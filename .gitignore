@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env/
+
+# Distribuição
+dist/
+build/
+*.egg-info/
+*.egg
+*.whl
+
+# Testes e qualidade
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# Relatórios de scan (nunca versionar evidência real)
+*.wirs.json
+reports/
+scans/
+
+# Baselines e rule packs locais com material sensível
+baselines/*.zip
+*.tar.zst
+
+# Segredos e ambiente
+.env
+.env.*
+!.env.example
+
+# SO e IDE
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp

@@ -1,0 +1,6 @@
+# Normaliza line endings para LF no repositório (evita divergência CRLF/LF no Windows).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.zip binary
+*.tar.zst binary

@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv venv && uv pip install -e ".[dev]"
+      - run: uv run pytest
+      - run: uv run ruff check . && uv run ruff format --check .
+      - run: uv run mypy src/
+      - run: uv run python -m build 2>/dev/null || uv pip install build && uv run python -m build

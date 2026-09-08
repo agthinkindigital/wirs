@@ -1,0 +1,76 @@
+[project]
+name = "wirs"
+version = "0.0.1"
+description = "WordPress Incident Response Scanner — motor generico de scanning para resposta a incidentes, integridade e orquestracao de evidencias"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "Leonardo Nascimento" }]
+keywords = ["wordpress", "incident-response", "integrity", "malware", "forensics"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+]
+dependencies = [
+  "typer>=0.12",
+  "rich>=13",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "hypothesis>=6",
+  "ruff>=0.4",
+  "mypy>=1.10",
+]
+# Providers externos sao sempre opcionais (P10 do spec):
+# yara = ["yara-python>=4.3"]
+# mysql = ["mysql-connector-python>=8.4"]
+
+[project.scripts]
+wirs = "wirs.cli.app:main"
+
+[project.urls]
+Homepage = "https://github.com/agthinkindigital/wirs"
+Issues = "https://github.com/agthinkindigital/wirs/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wirs"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["S101"]
+"src/wirs/cli/*" = ["B008"]
+
+[tool.ruff.format]
+exclude = ["WIRS_MASTER_SPEC_PT-BR.md"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["src/wirs"]
