@@ -909,4 +909,4 @@ leitura sem que nenhum detector precise saber dos outros.
   outra slice — hints expõem os fatos, regras julgam.
 
 **Verificar:** `src/wirs/detectors/content.py`,
-`tests/unit/test_content_hints.py` · **Issue:** #38 (aberta).
+`tests/unit/test_content_hints.py` · **Issue:** #38 (fechada).

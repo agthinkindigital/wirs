@@ -33,7 +33,19 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 completos (QA aprovado). FT-3: #36 (done) → #37 (done) → #39 (done) → #41 (done) → #40 (done) + {#38 livre}.
+DAG atual: FT-1 + FT-2 completos (QA aprovado). FT-3 completo: #36→#37→#39→#41→#40→#38 (todas done).
+
+## QA da DAG FT-3 (2026-09-09, APROVADA com ressalvas)
+
+- Suite: 119 passed, 4 skipped (symlink/fifo/wp-cli ausentes neste Windows; rodam no CI Linux).
+- Ruff check + format + mypy strict + guardas: limpos.
+- Cadeia E2E sobre fixture heuristics/chain.php: IOC achado (1x),
+  heurística PHP.HEUR.CHAIN/high, hints text+executable — três detectores
+  concordando sobre o mesmo arquivo.
+- Aceites das 6 slices conferidos um a um (evidências nos comentários).
+- Ressalvas: (1) detectores ainda não plugados no `scan` (orquestrador é
+  FT-4); (2) contratos JSON de plugins assumidos; (3) QA formal de Epic fica
+  para a Fase B.
 
 ## QA da DAG FT-2 (2026-09-09, APROVADA com ressalvas)
 
