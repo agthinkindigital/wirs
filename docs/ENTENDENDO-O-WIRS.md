@@ -576,4 +576,4 @@ esperado. Ausência vira dado que o coverage consome; só o inesperado vira erro
 
 **Verificar:** `src/wirs/infrastructure/command_runner.py`,
 `src/wirs/providers/wpcli.py`, `tests/unit/test_wpcli_doctor.py` ·
-**Issue:** #32 (aberta).
+**Issue:** #32 (fechada).
