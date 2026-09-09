@@ -33,7 +33,16 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual (ordem de dependência): #18 (done) → #19 (done) → #20 (done) → #21 (done) → #22 (done) → #23 (done) → #24 (done) → #25 (done) → #26 (done) → #27 (done) → #28 (done) → #29.
+DAG atual (ordem de dependência): FT-1 completo — #17→#18→#19→#20→#21→#22→#23→#24→#25→#26→#27→#28→#29 (todas done).
+
+## QA da DAG FT-1 (2026-09-09, APROVADA com ressalvas)
+
+- Suite: 74 passed, 2 skipped (symlink+fifo exigem privilégio ausente neste Windows; rodam no CI Linux).
+- Ruff check + format + mypy strict: limpos. Guardas de arquitetura verdes.
+- E2E real: `wirs scan <fixture> --format json|terminal` → JSON válido, coverage filesystem COMPLETE, exit 3 honesto.
+- Sem escrita: único `open(` em `src/` é `"rb"`; nenhum `write/mkdir/unlink/subprocess/shell`.
+- Aceites das 13 slices conferidos um a um contra as Issues (evidências nos comentários de fechamento).
+- Ressalvas: (1) testes symlink/fifo não executados neste host — CI Linux cobre; (2) QA formal de Epic (`/qa-analyst` completo com plano) fica para o fechamento da Fase B.
 
 ## Próximos passos
 
