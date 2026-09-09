@@ -81,5 +81,7 @@ Use a skill especializada quando a tarefa corresponder ao seu contrato:
 Uma tarefa relevante deve registrar objetivo, arquivos afetados, riscos,
 verificações executadas, pendências e atualizações de documentação. Não declare
 testes, comandos ou comportamentos que não possam ser reproduzidos no checkout atual.
-Toda slice concluída ganha uma seção em `docs/ENTENDENDO-O-WIRS.md` com a explicação
-da entrega (o quê, por quê, decisões) na linguagem das revisões.
+Toda entrega ligada a detecção ganha uma seção em `docs/ENTENDENDO-O-WIRS.md`
+(o quê o scan busca, como busca e por quê foi desenhado assim) na linguagem
+das revisões. Mecânica interna (tooling, plumbing, implementação) mora no
+código e nos ADRs, não nesse documento.

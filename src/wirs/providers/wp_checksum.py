@@ -10,10 +10,13 @@ A aplicação nunca vê esses formatos: só reports normalizados.
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+from wirs.adapters.wordpress.zones import OFFICIAL_ROOT_FILES
 from wirs.domain import IntegrityState, Target
 from wirs.domain.errors import (
     ProviderExecutionError,
@@ -111,7 +114,9 @@ def _execute_verify(
     status = real_doctor.check(wp_command=wp_command)
     if not status.available:
         raise ProviderUnavailable(status.error or "WP-CLI indisponível")
-    argv = (wp_command or ["wp"]) + command
+    # Caminho resolvido pelo doctor (bare "wp" não resolve .cmd via CreateProcess).
+    base = list(wp_command) if wp_command else [status.path or "wp"]
+    argv = base + command
     if json_format:
         argv = [*argv, "--format=json"]
     argv = [*argv, f"--path={target.root}"]
@@ -239,6 +244,17 @@ def verify_plugin_checksums(
     timeout_s: float = 120.0,
     provider_version: str | None = None,
 ) -> PluginChecksumReport:
+    plugins_dir = Path(target.root) / "wp-content" / "plugins"
+    try:
+        has_plugins = any(entry.is_dir(follow_symlinks=False) for entry in os.scandir(plugins_dir))
+    except OSError:
+        has_plugins = False
+    if not has_plugins:
+        # Nada a verificar: nem executa o WP-CLI (sem wp-config, falharia à toa).
+        version = provider_version
+        if version is None and doctor is not None:
+            version = doctor.check(wp_command=wp_command).version
+        return PluginChecksumReport(PLUGIN_PROVIDER_ID, version, (), ())
     result, wp_version = _execute_verify(
         target,
         ["plugin", "verify-checksums", "--all", "--strict"],
@@ -281,12 +297,16 @@ class WpCliCoreIntegrity:
         report = verify_core_checksum(
             target, runner=self._runner, wp_command=self._wp_command, timeout_s=self._timeout_s
         )
+        # Run completa = tudo no escopo foi verificado; só os divergentes
+        # (em files) continuam sujeitos a detecção.
+        covers = ("wp-admin/", "wp-includes/", *sorted(OFFICIAL_ROOT_FILES))
         return [
             ComponentIntegrity(
                 provider_id=report.provider_id,
                 provider_version=report.provider_version,
                 component="wordpress-core",
                 files=report.files,
+                covers=covers,
             )
         ]
 
@@ -317,6 +337,7 @@ class WpCliPluginIntegrity:
                 provider_version=report.provider_version,
                 component=f"plugin:{result.slug}",
                 files=result.files,
+                covers=(f"wp-content/plugins/{result.slug}/",),
             )
             for result in report.plugins
         ]

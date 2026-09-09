@@ -51,6 +51,7 @@ FAKE_STDERR = (
 
 
 def _run(tmp_path, out: str = FAKE_JSON, err: str = FAKE_STDERR):
+    (tmp_path / "wp-content" / "plugins" / "akismet").mkdir(parents=True)
     runner = FakeRunner("WP-CLI 2.12.0\n", out, err)
     return runner, verify_plugin_checksums(
         LocalDirectoryTarget(tmp_path),
@@ -58,6 +59,31 @@ def _run(tmp_path, out: str = FAKE_JSON, err: str = FAKE_STDERR):
         doctor=WpCliDoctor(runner=runner),
         wp_command=["wp"],
     )
+
+
+def _run_bare(tmp_path, runner):
+    (tmp_path / "wp-content" / "plugins" / "akismet").mkdir(parents=True, exist_ok=True)
+    return verify_plugin_checksums(
+        LocalDirectoryTarget(tmp_path),
+        runner=runner,
+        doctor=WpCliDoctor(runner=runner),
+        wp_command=["wp"],
+    )
+
+
+def test_sem_plugins_nem_chama_wp(tmp_path) -> None:
+    (tmp_path / "wp-content" / "plugins").mkdir(parents=True)
+
+    runner = FakeRunner("WP-CLI 2.12.0\n", "NUNCA", "")
+    report = verify_plugin_checksums(
+        LocalDirectoryTarget(tmp_path),
+        runner=runner,
+        doctor=WpCliDoctor(runner=runner),
+        wp_command=["wp"],
+    )
+
+    assert report.plugins == () and report.unverified_plugins == ()
+    assert all("verify-checksums" not in c for c in runner.calls)  # nem executou
 
 
 def test_json_por_plugin_normalizado(tmp_path) -> None:
@@ -83,22 +109,12 @@ def test_shape_do_core_rejeitado_e_falhas_propagadas(tmp_path) -> None:
 
     core_shaped = FakeRunner("WP-CLI 2.12.0\n", '[{"file": "x.php", "message": "y"}]')
     with pytest.raises(ProviderInvalidOutput):  # sem plugin_name: não é contrato
-        verify_plugin_checksums(
-            LocalDirectoryTarget(tmp_path),
-            runner=core_shaped,
-            doctor=WpCliDoctor(runner=core_shaped),
-            wp_command=["wp"],
-        )
+        _run_bare(tmp_path, core_shaped)
 
     for ruim in ["não é json", '{"a": 1}', '[{"plugin_name": "a"}]']:
         r = FakeRunner("WP-CLI 2.12.0\n", ruim)
         with pytest.raises(ProviderInvalidOutput):
-            verify_plugin_checksums(
-                LocalDirectoryTarget(tmp_path),
-                runner=r,
-                doctor=WpCliDoctor(runner=r),
-                wp_command=["wp"],
-            )
+            _run_bare(tmp_path, r)
 
     class SlowRunner(FakeRunner):
         def run(self, argv, *, timeout_s=120.0, max_bytes=1048576):  # type: ignore[override]
@@ -108,12 +124,7 @@ def test_shape_do_core_rejeitado_e_falhas_propagadas(tmp_path) -> None:
 
     slow = SlowRunner("", "", "")
     with pytest.raises(ProviderTimeout):
-        verify_plugin_checksums(
-            LocalDirectoryTarget(tmp_path),
-            runner=slow,
-            doctor=WpCliDoctor(runner=slow),
-            wp_command=["wp"],
-        )
+        _run_bare(tmp_path, slow)
 
 
 def test_wp_ausente_vira_unavailable(tmp_path, monkeypatch) -> None:
@@ -124,5 +135,6 @@ def test_wp_ausente_vira_unavailable(tmp_path, monkeypatch) -> None:
     from wirs.domain import ProviderUnavailable
 
     monkeypatch.setattr(shutil, "which", lambda *_: None)
+    (tmp_path / "wp-content" / "plugins" / "x").mkdir(parents=True)
     with pytest.raises(ProviderUnavailable):
         verify_plugin_checksums(LocalDirectoryTarget(tmp_path))

@@ -19,6 +19,10 @@ class ComponentIntegrity:
     component: str
     files: tuple[FileIntegrity, ...] = ()
     unverified: bool = False
+    # Prefixos relativos que o provider VERIFICOU nesta run (baseline confiável
+    # absolve). Inclui paths verificados mesmo quando outros divergiram: só os
+    # divergentes (em `files`) continuam sujeitos a detecção (correlação DX001).
+    covers: tuple[str, ...] = ()
 
 
 @runtime_checkable
