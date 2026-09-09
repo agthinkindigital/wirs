@@ -2,6 +2,7 @@
 
 from wirs.reporting.canonical import SCHEMA_VERSION, CanonicalReport
 from wirs.reporting.redaction import STORE_RAW_CONTENT, redact_mapping, redact_text
+from wirs.reporting.terminal import render_report, sanitize
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -9,4 +10,6 @@ __all__ = [
     "CanonicalReport",
     "redact_mapping",
     "redact_text",
+    "render_report",
+    "sanitize",
 ]

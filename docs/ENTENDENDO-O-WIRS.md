@@ -843,3 +843,39 @@ futura vai ligar.
 **Verificar:** `src/wirs/reporting/redaction.py`,
 `tests/unit/test_redaction.py`, `tests/security/test_secret_leakage.py` ·
 **Issue:** #41 (fechada).
+
+---
+
+## #40 — Terminal: a vitrine que não confia na mercadoria (WIRS-091)
+
+### O que é o reporter e por que a view é o lugar mais atacado
+
+JSON é para máquina; humano lê terminal — e terminal é código executando
+strings do invasor. Nome de arquivo com escape ANSI reprograma o emulador,
+`[bold]` no título vira formatação real no Rich, `\n` no path quebra a tabela
+e esconde linha. O `render_report` trata **todo conteúdo do alvo como
+hostil**: ANSI removido, markup escapado (aparece como texto), controles
+trocados por `?`. A regra de ouro da UX de segurança aqui: a formatação é
+nossa, os dados são deles, e os dois nunca se misturam.
+
+### Decisões de desenho
+
+- **Cor nunca sozinha**: cada severidade tem cor + nome em texto
+  (`CRITICAL`, `HIGH`...) — daltônico, terminal sem cor ou log redirecionado
+  perdem zero informação. Summary mostra os 5 níveis mesmo zerados: ausência
+  visível também é dado.
+- **Finding card com refs**: regra, título, categoria, confiança em texto,
+  artifact e evidence refs — o cartão responde "o quê, onde, com que prova"
+  sem precisar abrir o JSON.
+- **Coverage tão visível quanto findings**: mesma hierarquia de tabela, no
+  mesmo render. Cobertura escondida no rodapé seria repetir o pecado que o
+  produto nasceu para matar.
+- **`sanitize` exportado e testado**: a função é pública para os futuros
+  renderers Markdown/HTML reutilizarem a mesma política — sanitizar uma vez,
+  em um lugar.
+- **CLI delega, não duplica**: o `_print_terminal` do scan virou inventory
+  (específico) + `render_report` (geral). A refatoração rodou em GREEN com a
+  suite intacta — e a prova E2E no fixture confirma as três tabelas.
+
+**Verificar:** `src/wirs/reporting/terminal.py`,
+`tests/unit/test_terminal.py` · **Issue:** #40 (aberta).
