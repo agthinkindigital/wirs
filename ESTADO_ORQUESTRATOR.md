@@ -24,8 +24,19 @@
 - [ ] Issues GitHub via `/to-issues` (após scaffold)
 - [ ] Links Epic→Issue no roadmap (após `/to-issues`)
 
+## Fase 2 — To-issues FT-1 (CONCLUÍDA)
+
+- [x] Labels criadas (triage, tipos, áreas, prioridades)
+- [x] 16 Epic issues: #1–#16 (E00–E15)
+- [x] 13 slice issues FT-1: #17–#29, modo AFK, `ready-for-agent`, `Blocked by` reais
+- [x] #17 (WIRS-001) fechada com evidência do scaffold
+- [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
+- [x] Roadmap com links diretos Epic→Issue
+
+DAG atual (ordem de dependência): #18 → #19 → #20 → #21 → {#22, #23} → {#24, #25, #26} → {#27, #28, #29}.
+
 ## Próximos passos
 
-1. Scaffold MVP (pyproject, `src/wirs`, tests, CI) — commit inicial + `develop`.
-2. `/to-issues`: fatiar FT-1 em Issues rastreáveis.
-3. TDD Exercise 1 (domain primitives) em slices verticais.
+1. TDD #18 (WIRS-002 boundaries + architecture test) na `develop`.
+2. Seguir a DAG em slices verticais (RED→GREEN→refactor), uma issue por vez.
+3. QA (`/qa-analyst`) ao fechar cada Epic.
