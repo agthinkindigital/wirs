@@ -842,4 +842,4 @@ futura vai ligar.
 
 **Verificar:** `src/wirs/reporting/redaction.py`,
 `tests/unit/test_redaction.py`, `tests/security/test_secret_leakage.py` ·
-**Issue:** #41 (aberta).
+**Issue:** #41 (fechada).
