@@ -803,3 +803,43 @@ patente de certeza; o teto é HIGH por desenho, com teste travando isso.
 **Verificar:** `src/wirs/detectors/php_heuristics.py`,
 `tests/unit/test_php_heuristics.py`,
 `tests/fixtures/wordpress/heuristics/` · **Issue:** #39 (fechada).
+
+---
+
+## #41 — Redaction: o segredo morre na fronteira, não na vitrine (WIRS-092)
+
+### O que é o redaction e por que fronteira, não renderer
+
+Relatório de incidente vaza por dois caminhos: o operador cola o JSON num
+ticket, e o ticket vaza — levando `DB_PASSWORD`, salts e API keys junto. A
+resposta comum ("mascaramos na UI") é teatro: o dado cru continua no JSON, no
+log, no debug. O redactor do WIRS roda **na fronteira de coleta**: o conteúdo
+é limpo *antes* de virar Evidence, então o segredo simplesmente não existe
+abaixo dali — nem no JSON, nem no terminal, nem no HTML futuro. `redact_text`
+para strings, `redact_mapping` recursivo para estruturas (str, bytes, dicts,
+listas), e `STORE_RAW_CONTENT = False` como default explícito que a config
+futura vai ligar.
+
+### Decisões de desenho
+
+- **Padrões conservadores, com nome por perto**: DB_PASSWORD com moldura
+  preservada, bloco PRIVATE KEY multilinha, atribuições
+  password/secret/api_key/token, AKIA, Bearer. Todos exigem o *nome* da chave
+  — por isso hash SHA, `art_abc` e `6.5.2` passam intactos (testado lado a
+  lado com o segredo). Precisão antes de cobertura: redigir um hash legítimo
+  destruiria evidência.
+- **A chave do mapping também é sinal**: `{"pwd": "s3nha"}` — o valor sozinho
+  não casa nenhum padrão de texto. O TDD pegou: `redact_mapping` redige o
+  valor inteiro quando o *nome* do campo é de secret. Dado estruturado se lê
+  pela chave, não pelo valor.
+- **Bytes via decode/re-encode**: valores binários são decodificados
+  (tolerante), redigidos e re-codificados — sem corromper, sem exceção.
+- **Fake com `noqa` justificado**: o S105 acusou a senha fake do teste; `noqa`
+  com motivo, como manda o manual do bandit para fixtures.
+- **Teste adversário dedicado** (`tests/security/`): aspas/case variados,
+  chave quebrada em linhas, segredo colado em legítimo — o segredo não
+  sobrevive em nenhuma forma, e o legítimo sobrevive ao lado.
+
+**Verificar:** `src/wirs/reporting/redaction.py`,
+`tests/unit/test_redaction.py`, `tests/security/test_secret_leakage.py` ·
+**Issue:** #41 (aberta).
