@@ -81,3 +81,5 @@ Use a skill especializada quando a tarefa corresponder ao seu contrato:
 Uma tarefa relevante deve registrar objetivo, arquivos afetados, riscos,
 verificações executadas, pendências e atualizações de documentação. Não declare
 testes, comandos ou comportamentos que não possam ser reproduzidos no checkout atual.
+Toda slice concluída ganha uma seção em `docs/ENTENDENDO-O-WIRS.md` com a explicação
+da entrega (o quê, por quê, decisões) na linguagem das revisões.

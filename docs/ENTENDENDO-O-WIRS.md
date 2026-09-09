@@ -1,0 +1,428 @@
+# Entendendo o WIRS: o porquê de cada peça
+
+Este documento é para aprender. Cada seção explica **uma slice do projeto**
+com as mesmas palavras usadas nas revisões de entrega: primeiro **o que** a
+peça é e **por que** ela existe, depois as **decisões de desenho** que a
+moldaram. Leia na ordem — cada peça se apoia nas anteriores, igual ao código.
+
+Toda slice nova ganha sua seção aqui antes de ser dada como concluída. É
+assim que o conhecimento da construção vira conhecimento do time.
+
+---
+
+## #17 — Scaffold: o terreno antes da casa (WIRS-001)
+
+### O que é o scaffold e por que ele vem primeiro
+
+Antes de qualquer detector, precisávamos de um repositório que compila, testa,
+passa lint, checa tipos e publica no CI — porque ferramenta de segurança sem
+esteira confiável é opinião, não engenharia. O scaffold entregou o pacote
+Python importável, a CLI mínima (`version`, `doctor`, `scan`), a suite de
+testes, o Ruff, o `mypy strict` e o CI na matrix 3.11–3.14. E o `wirs scan`
+nasceu como **esqueleto honesto**: valida o target (inválido → exit 2) e
+declara "engine em construção" com coverage explícito (exit 3) em vez de
+fingir um resultado.
+
+### Decisões de desenho
+
+- **Python `>=3.11`, sem exigir o bleeding edge**: o dev roda no 3.14 local,
+  mas o scanner precisa funcionar em VPS e hospedagem comum (Ubuntu 22.04
+  entrega 3.10, 24.04 entrega 3.12). Travar no 3.14 seria excluir os
+  ambientes que mais precisam da ferramenta.
+- **Typer + Rich**: CLI declarativa com `--help` de graça e terminal legível
+  sem reinventar formatação — o foco é WordPress e incident response, não
+  framework de CLI.
+- **`uv` via scoop**: venv + lock + instalação rápida no mesmo canal das
+  outras ferramentas da máquina, sem poluir o Python global.
+- **Esqueleto que confessa, não que finge**: exit 3 com coverage explícito em
+  vez de "0 findings". A honestidade do relatório começou no dia zero.
+- **LF travado no `.gitattributes`**: diverging CRLF/LF já mordeu outro
+  projeto da casa; aqui o repo normaliza na entrada.
+
+**Verificar:** `pyproject.toml`, `src/wirs/cli/app.py`, `.github/workflows/ci.yml` · **Issue:** #17 (fechada).
+
+---
+
+## #18 — Fronteiras que o compilador não vê (WIRS-002)
+
+### O que são os guardas de arquitetura e por que testes, não convenção
+
+Python não tem visibilidade de pacote como Java: nada na linguagem impede
+`domain/` de importar `wordpress`, um detector de chamar `subprocess` ou um
+provider de espalhar formato de vendor pela aplicação. Como as invariantes
+arquiteturais são o coração do produto (é nelas que mora a segurança do
+scanner), elas viraram **testes que varrem imports reais via AST** e quebram
+o build quando a fronteira é cruzada. Convenção se esquece; teste quebrado
+não passa no CI.
+
+### Decisões de desenho
+
+- **Três guardas, três fronteiras**: domain só-stdlib (sem wordpress, yara,
+  wordfence, rich, mysql, typer), detectors sem subprocess, subprocess em
+  geral só via `CommandRunner` (allowlist com um único futuro morador).
+- **Prova por mutação, não por fé**: cada guarda foi verificado injetando a
+  violação de propósito (quebra), revertendo (volta ao verde) e conferindo a
+  árvore limpa. Teste de guarda que nunca foi visto quebrar é decoração.
+- **Helper compartilhado, sem especulação**: a varredura AST mora num helper
+  comum do arquivo de teste — o suficiente para hoje, sem framework de
+  "architecture tests" antes da hora.
+
+**Verificar:** `tests/unit/test_architecture.py` · **Issue:** #18 (fechada).
+
+---
+
+## #19 — Target: onde é permitido olhar (WIRS-010)
+
+### O que é o Target e por que ele congela a pergunta inicial
+
+Todo scan começa respondendo "o quê, exatamente, estou analisando?" — e essa
+resposta precisa ser **congelada**, porque todo o resto (IDs, coverage,
+comparação entre scans) depende dela não mudar no meio do caminho. O `Target`
+é um dataclass imutável com kind (`local_directory`, `snapshot_directory`,
+`archive`), root normalizado e metadata imutável. Raiz inexistente ou
+arquivo-como-root vira `TargetError`: alvo inválido nunca produz "scan vazio
+válido" — que seria o falso negativo mais perigoso do produto, um relatório
+limpo sobre nada.
+
+### Decisões de desenho
+
+- **ID determinístico** (`tgt_<sha256:16>` de kind + root): dois scans do
+  mesmo alvo geram o mesmo ID, base para comparar relatórios no tempo e,
+  no futuro, cachear trabalho.
+- **Metadata em `MappingProxyType`, não dict**: dicionário mutável num objeto
+  "imutável" é mentira — o congelamento é real, testado por tentativa de
+  escrita.
+- **Normalização com `pathlib` apenas**: o SafePath (#20) ainda não existia
+  (ordem da DAG), então o Target resolve o root sozinho sem criar dependência
+  para frente. Cada slice usa só o que já existe.
+- **`WirsError` como base da hierarquia**: `TargetError` herda dela para que
+  camadas externas capturem "erro do scanner" sem conhecer cada tipo — o
+  núcleo do modelo de erros do spec.
+
+**Verificar:** `src/wirs/domain/target.py`, `src/wirs/domain/errors.py`,
+`tests/unit/test_target.py` · **Issue:** #19 (fechada).
+
+---
+
+## #20 — SafePath: o único lugar onde path sujo vira path confiável (WIRS-011)
+
+### O que é o SafePath e por que ele é security critical
+
+Todo o resto do scanner vai manipular caminhos vindos de um **alvo hostil**:
+nomes criados por um invasor para escapar do diretório (`../../etc/cron.d/x`),
+para quebrar relatórios (`<script>`, ANSI, quebras de linha) ou para explorar
+peculiaridades do Windows (`C:\...`, `\\server\...`). O `SafePath` é o
+**único lugar** onde um caminho sujo vira confiável — um value object imutável
+que carrega `root` + `relative` canônico e só existe se o confinamento for
+válido. Sem ele, cada detector validaria path por conta própria, e algum dia
+algum deles erraria.
+
+### Decisões de desenho
+
+- **Confinamento lexical, sem tocar o filesystem**: `..` que escapa, path
+  absoluto, drive e UNC viram `SecurityBoundaryError`. `a/b/../c` resolve para
+  `a/c`, mas `a/../..` é rejeitado — e o TDD forçou a explicitar que `a/..`
+  é o próprio root (benigno), não ataque.
+- **`\` sempre vira `/`**: código único para Windows e Linux, e o `relative`
+  é estável no JSON independente da plataforma que escaneou.
+- **NUL rejeitado em voz alta** (nunca truncado em silêncio) e **Unicode em
+  NFC** (`e + acento combinante` vira `é`), para que comparação e exibição não
+  tenham duas formas do "mesmo" nome.
+- **O achado do property test**: o Hypothesis gerou `raw='::'` e quebrou o
+  invariante — no Windows, `Path(root).joinpath('::')` **descarta o root
+  inteiro** (o segmento é interpretado como drive). O `full` passou a ser
+  construído por concatenação em parse único e ancorado, que mantém contenção
+  para qualquer segmento. Virou regressão parametrizada.
+- **Fora de escopo de propósito**: escape via symlink (é do inventory, nunca
+  follow — ADR-008) e nomes de dispositivo (`CON`, `NUL` — não escapam o root,
+  viram erro de OS tratado como gap na #22).
+
+**Verificar:** `src/wirs/domain/safepath.py`, `tests/unit/test_safepath.py`
+(inclui property test) · **Issue:** #20 (fechada).
+
+---
+
+## #21 — Artifact: a unidade que atravessa o pipeline (WIRS-012)
+
+### O que é o Artifact e por que ele é o centro do sistema
+
+Com *onde* olhar (Target) e *como* nomear com segurança (SafePath), faltava
+*o que* é analisável. O `Artifact` é essa peça: a unidade lógica que atravessa
+o pipeline inteiro — o inventory os produz, o hash/IOC/heurísticas os
+consomem, os findings os referenciam, o coverage os conta. Sem um modelo
+único, cada detector inventaria sua própria representação de "arquivo" e a
+correlação futura seria impossível.
+
+### Decisões de desenho
+
+- **4 kinds, sem hierarquia de classes**: `FILE`, `DIR`, `SYMLINK` e `SPECIAL`
+  como enum, não subclasses. A distinção que importa para as regras é kind +
+  metadata, e um único tipo congelado mantém serialização e comparação
+  triviais. FIFO/socket/device viram `SPECIAL` — o scanner nunca os abre como
+  arquivo comum.
+- **ID estável que inclui o kind** (`art_<sha256:16>`): um path que vira de
+  arquivo para symlink *é* outro artifact, e dois scans geram os mesmos IDs —
+  base para comparar relatórios e, no futuro, cachear hashes.
+- **Construído sobre SafePath, não sobre string**: impossível criar Artifact
+  com path fora do root — a garantia da #20 é herdada, não revalidada.
+- **`from_stat` puro, sem I/O**: recebe o `stat` já coletado e só mapeia
+  campos (com `getattr` defensivo para `uid`/`gid`, ausentes no Windows).
+  Quem toca disco é o inventory; o modelo interpreta.
+- **Symlink carrega o destino como dado** (`symlink_target: str`), nunca
+  seguido — coerente com o ADR-008.
+- **Metadata honesta sobre ausência**: tudo opcional (`None` quando
+  indisponível) em vez de zeros inventados que pareceriam fatos.
+- **Round-trip total** (`to_dict`/`from_dict` com igualdade completa): o que
+  vai permitir o JSON canônico sem camada extra de conversão.
+
+**Verificar:** `src/wirs/domain/artifact.py`, `tests/unit/test_artifact.py` ·
+**Issue:** #21 (fechada).
+
+---
+
+## #22 — Inventory: a fronteira onde o scanner toca o disco (WIRS-013)
+
+### O que é o inventory e por que ele concentra as decisões de leitura
+
+Até aqui, tudo era modelo puro: nenhum módulo lia nada do alvo. O
+`LocalArtifactSource` é a fronteira onde isso muda — e justamente por isso
+concentra **todas** as decisões de segurança de leitura num lugar só, para
+que nenhum detector precise pensar nisso depois. A regra: o inventory
+caracteriza entradas (*o que* cada coisa é) mas nunca interpreta conteúdo
+(isso é dos detectores, via `ArtifactReader`).
+
+### Decisões de desenho
+
+- **Um gerador, memória bounded**: função geradora com pilha explícita — nunca
+  materializa a árvore. Em 100 mil arquivos, o pico fica proporcional à
+  profundidade, não ao total. O teste prova streaming pelo tipo
+  (`isgeneratorfunction`), não por medição frágil de RSS.
+- **Ordem determinística**: entradas ordenadas por nome em cada diretório
+  (pilha LIFO com subdirs em reverso mantém depth-first ordenado). Sem isso,
+  relatórios e IDs correlacionados seriam instáveis entre runs.
+- **Symlink: dado, nunca caminho**: registrado como `SYMLINK` com destino de
+  `readlink` (que não segue), e o walker jamais desce por ele. Loops e escapes
+  impossíveis *por construção*. Prova com link interno, externo e quebrado.
+- **`SPECIAL` como quarentena**: FIFO/socket/device viram `SPECIAL` via
+  `stat` e jamais são abertos. A prova é um teste que *travaria para sempre*
+  se tentássemos abrir o FIFO.
+- **Falha parcial como tipo**: entrada ilegível vira `InventoryGap(path,
+  reason)` e o scan continua; só root ilegível vira `TargetError`. Os gaps
+  são o insumo direto do Coverage.
+- **Portabilidade honesta**: symlink e FIFO exigem privilégio/recursos que o
+  Windows de dev não tem — skip explícito aqui, execução no CI Linux — em vez
+  de cobertura fingida. Permissão negada é simulada via `monkeypatch` (testa
+  o *tratamento*, portável, não o chmod do OS, que não é).
+
+**Verificar:** `src/wirs/infrastructure/filesystem.py`,
+`tests/integration/test_inventory.py` · **Issue:** #22 (fechada).
+
+---
+
+## #23 — Evidence: a moeda da explicabilidade (WIRS-020)
+
+### O que é a Evidence e por que nada existe sem ela
+
+Princípio P2, "evidência antes de interpretação": a `Evidence` é a
+**observação imutável** que um collector ou detector produziu — a outra metade
+do Artifact (ele diz *o que foi olhado*, ela diz *o que foi visto*). Findings
+vão apenas referenciar evidências; diagnósticos vão correlacionar findings.
+Toda a cadeia de explicabilidade do relatório nasce aqui.
+
+### Decisões de desenho
+
+- **ID determinístico, não aleatório** (`ev_<sha256:16>` de scan + kind +
+  artifact + conteúdo canônico, *sem* timestamp): a mesma observação deduplica
+  entre scans. O timestamp registra *quando*, não compõe *o quê*.
+- **`kind` aberto (string), não enum**: nenhum detector existe ainda para
+  fixar o vocabulário, e rule packs futuros vão inventar kinds. Rígida é a
+  *estrutura*, não o vocabulário.
+- **`Provenance` obrigatória sem default**: sem `collector` + `version`, o
+  construtor nem aceita. A invariante "finding não existe sem provenance"
+  começa a ser imposta aqui — o finding herdará de graça.
+- **`content` restrito a JSON-serializável na construção**: bytes ou objetos
+  arbitrários viram `ValueError` na hora, não na hora do relatório. É a
+  fundação do "dado canônico independente da UI". O próprio TDD pegou a
+  armadilha: o congelamento com `mappingproxy` quebrou a canonicalização e
+  foi preciso serializar o `dict` interno.
+- **`RedactionState` explícito** (`none`/`redacted`): distingue "não havia
+  secret" de "houve e foi redigido" — prepara a redaction na fronteira.
+- **`artifact_ref` como string, não objeto**: sem import circular,
+  serialização trivial, pronto para o futuro evidence graph.
+
+**Verificar:** `src/wirs/domain/evidence.py`, `tests/unit/test_evidence.py` ·
+**Issue:** #23 (fechada).
+
+---
+
+## #24 — Finding: a linha entre fato e chute (WIRS-021)
+
+### O que é o Finding e por que severidade e confiança não se misturam
+
+Evidências ninguém lê em volume; findings dizem o que elas *significam* —
+"este arquivo do core diverge do baseline oficial". Cada finding carrega
+**severidade** (quão grave, *se* verdade) e **confiança** (quão certo estamos)
+como eixos *independentes*. Um `CRITICAL + DETERMINISTIC` (checksum oficial
+divergiu) e um `CRITICAL + LOW` (heurística isolada) coexistem no relatório sem
+se confundir — é isso que impede o produto de colapsar tudo num "INFECTED"
+opaco.
+
+### Decisões de desenho
+
+- **Invariante 2 como exceção**: sem `evidence_refs` e sem `provenance`, o
+  construtor levanta `ValueError`. Finding órfão é impossível por construção.
+  A válvula (`provenance` de provider, ex. Wordfence CLI) existe porque finding
+  externo chega sem evidência interna — mas aí a proveniência viaja junto.
+- **Confiança em duas partes**: classe honesta + score 0–1 validado, que
+  complementa sem fingir precisão. Número inventado em relatório de incidente
+  é pior que ausência de número.
+- **O ID ignora severidade e ordem**: deriva de regra + artifact + evidências
+  + atributos — reclassificar a gravidade não muda a identidade (histórico e
+  correlação estáveis quando a regra amadurece), e `("ev_2","ev_1")` gera o
+  mesmo ID que `("ev_1","ev_2")`.
+- **`category` aberta como `kind`**: `integrity`, `policy`, `ioc`... virão das
+  regras; travar enum agora seria adivinhar o futuro.
+- **`status` com default `"open"`**: o único default — ciclo de vida pertence
+  a outra Epic; o default só evita burocracia no construtor agora.
+
+**Verificar:** `src/wirs/domain/finding.py`, `tests/unit/test_finding.py` ·
+**Issue:** #24 (fechada).
+
+---
+
+## #25 — Coverage: o antídoto contra o "está limpo" (WIRS-023)
+
+### O que é o Coverage e por que o falso negativo silencioso é o pior bug
+
+O problema mais caro em incident response não é o falso positivo — é o
+**falso negativo silencioso**: o scanner roda, não acha nada, e o analista
+conclui "limpo" sem saber que o YARA estava ausente e 300 arquivos eram
+ilegíveis. O `CoverageEntry` torna essa ignorância *visível e tipada*: cada
+capability declara seu estado em 6 valores, com a contabilidade exata de cada
+check aplicável.
+
+### Decisões de desenho
+
+- **O invariante como exceção**: `verified + failed + skipped + unavailable`
+  precisa igualar `applicable_checks` — nem check em dois baldes, nem check
+  perdido. Contador negativo também recusa.
+- **Estado e contadores amarrados**: `COMPLETE` exige tudo verificado (completo
+  vazio é suspeito, não vitória); `PARTIAL` exige ao menos 1 não-verificado;
+  `UNAVAILABLE`/`SKIPPED`/`NOT_APPLICABLE` têm forma própria. YARA com 10
+  indisponíveis **não compila** como `COMPLETE` — o teste nominal do ADR-010.
+- **`FAILED` deliberadamente frouxo**: capability que quebrou por inteiro
+  descreve o estrago como estava — impor forma ali seria inventar precisão
+  sobre naufrágio.
+- **`note` livre para contexto humano**: "2 plugins premium sem baseline"
+  viaja com os números, porque coverage sem explicação vira outro número opaco.
+- **Só o tijolo, sem a parede**: o relatório consolidado pertence ao futuro
+  `ReportService` — aqui sai a entry validada, sem especular o agregador.
+
+**Verificar:** `src/wirs/domain/coverage.py`, `tests/unit/test_coverage.py` ·
+**Issue:** #25 (fechada).
+
+---
+
+## #26 — ArtifactReader: o gargalo obrigatório (WIRS-030)
+
+### O que é o reader e por que todo detector lê por ele
+
+O inventory só fez `stat` — nunca abriu conteúdo. Mas hash, IOC e heurísticas
+precisam *ler* arquivos. Se cada detector abrisse por conta própria, teríamos
+N leituras do mesmo arquivo, N políticas de limite e N chances de abrir a
+coisa errada (FIFO que trava, symlink para fora do root, 40 GB na RAM). O
+`ArtifactReader` é o **único caminho para conteúdo**: todo detector futuro lê
+por ele, herdando streaming, budget, cancelamento e travas de graça.
+
+### Decisões de desenho
+
+- **Recusa antes do disco**: não-`FILE` levanta `SecurityBoundaryError` sem
+  nenhuma chamada ao filesystem. O caso crítico é o symlink — abrir o `full`
+  seguiria o destino. O teste usa paths inexistentes de propósito: se tocasse
+  o disco, daria `FileNotFoundError` em vez do guarda.
+- **Sempre `rb`, nunca texto**: bytes crus (o teste cobre os 256 valores,
+  incluindo não-UTF-8). Decoding é decisão do detector — sem `UnicodeDecodeError`
+  em arquivo hostil.
+- **Budget com fronteira exata**: `BudgetExceeded` carrega `bytes_read`
+  (permite relatar "hash parcial de X bytes"); arquivo que termina *exatamente*
+  no limite não é erro — punir o caso-limite geraria falsos gaps.
+- **Cancelamento cooperativo, sem threads**: `should_stop()` por chunk levanta
+  `ReadCancelled`. O scheduler futuro só passa o callback.
+- **`ReadBudget` validado na construção**: limite inválido silencioso
+  significaria "leia tudo" ou "leia nada" conforme o cliente.
+- **Erros na família `WirsError`**: `BudgetExceeded` e `ReadCancelled` são
+  recuperáveis, feitos para virar Coverage — nunca abortar scan. A decisão do
+  que fazer com falha de leitura é do orquestrador, não do leitor.
+
+**Verificar:** `src/wirs/infrastructure/reader.py`, `tests/unit/test_reader.py` ·
+**Issue:** #26 (fechada).
+
+---
+
+## #27 — HashService: ler uma vez, servir N detectores (WIRS-031)
+
+### O que é o HashService e por que ele é separado do reader
+
+O reader sabe *ler bytes com segurança*; mas quase todo detector vai precisar
+do *hash* do mesmo arquivo — integridade, IOC por SHA-256, identidade,
+deduplicação. Sem serviço central, cada detector leria tudo de novo ou
+inventaria seu cache com sua invalidação. O `HashService` resolve: **uma
+instância por scan, dona do cache, alimentada pelo reader em streaming**.
+
+### Decisões de desenho
+
+- **Memo na instância, não global**: o cache morre com o scan. Vazamento entre
+  scans seria um falso `VERIFIED` catastrófico — impossível por construção, sem
+  precisar lembrar de invalidar.
+- **Chave `(artifact.id, algorithm)`**: o ID já é determinístico, então a chave
+  herda estabilidade; o algoritmo entra porque o mesmo arquivo tem digest
+  diferente em SHA-256 e MD5 — sem isso, pedir MD5 depois devolveria o hash
+  errado em silêncio.
+- **SHA-256 interno, MD5 só compatível**: o parâmetro `algorithm` existe para
+  respeitar baseline upstream (checksums MD5 do WordPress.org). O linter
+  acusou S324 e a resposta documenta `usedforsecurity=False` — MD5 aqui é
+  *comparação com referência oficial*, nunca prova de segurança.
+- **Prova de leitura única via spy, não mock**: subclasse que conta invocações
+  reais e delega ao comportamento verdadeiro. Duas consultas → 1 leitura de
+  disco, testado pela interface pública.
+- **Erros propagam intactos**: não-FILE, budget, cancelamento sobem do reader
+  sem tradução — o hasher não inventa semântica de falha.
+
+**Verificar:** `src/wirs/infrastructure/hashing.py`, `tests/unit/test_hash.py` ·
+**Issue:** #27 (fechada).
+
+---
+
+## #28 — JSON canônico: a fonte de verdade (WIRS-090)
+
+### O que é o JSON canônico e por que ele vem antes das views
+
+Terminal bonito, Markdown e HTML são *apresentação* — e apresentação muda toda
+hora. Se cada formato lesse o modelo do seu jeito, qualquer mudança de layout
+arriscaria mudar o *significado*. O `CanonicalReport` é a **fonte de verdade
+serializada**: um JSON com contrato versionado do qual todas as views derivam
+mecanicamente. Automação, comparação entre scans e re-análise falam com ele;
+humanos falam com as views.
+
+### Decisões de desenho
+
+- **`schema_version` ≠ `scanner_version`**: o schema ("1.0") só muda com
+  breaking change de campo; a versão do scanner muda a cada release. Sem isso,
+  seria impossível saber se um JSON antigo ainda é legível — compatibilidade
+  de relatório é promessa de produto, não detalhe.
+- **Ordem determinística por construção**: findings por ID estável, coverage
+  por capability. A ordem de chegada do pipeline (threads, OS, fases) *não*
+  vaza para o relatório — provado com entradas embaralhadas gerando byte
+  idêntico. Sem isso, `diff` entre scans seria ruído.
+- **`generated_at` injetável**: o primeiro teste pegou um vazamento real —
+  `now()` na construção fazia duas montagens "iguais" diferirem. Default
+  prático, valor fixo nos testes e no golden. Determinismo é pré-requisito de
+  reprodutibilidade, não estética.
+- **Sem conteúdo bruto por estrutura**: os modelos nem têm campo para conteúdo
+  de arquivo — a asserção do teste é rede de segurança, não a trava principal.
+- **Golden revisado, nunca abençoado cego**: o fixture foi gerado, lido por
+  humano e congelado; o teste compara byte-a-byte. Schema que evolui exige ler
+  o diff e atualizar conscientemente — teste quebrar é o sistema funcionando.
+
+**Verificar:** `src/wirs/reporting/canonical.py`,
+`tests/unit/test_canonical.py`, `tests/golden/` · **Issue:** #28 (fechada).
