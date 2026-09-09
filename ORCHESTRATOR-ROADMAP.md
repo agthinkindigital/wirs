@@ -29,6 +29,9 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 - [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `todo`
 
   Manifest schema, comparator, `baseline create`, ZIP baseline, trust explícito.
+  Refresh automatizado de manifests upstream (ex.: checksums do WordPress.org
+  por versão, com provenance e cache offline) + zonas derivadas do manifest
+  em vez de listas manuais.
   Issues: WIRS-040–WIRS-046. (Fase C)
 
 - [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `todo`

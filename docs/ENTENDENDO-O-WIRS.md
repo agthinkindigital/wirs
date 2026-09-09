@@ -537,4 +537,43 @@ perguntam "o que significa este arquivo *nesta zona*?".
   preservar é o comportamento honesto).
 
 **Verificar:** `src/wirs/adapters/wordpress/zones.py`,
-`tests/unit/test_wordpress_zones.py` · **Issue:** #31 (aberta).
+`tests/unit/test_wordpress_zones.py` · **Issue:** #31 (fechada).
+
+---
+
+## #32 — Doctor: perguntando ao ambiente antes de prometer (WIRS-063)
+
+### O que é o doctor e por que disponibilidade é dado, não exceção
+
+Todo provider futuro (WP-CLI, YARA, Wordfence) pode faltar — e o ADR-010 manda
+degradar coverage, nunca abortar. Mas para degradar com precisão, o scanner
+precisa *saber* o que existe: path, versão, tempo de resposta. O `WpCliDoctor`
+transforma "será que tem wp?" num `WpCliStatus` estruturado (available, path,
+version, duration, error) — nunca texto solto, nunca exceção para caso
+esperado. Ausência vira dado que o coverage consome; só o inesperado vira erro.
+
+### Decisões de desenho
+
+- **Só comando pré-load**: `wp --version` não inicializa plugins/themes, logo
+  é seguro no `safe_only` (ADR-009). O teste asserta o argv exato —
+  `["wp", "--version"]` — travando qualquer tentativa futura de usar um
+  comando com bootstrap aqui.
+- **Comando explícito não passa no `which`**: quem passa o caminho assume a
+  existência (útil em testes e installs fora do PATH). O TDD pegou o desenho
+  inicial errado, que fazia lookup sempre e quebrava o caso explícito.
+- **Runner injetável, fakes como subclasses**: ausência/timeout/falha usam
+  `FakeRunner(CommandRunner)` — tipado, sem mocks mágicos — e um teste com o
+  runner real prova o timeout matando um sleep de 30s em 0,5s.
+- **CommandRunner mínimo agora, endurecido depois**: argv-sequência,
+  `shell=False`, timeout com kill, cap de output e decode tolerante. A
+  allowlist do guarda da #18 já previa exatamente este endereço
+  (`infrastructure/command_runner.py`); sanitização de env e cwd explícito
+  chegam na WIRS-122 sem mudar a interface. O S603 do linter foi silenciado
+  com `noqa` justificado — o único call site autorizado do repositório.
+- **Versão via regex tolerante** (`WP-CLI x.y[.z]`): sem versão parseável,
+  `available=True` com `version=None` — resposta parcial honesta em vez de
+  falha inventada.
+
+**Verificar:** `src/wirs/infrastructure/command_runner.py`,
+`src/wirs/providers/wpcli.py`, `tests/unit/test_wpcli_doctor.py` ·
+**Issue:** #32 (aberta).
