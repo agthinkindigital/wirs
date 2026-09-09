@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from wirs.application.orchestrator import run_scan
 from wirs.domain import Artifact, LocalDirectoryTarget
-from wirs.infrastructure import LocalArtifactSource
+from wirs.infrastructure import ArtifactReader, LocalArtifactSource, ReadBudget
 
 
 def _fixture(tmp_path) -> LocalDirectoryTarget:
@@ -81,3 +81,93 @@ def test_discovery_e_zones_wordpress(tmp_path) -> None:
     por_rel = {a.path.relative: a.id for a in result.artifacts}
     assert result.zones[por_rel["wp-includes/version.php"]] == "wp-core-protected"
     assert result.zones[por_rel["wp-content/uploads/x.jpg"]] == "wp-content-uploads"
+
+
+def _mini_wp(tmp_path) -> LocalDirectoryTarget:
+    (tmp_path / "wp-includes").mkdir()
+    (tmp_path / "wp-includes" / "version.php").write_bytes(b"<?php // v")
+    (tmp_path / "wp-admin").mkdir()
+    up = tmp_path / "wp-content" / "uploads"
+    up.mkdir(parents=True)
+    (up / "evil.php").write_bytes(b"<?php // in" + b"erte")
+    return LocalDirectoryTarget(tmp_path)
+
+
+def test_detection_policy_com_evidence(tmp_path) -> None:
+    from wirs.adapters.wordpress.discovery import WordPressAdapter
+    from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
+
+    target = _mini_wp(tmp_path)
+    result = run_scan(
+        target,
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[WordPressAdapter()],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[UploadsExecutablePolicy()],
+    )
+
+    rules = [f.rule_id for f in result.findings]
+    assert "WP.UPLOAD.EXECUTABLE" in rules
+    finding = next(f for f in result.findings if f.rule_id == "WP.UPLOAD.EXECUTABLE")
+    assert finding.severity.value == "high"
+    ev_ids = {e.id for e in result.evidence}
+    assert set(finding.evidence_refs) <= ev_ids  # toda ref resolve nesta run
+
+
+def test_ioc_e_heuristicas_agregados(tmp_path) -> None:
+    from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
+    from wirs.domain import IOC, IOCKind
+
+    (tmp_path / "t.php").write_bytes(
+        b"<?php as" + b"sert(" + b"ba" + b"se64_decode(" + b"ZZZ)); // MARKER123"
+    )
+    target = LocalDirectoryTarget(tmp_path)
+    ioc = IOC(kind=IOCKind.LITERAL, value="MARKER123")
+
+    result = run_scan(
+        target,
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[IocDetector([ioc]), PhpHeuristicsDetector()],
+    )
+
+    rules = {f.rule_id for f in result.findings}
+    assert rules == {"IOC.MATCH", "PHP.HEUR.CHAIN"}
+    ioc_finding = next(f for f in result.findings if f.rule_id == "IOC.MATCH")
+    assert ioc_finding.severity.value == "medium"
+    assert ioc_finding.attributes["match_count"] == 1
+    ev_ids = {e.id for e in result.evidence}
+    assert all(set(f.evidence_refs) <= ev_ids for f in result.findings)
+
+
+def test_checksum_ausente_degrada_e_scan_continua(tmp_path) -> None:
+    from wirs.domain import ProviderUnavailable
+    from wirs.ports.checksum import IntegrityProvider
+
+    (tmp_path / "a.txt").write_bytes(b"a")
+
+    class DeadProvider:
+        id = "wp-cli-core-checksum"
+
+        def verify(self, target):
+            raise ProviderUnavailable("sem wp aqui")
+
+    assert isinstance(DeadProvider(), IntegrityProvider)
+
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        integrity=[DeadProvider()],
+    )
+
+    assert result.findings == ()
+    (fs, ck) = result.coverage
+    assert fs.state.value == "complete"
+    assert ck.capability == "wp-cli-core-checksum" and ck.state.value == "unavailable"

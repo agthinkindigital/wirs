@@ -20,6 +20,7 @@ from wirs.domain.errors import (
 )
 from wirs.domain.integrity import FileIntegrity
 from wirs.infrastructure.command_runner import CommandResult, CommandRunner
+from wirs.ports.checksum import ComponentIntegrity
 from wirs.providers.wpcli import WpCliDoctor
 
 PROVIDER_ID = "wp-cli-core-checksum"
@@ -230,3 +231,74 @@ def verify_plugin_checksums(
         plugins=parsed.plugins,
         unverified_plugins=parsed.unverified_plugins,
     )
+
+
+class WpCliCoreIntegrity:
+    """Adapter WP-CLI → seam IntegrityProvider (montado no CLI)."""
+
+    id = "wp-cli-core-checksum"
+
+    def __init__(
+        self,
+        *,
+        runner: CommandRunner | None = None,
+        wp_command: list[str] | None = None,
+        timeout_s: float = 60.0,
+    ) -> None:
+        self._runner = runner
+        self._wp_command = wp_command
+        self._timeout_s = timeout_s
+
+    def verify(self, target: Target) -> list[ComponentIntegrity]:
+        report = verify_core_checksum(
+            target, runner=self._runner, wp_command=self._wp_command, timeout_s=self._timeout_s
+        )
+        return [
+            ComponentIntegrity(
+                provider_id=report.provider_id,
+                provider_version=report.provider_version,
+                component="wordpress-core",
+                files=report.files,
+            )
+        ]
+
+
+class WpCliPluginIntegrity:
+    """Adapter WP-CLI → seam IntegrityProvider (montado no CLI)."""
+
+    id = "wp-cli-plugin-checksum"
+
+    def __init__(
+        self,
+        *,
+        runner: CommandRunner | None = None,
+        wp_command: list[str] | None = None,
+        timeout_s: float = 120.0,
+    ) -> None:
+        self._runner = runner
+        self._wp_command = wp_command
+        self._timeout_s = timeout_s
+
+    def verify(self, target: Target) -> list[ComponentIntegrity]:
+        report = verify_plugin_checksums(
+            target, runner=self._runner, wp_command=self._wp_command, timeout_s=self._timeout_s
+        )
+        out = [
+            ComponentIntegrity(
+                provider_id=report.provider_id,
+                provider_version=report.provider_version,
+                component=f"plugin:{result.slug}",
+                files=result.files,
+            )
+            for result in report.plugins
+        ]
+        out.extend(
+            ComponentIntegrity(
+                provider_id=report.provider_id,
+                provider_version=report.provider_version,
+                component=f"plugin:{slug}",
+                unverified=True,
+            )
+            for slug in report.unverified_plugins
+        )
+        return out

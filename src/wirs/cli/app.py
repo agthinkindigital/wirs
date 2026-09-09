@@ -22,9 +22,13 @@ from rich.table import Table
 
 from wirs import __version__
 from wirs.adapters.wordpress.discovery import WordPressAdapter
+from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
 from wirs.application.orchestrator import run_scan
-from wirs.domain import LocalDirectoryTarget, TargetError
-from wirs.infrastructure import LocalArtifactSource
+from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
+from wirs.domain import LocalDirectoryTarget, Severity, TargetError
+from wirs.infrastructure import ArtifactReader, LocalArtifactSource
+from wirs.infrastructure.reader import ReadBudget
+from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
 from wirs.reporting import CanonicalReport, render_report
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
@@ -71,14 +75,20 @@ def scan(
     target: Path = typer.Argument(..., help="Diretório local ou snapshot a analisar."),
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
     format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
+    fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
 ) -> None:
-    """Executa um scan read-only sobre o target (Fase A: inventory + report)."""
+    """Executa um scan read-only sobre o target (orquestrador v1)."""
     if profile not in PROFILE_BUDGETS:
         console.print(f"[red]Perfil inválido:[/red] {profile}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
     if format_ not in ("terminal", "json"):
         console.print(f"[red]Formato inválido:[/red] {format_}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
+    try:
+        threshold = Severity(fail_on)
+    except ValueError:
+        console.print(f"[red]fail-on inválido:[/red] {fail_on}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from None
     try:
         tgt = LocalDirectoryTarget(target)
     except TargetError as e:
@@ -87,25 +97,36 @@ def scan(
 
     kinds: Counter[str] = Counter()
     result = run_scan(
-        tgt, profile=profile, source=LocalArtifactSource(), adapters=[WordPressAdapter()]
+        tgt,
+        profile=profile,
+        source=LocalArtifactSource(),
+        adapters=[WordPressAdapter()],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
+        detectors=[IocDetector([]), PhpHeuristicsDetector(), UploadsExecutablePolicy()],
+        integrity=[WpCliCoreIntegrity(), WpCliPluginIntegrity()],
     )
     for artifact in result.artifacts:
         kinds[artifact.kind.value] += 1
-    (coverage,) = result.coverage
     report = CanonicalReport(
         scan_id=result.scan_id,
         target_root=result.target_root,
         profile=profile,
-        findings=(),
-        coverage=(coverage,),
-        note="Orquestrador v0: inventory + discovery + zones. Detecção na WIRS-117.",
+        findings=result.findings,
+        coverage=result.coverage,
+        note="Orquestrador v1: inventory + detection + checksum (degrade gracioso).",
     )
     if format_ == "json":
         console.print_json(report.to_json())
     else:
         _print_terminal(report, kinds)
-    # Pipeline incompleto por construção: detectores ainda não existem.
-    raise typer.Exit(code=ExitCode.INCOMPLETE)
+    order = ["info", "low", "medium", "high", "critical"]
+    worst = max([order.index(f.severity.value) for f in result.findings], default=-1)
+    raise typer.Exit(
+        code=ExitCode.FINDINGS_OVER_THRESHOLD
+        if worst >= order.index(threshold.value)
+        else ExitCode.OK
+    )
 
 
 def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
@@ -120,7 +141,6 @@ def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
         inventory.add_row(kind, str(kinds[kind]))
     console.print(inventory)
     render_report(report, console)
-    console.print("[yellow]Scan incompleto:[/yellow] detecção em construção (Fase A).")
 
 
 def main() -> None:

@@ -8,31 +8,24 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from collections.abc import Callable, Generator
 
 from wirs.domain import Artifact, ArtifactKind
 from wirs.domain.errors import BudgetExceeded, ReadCancelled, SecurityBoundaryError
+from wirs.ports.reader import ArtifactReader as ArtifactReaderPort
+from wirs.ports.reader import ReadBudget
+
+__all__ = ["ArtifactReader", "ReadBudget"]
 
 
-@dataclass(frozen=True)
-class ReadBudget:
-    max_bytes: int
-    chunk_size: int = 65536
-
-    def __post_init__(self) -> None:
-        if self.max_bytes <= 0 or self.chunk_size <= 0:
-            raise ValueError("budget precisa de max_bytes e chunk_size positivos")
-
-
-class ArtifactReader:
+class ArtifactReader(ArtifactReaderPort):
     def iter_chunks(
         self,
         artifact: Artifact,
         budget: ReadBudget,
         *,
         should_stop: Callable[[], bool] | None = None,
-    ) -> Iterator[bytes]:
+    ) -> Generator[bytes, None, None]:
         if artifact.kind is not ArtifactKind.FILE:
             raise SecurityBoundaryError(
                 f"leitura recusada para kind {artifact.kind.value}: {artifact.path.relative!r}"

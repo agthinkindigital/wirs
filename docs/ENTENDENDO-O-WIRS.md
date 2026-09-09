@@ -949,4 +949,49 @@ valida, delega, renderiza.
 
 **Verificar:** `src/wirs/application/orchestrator.py`,
 `src/wirs/ports/source.py`, `tests/integration/test_orchestrator.py` ·
-**Issue:** #42 (aberta).
+**Issue:** #42 (fechada).
+
+---
+
+## #43 — Ligando o produto: detectores e providers viram findings (WIRS-117)
+
+### O que é a detecção orquestrada e por que ela é uma seam, não uma lista
+
+Peças testadas não fazem produto: até aqui, IOC, policy, heurísticas e
+checksums existiam isolados e o scan não usava nenhum. A #43 liga tudo através
+de **duas seams em `ports/`** — `Detector` (internos: propõe findings sem
+evidence, orquestrador cunha e anexa a ref) e `IntegrityProvider` (externos:
+verifica por componente, orquestrador converte em findings + coverage). O
+orquestrador continua sem importar nada além de `domain` + `ports`: leitores,
+policies, heurísticas e WP-CLI entram por parâmetro, montados no CLI. E o
+`--fail-on` fecha o contrato operacional: exit 1 quando há finding na
+severidade pedida, 0 abaixo — CI consegue travar deploy em `HIGH+`.
+
+### Decisões de desenho
+
+- **Proposta sem ref, finding com ref**: o detector devolve `ProposedFinding`
+  (sem `evidence_refs`); o orquestrador cunha a Evidence (com redaction nos
+  contextos!) e anexa. Isso exigiu mudar `analyze_php` para devolver propostas
+  — refactor guiado pela invariante 2, com os testes da #39 verdes o tempo
+  todo. Invariante que quebra refactor revela onde o desenho estava devendo.
+- **IOCs viajam dentro do detector**: `IocDetector([iocs])` em vez de parâmetro
+  solto no `run_scan` — a lista de indicadores é configuração do detector,
+  não do pipeline. CLI ainda sem flag `--ioc` (config file é WIRS-111).
+- **Checksum degradando de verdade**: sem `wp` neste host, o scan real mostra
+  `wp-cli-core-checksum: unavailable` e continua — ADR-010 exercido de ponta
+  a ponta, não só em teste fake. Quando roda, MISMATCH→CRITICAL com
+  provenance do provider (o escape explícito da invariante, feito para isso).
+- **Redaction mora no domain agora**: `application` não podia importar de
+  `reporting` (camada errada), então o primitivo mudou para
+  `wirs.domain.redaction` com re-export compatível. Segurança como vocabulário
+  do domínio, não detalhe de view.
+- **Agregação por (artifact, IOC)**: um finding por indicador por arquivo, com
+  count e offsets — 250 matches não viram 250 findings.
+- **Generators no protocolo**: `iter_chunks` tipado como `Generator` (não
+  `Iterator`) para fechar handle em leitura parcial sem `contextlib` — vazamento
+  de FD em scan de 100 mil arquivos seria o bug silencioso do ano.
+
+**Verificar:** `src/wirs/application/orchestrator.py`,
+`src/wirs/ports/detection.py`, `src/wirs/ports/checksum.py`,
+`src/wirs/ports/reader.py`, `src/wirs/domain/redaction.py`,
+`tests/integration/test_orchestrator.py` · **Issue:** #43 (aberta).
