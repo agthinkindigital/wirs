@@ -994,4 +994,4 @@ severidade pedida, 0 abaixo — CI consegue travar deploy em `HIGH+`.
 **Verificar:** `src/wirs/application/orchestrator.py`,
 `src/wirs/ports/detection.py`, `src/wirs/ports/checksum.py`,
 `src/wirs/ports/reader.py`, `src/wirs/domain/redaction.py`,
-`tests/integration/test_orchestrator.py` · **Issue:** #43 (aberta).
+`tests/integration/test_orchestrator.py` · **Issue:** #43 (fechada).

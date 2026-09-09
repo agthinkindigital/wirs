@@ -34,7 +34,7 @@
 - [x] Roadmap com links diretos Epic→Issue
 
 DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado, Fase B em `main`).
-Orquestrador: #42 (done) → #43.
+Orquestrador: #42 (done) → #43 (done). Próximo: FT-4 (E04) ou polimento 0.1.0.
 
 ## Merge Fase B (2026-09-09)
 
