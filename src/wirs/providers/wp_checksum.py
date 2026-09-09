@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from wirs.adapters.wordpress.zones import OFFICIAL_ROOT_FILES
 from wirs.domain import IntegrityState, Target
 from wirs.domain.errors import (
     ProviderExecutionError,
@@ -281,12 +282,17 @@ class WpCliCoreIntegrity:
         report = verify_core_checksum(
             target, runner=self._runner, wp_command=self._wp_command, timeout_s=self._timeout_s
         )
+        covers: tuple[str, ...] = ()
+        if report.success:
+            # Sucesso = core inteiro verificado: baseline confiável absolve.
+            covers = ("wp-admin/", "wp-includes/", *sorted(OFFICIAL_ROOT_FILES))
         return [
             ComponentIntegrity(
                 provider_id=report.provider_id,
                 provider_version=report.provider_version,
                 component="wordpress-core",
                 files=report.files,
+                covers=covers,
             )
         ]
 
@@ -317,6 +323,7 @@ class WpCliPluginIntegrity:
                 provider_version=report.provider_version,
                 component=f"plugin:{result.slug}",
                 files=result.files,
+                covers=(f"wp-content/plugins/{result.slug}/",) if result.success else (),
             )
             for result in report.plugins
         ]

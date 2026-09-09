@@ -120,11 +120,16 @@ def _detect_file(
     return evidences, findings
 
 
+def _covered(relative: str, prefixes: tuple[str, ...]) -> bool:
+    return any(relative == p.rstrip("/") or relative.startswith(p) for p in prefixes)
+
+
 def _integrity_phase(
     target: Target, providers: Sequence[IntegrityProvider]
-) -> tuple[list[Finding], list[CoverageEntry]]:
+) -> tuple[list[Finding], list[CoverageEntry], tuple[str, ...]]:
     findings: list[Finding] = []
     coverage: list[CoverageEntry] = []
+    covered: list[str] = []
     for provider in providers:
         try:
             components = provider.verify(target)
@@ -137,6 +142,7 @@ def _integrity_phase(
             coverage.append(CoverageEntry(capability=provider.id, state=state, note=str(e)[:200]))
             continue
         for component in components:
+            covered.extend(component.covers)
             if component.unverified:
                 coverage.append(
                     CoverageEntry(
@@ -170,7 +176,7 @@ def _integrity_phase(
                         },
                     )
                 )
-    return findings, coverage
+    return findings, coverage, tuple(covered)
 
 
 def run_scan(
@@ -207,12 +213,18 @@ def run_scan(
         for artifact in artifacts:
             zones[artifact.id] = adapter.classify(artifact.path.relative)
 
+    # Integridade ANTES da detecção: baseline confiável absolve (WIRS-053).
+    ck_findings, ck_coverage, covered = _integrity_phase(target, integrity)
     all_evidence: list[Evidence] = []
-    all_findings: list[Finding] = []
+    all_findings: list[Finding] = list(ck_findings)
+    suppressed = 0
     want_stream = any(d.wants_stream for d in detectors)
     if reader is not None and budget is not None and detectors:
         for artifact in artifacts:
             if artifact.kind is not ArtifactKind.FILE:
+                continue
+            if _covered(artifact.path.relative, covered):
+                suppressed += 1
                 continue
             try:
                 head = _read_head(reader, artifact, budget, head_bytes)
@@ -231,10 +243,8 @@ def run_scan(
             except (OSError, BudgetExceeded):
                 gaps += 1
 
-    ck_findings, ck_coverage = _integrity_phase(target, integrity)
-    all_findings.extend(ck_findings)
-
     verified = len(artifacts)
+    fs_note = f"{suppressed} suprimido(s) por baseline confiável" if suppressed else ""
     coverage = (
         CoverageEntry(
             capability="filesystem",
@@ -242,6 +252,7 @@ def run_scan(
             applicable_checks=verified + gaps,
             verified=verified,
             failed=gaps,
+            note=fs_note,
         ),
         *ck_coverage,
     )

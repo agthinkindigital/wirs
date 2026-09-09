@@ -19,6 +19,9 @@ class ComponentIntegrity:
     component: str
     files: tuple[FileIntegrity, ...] = ()
     unverified: bool = False
+    # Prefixos relativos cobertos quando VERIFICADO (baseline confiável absolve:
+    # heurísticas não acusam o que o upstream já absolveu). Vazio = desconhecido.
+    covers: tuple[str, ...] = ()
 
 
 @runtime_checkable

@@ -171,3 +171,40 @@ def test_checksum_ausente_degrada_e_scan_continua(tmp_path) -> None:
     (fs, ck) = result.coverage
     assert fs.state.value == "complete"
     assert ck.capability == "wp-cli-core-checksum" and ck.state.value == "unavailable"
+
+
+def test_verificado_por_baseline_suprime_heuristicas(tmp_path) -> None:
+    from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
+    from wirs.detectors.builtin import PhpHeuristicsDetector
+    from wirs.ports.checksum import ComponentIntegrity
+
+    (tmp_path / "wp-includes").mkdir()
+    (tmp_path / "wp-includes" / "ok.php").write_bytes(b"<?php system($x);")
+
+    class CoreOk:
+        id = "fake-baseline"
+
+        def verify(self, target):
+            return [
+                ComponentIntegrity(
+                    provider_id="fake-baseline",
+                    provider_version="1",
+                    component="wordpress-core",
+                    covers=("wp-includes/"),
+                )
+            ]
+
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[PhpHeuristicsDetector(), UploadsExecutablePolicy()],
+        integrity=[CoreOk()],
+    )
+
+    assert result.findings == ()  # baseline confiável absolveu
+    (fs,) = [c for c in result.coverage if c.capability == "filesystem"]
+    assert "1 suprimido" in fs.note
