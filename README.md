@@ -18,6 +18,11 @@ Se esse problema já te custou uma madrugada, dá uma estrela para acompanhar �
 e se manja de Python, PHP ou forense web, as [issues](https://github.com/agthinkindigital/wirs/issues)
 estão abertas para contribuir.
 
+> [![APRENDENDO SOBRE O WIRS](https://img.shields.io/badge/APRENDENDO_SOBRE_O_WIRS-conceitos_e_decisões-21759B?style=for-the-badge)](docs/ENTENDENDO-O-WIRS.md)
+>
+> Começando agora? Esse documento explica cada peça do sistema na linguagem
+> das revisões — o que é, por que existe e que decisões a moldaram.
+
 ## O que ele faz
 
 - Aponta **quais arquivos diferem de uma origem confiável** (checksums oficiais do core e plugins via WP-CLI, baselines do operador para temas/plugins premium).

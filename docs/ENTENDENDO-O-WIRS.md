@@ -460,3 +460,43 @@ code concorda.
 
 **Verificar:** `src/wirs/cli/app.py`, `tests/integration/test_scan.py` ·
 **Issue:** #29 (fechada).
+
+---
+
+## #30 — Discovery: provando que é WordPress sem acreditar em nome (WIRS-060)
+
+### O que é o discovery e por que combinação de sinais, não nome de pasta
+
+O FT-2 é o primeiro contato do motor genérico com o mundo real — e a primeira
+pergunta é "isto é mesmo um WordPress?". Responder "tem `wp-content`, logo é"
+seria o falso positivo inaugural do produto: qualquer backup, tema solto ou
+diretório com nome famoso enganaria o scanner. O discovery exige **combinação
+de sinais** (`wp-includes/version.php` como arquivo, `wp-admin/` e
+`wp-content/` como diretórios, `wp-config.php` como arquivo): no mínimo 2 dos
+4 precisam existir *com o tipo certo*. E tudo **sem banco e sem ler conteúdo
+nenhum** — só `lstat`, que nunca segue symlink e nunca abre arquivo.
+
+### Decisões de desenho
+
+- **Limiar 2 de 4, pinado em teste**: 1 sinal nunca decide (o teste prova com
+  `wp-content` solitário); 2 sinais disparam. O próprio TDD calibrou o limiar:
+  meu caso inicial achava que `wp-content` + `wp-config.php` era "1 sinal",
+  e o teste me corrigiu — são 2, e o limiar fez sentido exatamente ali.
+- **Tipo importa, não só existência**: `wp-config.php` precisa ser *arquivo*,
+  `wp-admin` precisa ser *diretório* — e symlink com nome famoso não conta
+  (rejeitado no `lstat`). Nome sem tipo é fantasia.
+- **Sem leitura de conteúdo**: descobrir não abre `version.php` — extrair
+  versão com segurança é outra slice (WIRS-062, Fase D). Aqui, existir basta;
+  interpretar vem depois.
+- **Protocolo antes da implementação**: `PlatformAdapter` (runtime_checkable)
+  + `PlatformDiscovery` moram em `ports/` — o contrato que Laravel, Joomla e
+  PHP genérico vão implementar sem tocar no core. O teste asserta
+  `isinstance(adapter, PlatformAdapter)`: conformidade executável, não
+  documentada.
+- **Versão fica `None` de propósito**: preencher versão agora seria ou
+  executar PHP (proibido) ou ler arquivo no adapter (papel do reader). Ausência
+  honesta até a slice certa.
+
+**Verificar:** `src/wirs/ports/platform.py`,
+`src/wirs/adapters/wordpress/discovery.py`,
+`tests/unit/test_wordpress_discovery.py` · **Issue:** #30 (aberta).
