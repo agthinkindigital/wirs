@@ -1001,6 +1001,53 @@ severidade pedida, 0 abaixo — CI consegue travar deploy em `HIGH+`.
 
 ---
 
+## #45 — Absolver por arquivo, não por exame (WIRS-053)
+
+### O que é a supressão por baseline e por que tudo-ou-nada quebra
+
+A primeira versão absolvia o core inteiro só quando o checksum saía limpo —
+e um único arquivo adulterado "desabsolvia" 3 mil inocentes, que voltavam a
+receber ~200 findings heurísticos. Num site real comprometido, o relatório
+afogava o verdadeiro positivo (o MISMATCH) em ruído. A correção: o provider
+declara o **escopo verificado** (`covers`), e o orquestrador suprime detecção
+só fora da lista de **divergentes** — o arquivo adulterado continua
+escrutinado (a correlação DX001 precisa do mismatch + heurística no *mesmo*
+artefato), os demais, absolvidos.
+
+### Decisões de desenho
+
+- **Escopo, não sucesso**: `covers` é preenchido em toda run completa, com ou
+  sem divergências — o que muda é só a lista de divergentes, sempre
+  escrutinados.
+- **Sem plugins, sem subprocess**: sem subdirs em `wp-content/plugins`, o
+  provider retorna vazio sem executar nada — num WP sem wp-config, some o
+  FAILED barulhento e o relatório respira.
+- **Contagem visível**: `"3338 suprimido(s) por baseline confiável"` na entry
+  do filesystem — supressão silenciosa seria outro falso negativo em potencial.
+
+**Verificar:** `src/wirs/ports/checksum.py`, `src/wirs/application/orchestrator.py`,
+`tests/integration/test_orchestrator.py` · **Issue:** #45 (fechada).
+
+---
+
+## #46 — Caminho resolvido: o Windows não adivinha extensão (WIRS-119)
+
+### O que quebrou e por que duas camadas
+
+Na sessão real, o checksum marcava `UNAVAILABLE` com `wp` visível no PATH. A
+causa tinha duas metades: o doctor *achava* via `which` mas *executava* o nome
+nu — e `CreateProcess` não resolve `.cmd` sem shell. E mesmo com caminho
+absoluto, `.cmd` não executa direto. Correção nas duas camadas: doctor executa
+o resolvido; `CommandRunner` prefixa `cmd.exe /d /c` para `.cmd`/`.bat`
+(`shell=False` e argv em lista mantidos, `/d` ignora AutoRun). Descoberto
+porque a sessão testou de verdade em vez de acreditar no fake.
+
+**Verificar:** `src/wirs/infrastructure/command_runner.py`,
+`src/wirs/providers/wpcli.py`, `tests/unit/test_wpcli_doctor.py` ·
+**Issue:** #46 (aberta).
+
+---
+
 ## #44 — IOCs do operador: a última peça do 0.1.0 (WIRS-118)
 
 ### O que é a flag e por que o scanner estava mudo sem ela

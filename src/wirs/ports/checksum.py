@@ -19,8 +19,9 @@ class ComponentIntegrity:
     component: str
     files: tuple[FileIntegrity, ...] = ()
     unverified: bool = False
-    # Prefixos relativos cobertos quando VERIFICADO (baseline confiável absolve:
-    # heurísticas não acusam o que o upstream já absolveu). Vazio = desconhecido.
+    # Prefixos relativos que o provider VERIFICOU nesta run (baseline confiável
+    # absolve). Inclui paths verificados mesmo quando outros divergiram: só os
+    # divergentes (em `files`) continuam sujeitos a detecção (correlação DX001).
     covers: tuple[str, ...] = ()
 
 

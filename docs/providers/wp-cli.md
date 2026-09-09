@@ -42,3 +42,6 @@
   Fallback nativo com manifests oficiais é pós-MVP.
 - **Riscos:** stderr/stdout podem conter paths do alvo (tratados como dados
   hostis, cap de output, sem interpolação em shell).
+- **Windows:** shims `.cmd`/`.bat` não executam via CreateProcess direto — o
+  CommandRunner prefixa `cmd.exe /d /c` com argv em lista (`shell=False`
+  mantido) e o doctor executa o caminho resolvido, nunca o nome nu.

@@ -126,7 +126,7 @@ def _covered(relative: str, prefixes: tuple[str, ...]) -> bool:
 
 def _integrity_phase(
     target: Target, providers: Sequence[IntegrityProvider]
-) -> tuple[list[Finding], list[CoverageEntry], tuple[str, ...]]:
+) -> tuple[list[Finding], list[CoverageEntry], tuple[str, ...], tuple[str, ...]]:
     findings: list[Finding] = []
     coverage: list[CoverageEntry] = []
     covered: list[str] = []
@@ -176,7 +176,8 @@ def _integrity_phase(
                         },
                     )
                 )
-    return findings, coverage, tuple(covered)
+    diverged = [f.attributes["path"] for f in findings if "path" in f.attributes]
+    return findings, coverage, tuple(covered), tuple(diverged)
 
 
 def run_scan(
@@ -214,7 +215,8 @@ def run_scan(
             zones[artifact.id] = adapter.classify(artifact.path.relative)
 
     # Integridade ANTES da detecção: baseline confiável absolve (WIRS-053).
-    ck_findings, ck_coverage, covered = _integrity_phase(target, integrity)
+    # Divergentes continuam escaneados (correlação DX001 precisa dos dois lados).
+    ck_findings, ck_coverage, covered, diverged = _integrity_phase(target, integrity)
     all_evidence: list[Evidence] = []
     all_findings: list[Finding] = list(ck_findings)
     suppressed = 0
@@ -223,7 +225,7 @@ def run_scan(
         for artifact in artifacts:
             if artifact.kind is not ArtifactKind.FILE:
                 continue
-            if _covered(artifact.path.relative, covered):
+            if _covered(artifact.path.relative, covered) and artifact.path.relative not in diverged:
                 suppressed += 1
                 continue
             try:

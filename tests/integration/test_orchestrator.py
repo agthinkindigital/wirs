@@ -208,3 +208,52 @@ def test_verificado_por_baseline_suprime_heuristicas(tmp_path) -> None:
     assert result.findings == ()  # baseline confiável absolveu
     (fs,) = [c for c in result.coverage if c.capability == "filesystem"]
     assert "1 suprimido" in fs.note
+
+
+def test_divergente_continua_escrutinado(tmp_path) -> None:
+    from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
+    from wirs.detectors.builtin import PhpHeuristicsDetector
+    from wirs.domain import FileIntegrity, IntegrityState
+    from wirs.ports.checksum import ComponentIntegrity
+
+    (tmp_path / "wp-includes").mkdir()
+    (tmp_path / "wp-includes" / "ok.php").write_bytes(b"<?php // limpo")
+    (tmp_path / "wp-includes" / "bad.php").write_bytes(b"<?php system($x);")
+
+    class CoreParcial:
+        id = "fake-baseline"
+
+        def verify(self, target):
+            return [
+                ComponentIntegrity(
+                    provider_id="fake-baseline",
+                    provider_version="1",
+                    component="wordpress-core",
+                    files=(
+                        FileIntegrity(path="wp-includes/bad.php", state=IntegrityState.MISMATCH),
+                    ),
+                    covers=("wp-includes/",),
+                )
+            ]
+
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[PhpHeuristicsDetector(), UploadsExecutablePolicy()],
+        integrity=[CoreParcial()],
+    )
+
+    rules = {f.rule_id for f in result.findings}
+    assert "WP.CORE.HASH_MISMATCH" in rules  # integridade viu
+    assert "PHP.HEUR.SINGLE" in rules  # heurística no divergente (DX001 precisa dos dois)
+    refs = {
+        a.path.relative
+        for a in result.artifacts
+        for f in result.findings
+        if f.artifact_ref == a.id and f.rule_id.startswith("PHP.")
+    }
+    assert refs == {"wp-includes/bad.php"}  # ok.php absolvido, sem heurística
