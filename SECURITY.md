@@ -28,6 +28,17 @@ Não commitar malware executável real. Fixtures usam amostras sintéticas e
 inertes que representam técnicas sem risco de execução. Corpus malicioso real,
 se um dia necessário, fica em repositório privado/controlado separado.
 
+### Regra anti-antivírus (aprendida na #37)
+
+Até *strings de teste* podem sumir: o Windows Defender quarantinou um arquivo
+de teste que continha `eval($_GET...` contíguo. Por isso, nenhum arquivo do
+repo — fixture, teste ou doc — pode conter assinatura viva de webshell/malware
+em sequência contígua. Fragmentar literais na fonte (`"ev" + "al("`, nunca
+`"eval("`), com comentário `NOTA ANTI-AV` explicando. Vale também para o
+formatador: nada de concatenação implícita que o `ruff format` juntaria de
+volta — usar `+` explícito. Amostra que o AV come é teste que "passa" sem
+existir.
+
 ## Reporte de vulnerabilidades
 
 Abra uma GitHub Issue com label `type:security` ou contate o mantenedor em

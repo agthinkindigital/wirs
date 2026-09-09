@@ -18,6 +18,11 @@ Se esse problema já te custou uma madrugada, dá uma estrela para acompanhar �
 e se manja de Python, PHP ou forense web, as [issues](https://github.com/agthinkindigital/wirs/issues)
 estão abertas para contribuir.
 
+> [![APRENDENDO SOBRE O WIRS](https://img.shields.io/badge/APRENDENDO_SOBRE_O_WIRS-conceitos_e_decisões-21759B?style=for-the-badge)](docs/ENTENDENDO-O-WIRS.md)
+>
+> Começando agora? Esse documento explica cada peça do sistema na linguagem
+> das revisões — o que é, por que existe e que decisões a moldaram.
+
 ## O que ele faz
 
 - Aponta **quais arquivos diferem de uma origem confiável** (checksums oficiais do core e plugins via WP-CLI, baselines do operador para temas/plugins premium).
@@ -63,9 +68,12 @@ INFO      14                     Database             NOT RUN
 
 ## Status do projeto
 
-Estamos na **Fase A — Skeleton**: fundação do motor genérico (target, artifact,
-evidence, finding, coverage, inventory seguro, JSON). O primeiro slice
-operacional com WordPress (Fase B — `0.1.0`) vem a seguir. Acompanhe pelo
+Fase A (núcleo seguro) e as slices da **Fase B** estão em `main`: discovery
+WordPress, zonas, doctor e providers de checksum via WP-CLI, IOC + scanner em
+streaming, hints compartilhados, heurísticas PHP v0, terminal e JSON canônico,
+redaction — tudo com testes e cobertura honesta. Falta para o `0.1.0`
+operacional: plugar providers e detectores no `scan` (orquestrador), profile
+`soft` formal e E2E com WordPress real. Acompanhe pelo
 [roadmap](ORCHESTRATOR-ROADMAP.md) e pela [especificação viva](WIRS_MASTER_SPEC_PT-BR.md)
 (em português).
 

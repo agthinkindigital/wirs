@@ -29,18 +29,25 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 - [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `todo`
 
   Manifest schema, comparator, `baseline create`, ZIP baseline, trust explícito.
+  Refresh automatizado de manifests upstream (ex.: checksums do WordPress.org
+  por versão, com provenance e cache offline) + zonas derivadas do manifest
+  em vez de listas manuais.
   Issues: WIRS-040–WIRS-046. (Fase C)
 
-- [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `todo`
+- [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `in_progress`
 
   IOC schema, literal scanner, regex, zone policy engine, executable detector,
   PHP heuristics v0, entropy, rule metadata.
+  Slices FT-3: #36 (WIRS-050), #37 (WIRS-051), #38 (WIRS-054), #39 (WIRS-055).
+  Restante (WIRS-052, 056, 057, 058): fatiar na Fase C.
   Issues: WIRS-050–WIRS-058. (Fase B)
 
-- [**[E06] WordPress Adapter**](https://github.com/agthinkindigital/wirs/issues/7) - `todo`
+- [**[E06] WordPress Adapter**](https://github.com/agthinkindigital/wirs/issues/7) - `in_progress`
 
   Discovery, zones, versão/locale, doctor, core/plugin checksum providers,
   premium baseline, MU-plugins, upload policy, config collector.
+  Slices FT-2: #30 (WIRS-060), #31 (WIRS-061), #32 (WIRS-063), #33 (WIRS-064),
+  #34 (WIRS-065), #35 (WIRS-068). Restante (WIRS-062, 066, 067, 069–073): fatiar na Fase D.
   Issues: WIRS-060–WIRS-069. (Fase B)
 
 - [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `todo`
@@ -53,6 +60,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   JSON canônico, terminal Rich, redaction, Markdown, atomic writer, HTML
   skeleton com design tokens (ref. OWASP ZAP melhorado), SARIF (futuro).
   Views com lista de findings com cap + paginação e contadores ao vivo.
+  Assets de demonstração (prints/GIF de runs reais) para o README quando houver
+  detecção operando.
   Slices: #28 (WIRS-090). (Fase A/B/C)
 
 - [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`

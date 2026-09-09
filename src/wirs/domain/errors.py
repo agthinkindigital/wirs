@@ -23,3 +23,23 @@ class BudgetExceeded(WirsError):
 
 class ReadCancelled(WirsError):
     """Leitura interrompida por cancelamento cooperativo."""
+
+
+class ProviderError(WirsError):
+    """Falha de provider externo (vira Coverage, nunca aborta o scan)."""
+
+
+class ProviderUnavailable(ProviderError):
+    """Capability não disponível no ambiente."""
+
+
+class ProviderTimeout(ProviderError):
+    """Provider excedeu o timeout (processo encerrado)."""
+
+
+class ProviderInvalidOutput(ProviderError):
+    """Output do provider fora do contrato documentado."""
+
+
+class ProviderExecutionError(ProviderError):
+    """Provider falhou sem output aproveitável."""

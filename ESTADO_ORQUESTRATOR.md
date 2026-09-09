@@ -33,7 +33,40 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual (ordem de dependência): FT-1 completo — #17→#18→#19→#20→#21→#22→#23→#24→#25→#26→#27→#28→#29 (todas done).
+DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado em cada DAG). Fase B
+(slices) publicada em `main` — ver "Merge Fase B" abaixo. Próximo: FT-4
+(E04, operator baselines) ou fatiar o orquestrador do scan.
+
+## Merge Fase B (2026-09-09)
+
+FT-1 (13 slices) + FT-2 (6) + FT-3 (6) em `main`: núcleo seguro, integridade
+WordPress via WP-CLI, detecção (IOC/heurísticas/policy) e relatórios humanos.
+Ainda fora do `scan` (sem orquestrador): providers e detectores rodam isolados;
+profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
+
+## QA da DAG FT-3 (2026-09-09, APROVADA com ressalvas)
+
+- Suite: 119 passed, 4 skipped (symlink/fifo/wp-cli ausentes neste Windows; rodam no CI Linux).
+- Ruff check + format + mypy strict + guardas: limpos.
+- Cadeia E2E sobre fixture heuristics/chain.php: IOC achado (1x),
+  heurística PHP.HEUR.CHAIN/high, hints text+executable — três detectores
+  concordando sobre o mesmo arquivo.
+- Aceites das 6 slices conferidos um a um (evidências nos comentários).
+- Ressalvas: (1) detectores ainda não plugados no `scan` (orquestrador é
+  FT-4); (2) contratos JSON de plugins assumidos; (3) QA formal de Epic fica
+  para a Fase B.
+
+## QA da DAG FT-2 (2026-09-09, APROVADA com ressalvas)
+
+- Suite: 96 passed, 4 skipped (symlink/fifo/wp-cli ausentes neste Windows; rodam no CI Linux).
+- Ruff check + format + mypy strict + guardas: limpos.
+- Cadeia E2E sobre fixture uploads_php: discovery=None (correto — fixture não
+  é install completo, anti-falso-positivo funciona) + policy gera
+  WP.UPLOAD.EXECUTABLE/high no evil.php e nada no jpg/plugin.
+- Aceites das 6 slices conferidos um a um (evidências nos comentários).
+- Ressalvas: (1) contratos JSON de plugins assumidos — integração real pendente
+  de ambiente com WP-CLI; (2) providers ainda não plugados no `scan`
+  (orquestrador é FT-3); (3) QA formal de Epic fica para a Fase B.
 
 ## QA da DAG FT-1 (2026-09-09, APROVADA com ressalvas)
 

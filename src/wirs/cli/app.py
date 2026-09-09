@@ -30,7 +30,7 @@ from wirs.domain import (
     TargetError,
 )
 from wirs.infrastructure import InventoryGap, LocalArtifactSource
-from wirs.reporting import CanonicalReport
+from wirs.reporting import CanonicalReport, render_report
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
 PROFILE_BUDGETS = {"soft": 64 << 20, "balanced": 256 << 20, "fast": 1 << 30}
@@ -127,22 +127,13 @@ def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
         f"[bold]wirs[/bold] {__version__} · Target: {report.target_root} "
         f"· Profile: {report.profile} · Mode: read-only"
     )
-    summary = Table(title="Inventory")
-    summary.add_column("Kind")
-    summary.add_column("Count", justify="right")
+    inventory = Table(title="Inventory")
+    inventory.add_column("Kind")
+    inventory.add_column("Count", justify="right")
     for kind in sorted(kinds):
-        summary.add_row(kind, str(kinds[kind]))
-    console.print(summary)
-    cov_table = Table(title="Coverage")
-    cov_table.add_column("Capability")
-    cov_table.add_column("State")
-    cov_table.add_column("Verified", justify="right")
-    cov_table.add_column("Failed", justify="right")
-    for entry in report.coverage:
-        cov_table.add_row(
-            entry.capability, entry.state.value, str(entry.verified), str(entry.failed)
-        )
-    console.print(cov_table)
+        inventory.add_row(kind, str(kinds[kind]))
+    console.print(inventory)
+    render_report(report, console)
     console.print("[yellow]Scan incompleto:[/yellow] detecção em construção (Fase A).")
 
 
