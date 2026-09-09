@@ -37,10 +37,12 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   PHP heuristics v0, entropy, rule metadata.
   Issues: WIRS-050–WIRS-058. (Fase B)
 
-- [**[E06] WordPress Adapter**](https://github.com/agthinkindigital/wirs/issues/7) - `todo`
+- [**[E06] WordPress Adapter**](https://github.com/agthinkindigital/wirs/issues/7) - `in_progress`
 
   Discovery, zones, versão/locale, doctor, core/plugin checksum providers,
   premium baseline, MU-plugins, upload policy, config collector.
+  Slices FT-2: #30 (WIRS-060), #31 (WIRS-061), #32 (WIRS-063), #33 (WIRS-064),
+  #34 (WIRS-065), #35 (WIRS-068). Restante (WIRS-062, 066, 067, 069–073): fatiar na Fase D.
   Issues: WIRS-060–WIRS-069. (Fase B)
 
 - [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `todo`
