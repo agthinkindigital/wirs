@@ -34,10 +34,12 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   em vez de listas manuais.
   Issues: WIRS-040–WIRS-046. (Fase C)
 
-- [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `todo`
+- [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `in_progress`
 
   IOC schema, literal scanner, regex, zone policy engine, executable detector,
   PHP heuristics v0, entropy, rule metadata.
+  Slices FT-3: #36 (WIRS-050), #37 (WIRS-051), #38 (WIRS-054), #39 (WIRS-055).
+  Restante (WIRS-052, 056, 057, 058): fatiar na Fase C.
   Issues: WIRS-050–WIRS-058. (Fase B)
 
 - [**[E06] WordPress Adapter**](https://github.com/agthinkindigital/wirs/issues/7) - `in_progress`
