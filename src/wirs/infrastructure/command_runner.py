@@ -7,6 +7,7 @@ chegam no endurecimento (WIRS-122) — a interface já é a final.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
 from collections.abc import Sequence
@@ -23,6 +24,23 @@ class CommandResult:
     truncated: bool = False
 
 
+_SCRIPT_EXTENSIONS = (".cmd", ".bat")
+
+
+def windows_shell_prefix(argv: Sequence[str]) -> list[str]:
+    """No Windows, .cmd/.bat não executam via CreateProcess: prefixa cmd explícito.
+
+    Continua `shell=False` com argv em lista (sem interpolação nossa); o
+    `list2cmdline` do subprocess cita cada argumento. `/d` ignora AutoRun.
+    """
+    args = [str(a) for a in argv]
+    if not args:
+        return args
+    if os.name == "nt" and args[0].lower().endswith(_SCRIPT_EXTENSIONS):
+        return ["cmd.exe", "/d", "/c", *args]
+    return args
+
+
 class CommandRunner:
     def run(
         self,
@@ -31,7 +49,7 @@ class CommandRunner:
         timeout_s: float = 30.0,
         max_bytes: int = 1 << 20,
     ) -> CommandResult:
-        args = [str(a) for a in argv]
+        args = windows_shell_prefix(argv)
         if not args:
             raise ValueError("argv vazio")
         start = time.monotonic()

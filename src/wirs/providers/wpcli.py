@@ -37,7 +37,8 @@ class WpCliDoctor:
             return WpCliStatus(
                 available=False, path=None, version=None, error="wp não encontrado no PATH"
             )
-        result = self._runner.run([*cmd, "--version"], timeout_s=timeout_s)
+        # Executa o caminho RESOLVIDO (bare "wp" não resolve .cmd via CreateProcess).
+        result = self._runner.run([path, *cmd[1:], "--version"], timeout_s=timeout_s)
         if result.timed_out:
             return WpCliStatus(
                 available=False,

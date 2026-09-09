@@ -59,3 +59,28 @@ def test_command_runner_executa_e_mata_no_timeout() -> None:
 
     with __import__("pytest").raises(ValueError):
         runner.run([])
+
+
+def test_cmd_bat_precisam_de_shell_explicita() -> None:
+    import os
+
+    from wirs.infrastructure.command_runner import windows_shell_prefix
+
+    assert windows_shell_prefix(["wp"]) == ["wp"]
+    assert windows_shell_prefix(["php"]) == ["php"]
+    if os.name != "nt":
+        __import__("pytest").skip("só Windows tem .cmd")
+    assert windows_shell_prefix(["C:\\x\\wp.cmd"])[:3] == ["cmd.exe", "/d", "/c"]
+
+    probe = tmp_cmd("echo sessao-ok")
+    out = CommandRunner().run([probe], timeout_s=30.0)
+    assert out.returncode == 0 and "sessao-ok" in out.stdout
+
+
+def tmp_cmd(body: str) -> str:
+    import tempfile
+
+    fd, path = tempfile.mkstemp(suffix=".cmd", text=True)
+    with open(fd, "w", encoding="utf-8", newline="") as fh:
+        fh.write("@echo off\n" + body + "\n")
+    return path
