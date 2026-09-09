@@ -587,24 +587,25 @@ esperado. Ausência vira dado que o coverage consome; só o inesperado vira erro
 O WP-CLI já sabe verificar o core contra os checksums oficiais — reinventar
 isso seria vaidade. O trabalho do WIRS é outro: **executar com segurança,
 normalizar a saída para o modelo interno e registrar provenance**. O
-`verify_core_checksum` roda `verify-checksums --include-root --format=json
---path=<alvo>`, traduz a lista `[{file, message}]` para `FileIntegrity`
+`verify_core_checksum` roda `verify-checksums --include-root --path=<alvo>`,
+traduz as linhas `Warning: <msg>: <file>` para `FileIntegrity`
 (MATCH/MISMATCH/MISSING/UNEXPECTED) e devolve um `CoreChecksumReport` com
 provider, versão e sucesso. A aplicação nunca vê o formato do vendor — essa é
-a anti-corruption layer funcionando: se o WP-CLI mudar o JSON amanhã, quebra
+a anti-corruption layer funcionando: se o WP-CLI mudar a saída amanhã, quebra
 um parser isolado, não o motor.
 
 ### Decisões de desenho
 
-- **Contrato lido da doc oficial, não da memória**: a página do comando
-  confirmou hook `before_wp_load`, download de md5 por versão+locale e o
-  formato da lista — e o contrato ficou registrado em
-  `docs/providers/wp-cli.md` (exigência da DoD de provider). O que a doc não
-  dizia (stdout vazio no sucesso), foi tratado defensivamente.
-- **Exit != 0 é sinal, não erro**: o WP-CLI sai diferente de zero quando algo
-  diverge — com JSON parseável, o report sai normal. Só vira
-  `ProviderExecutionError` quando não há stdout aproveitável. Confundir
-  "encontrou divergência" com "ferramenta quebrou" seria o erro clássico aqui.
+- **Contrato validado contra binário real, não só contra doc**: a doc oficial
+  sugeria `--format=json` para o core — o WP-CLI 2.12.0 real **rejeita** a flag.
+  Descobrimos baixando o WordPress oficial, adulterando de propósito e rodando
+  de verdade: o core fala em linhas de texto no STDERR
+  (`Warning: <msg>: <file>`), stdout vazio, e foi esse formato que o parser
+  implementa. Doc sem validação é rumor com URL.
+- **Exit != 0 é sinal, não erro**: com linhas parseáveis, o report sai normal
+  mesmo com exit 1; sem warnings e com falha, é `ProviderExecutionError`
+  (quebrou antes de verificar, ex.: sem rede). Confundir "divergiu" com
+  "quebrou" seria o erro clássico aqui.
 - **Mensagem desconhecida = `ProviderInvalidOutput`, nunca chute**: classificar
   um aviso novo como benigno seria o falso negativo silencioso; recusar alto
   força atualização explícita do parser + coverage degradado. Segurança antes
@@ -640,15 +641,17 @@ doeu: o trabalho foi só o formato por plugin + o caso novo.
 
 ### Decisões de desenho
 
-- **Contrato assumido às claras**: a doc oficial não mostra o JSON de plugins,
-  então definimos `[{plugin, file?, message}]` (core + slug) e registramos
-  como ASSUMIDO em `docs/providers/wp-cli.md`, com integração real pendente.
-  Assunção documentada + parser estrito > adivinhação silenciosa.
+- **Contrato lido do fonte, não chutado**: a doc não mostrava o JSON de plugins,
+  então lemos o `Checksum_Plugin_Command.php` oficial: erros em
+  `[{plugin_name, file, message}]` (`'File was added'`,
+  `'Checksum does not match'`). E o achado maior: skips moram nos **warnings
+  do STDERR**, nunca no JSON — registrado em `docs/providers/wp-cli.md`.
+  Fonte lida + parser estrito é melhor que adivinhação silenciosa.
 - **Sem baseline = UNVERIFIED, nunca failure**: plugin fora do WordPress.org
-  (premium/custom) cai em `unverified_plugins` via mensagens de skip
-  tabeladas — visível no coverage, jamais confundido com erro de provider.
-  É a invariante 7 ("sem baseline não é malicioso") atravessando a fronteira
-  do vendor.
+  nunca aparece no JSON — só nos warnings (`Could not retrieve ... skipping`,
+  `main file is missing`, `custom file`). O parser extrai os slugs dali para
+  `unverified_plugins`: visível no coverage, jamais confundido com erro de
+  provider. É a invariante 7 atravessando a fronteira do vendor.
 - **Shape do core é rejeitado aqui**: entrada sem `plugin` vira
   `ProviderInvalidOutput` — cada comando tem seu contrato, e misturá-los
   seria corrupção de camada.
@@ -910,3 +913,117 @@ leitura sem que nenhum detector precise saber dos outros.
 
 **Verificar:** `src/wirs/detectors/content.py`,
 `tests/unit/test_content_hints.py` · **Issue:** #38 (fechada).
+
+---
+
+## #42 — Orquestrador: quem manda no scan sem conhecer ferramenta (WIRS-116)
+
+### O que é o orquestrador e por que o scan era um script linear
+
+Até aqui, o `wirs scan` fazia tudo inline: lia, contava, montava coverage.
+Funcionava, mas cada capacidade nova (detector, provider) teria que ser
+costurada no CLI — e o CLI passaria a conhecer filesystem, adapters e regras,
+virando o acoplamento que a arquitetura proíbe. O `run_scan` inverte isso: o
+**pipeline mora em `application/` e só conhece `domain` + `ports`**.
+Implementações concretas (filesystem, adapters WordPress) entram por
+parâmetro, montadas no CLI como composition root. O CLI voltou a ser magro:
+valida, delega, renderiza.
+
+### Decisões de desenho
+
+- **Dependência só para dentro, verificada por teste**: o guarda de arquitetura
+  ganhou um irmão que varre `application/` e só aceita `domain` + `ports`
+  (+ stdlib). Se alguém importar infrastructure no orquestrador, o build quebra.
+- **Fonte e adapters injetados, nunca importados**: `run_scan(target,
+  profile, source, adapters)` — sem defaults concretos (default seria importar
+  infra no módulo e furar o guarda). Fake source e adapter vazio nos testes
+  provam a seam sem filesystem.
+- **`classify` virou parte do protocolo**: `PlatformAdapter` ganhou o método
+  de zona (string no vocabulário do adapter), e o `WordPressAdapter` o
+  implementa delegando ao classifier da #31. Zones deixaram de ser função
+  solta e viraram capability de plataforma — Laravel fará o mesmo sem tocar
+  no orquestrador.
+- **ScanResult congela a passada**: artifacts, gaps, discovery, zones por ID,
+  coverage e findings (vazios até a #43). Entre CLI e relatório não trafega
+  mais lógica, só esse objeto.
+- **Corrigido de passagem**: o `classify` do adapter tinha entrado sem o
+  import (sobra de um turno ambíguo) — o teste novo quebrou na hora, como deve
+  ser, e a correção foi trivial porque a seam já existia.
+
+**Verificar:** `src/wirs/application/orchestrator.py`,
+`src/wirs/ports/source.py`, `tests/integration/test_orchestrator.py` ·
+**Issue:** #42 (fechada).
+
+---
+
+## #43 — Ligando o produto: detectores e providers viram findings (WIRS-117)
+
+### O que é a detecção orquestrada e por que ela é uma seam, não uma lista
+
+Peças testadas não fazem produto: até aqui, IOC, policy, heurísticas e
+checksums existiam isolados e o scan não usava nenhum. A #43 liga tudo através
+de **duas seams em `ports/`** — `Detector` (internos: propõe findings sem
+evidence, orquestrador cunha e anexa a ref) e `IntegrityProvider` (externos:
+verifica por componente, orquestrador converte em findings + coverage). O
+orquestrador continua sem importar nada além de `domain` + `ports`: leitores,
+policies, heurísticas e WP-CLI entram por parâmetro, montados no CLI. E o
+`--fail-on` fecha o contrato operacional: exit 1 quando há finding na
+severidade pedida, 0 abaixo — CI consegue travar deploy em `HIGH+`.
+
+### Decisões de desenho
+
+- **Proposta sem ref, finding com ref**: o detector devolve `ProposedFinding`
+  (sem `evidence_refs`); o orquestrador cunha a Evidence (com redaction nos
+  contextos!) e anexa. Isso exigiu mudar `analyze_php` para devolver propostas
+  — refactor guiado pela invariante 2, com os testes da #39 verdes o tempo
+  todo. Invariante que quebra refactor revela onde o desenho estava devendo.
+- **IOCs viajam dentro do detector**: `IocDetector([iocs])` em vez de parâmetro
+  solto no `run_scan` — a lista de indicadores é configuração do detector,
+  não do pipeline. CLI ainda sem flag `--ioc` (config file é WIRS-111).
+- **Checksum degradando de verdade**: sem `wp` neste host, o scan real mostra
+  `wp-cli-core-checksum: unavailable` e continua — ADR-010 exercido de ponta
+  a ponta, não só em teste fake. Quando roda, MISMATCH→CRITICAL com
+  provenance do provider (o escape explícito da invariante, feito para isso).
+- **Redaction mora no domain agora**: `application` não podia importar de
+  `reporting` (camada errada), então o primitivo mudou para
+  `wirs.domain.redaction` com re-export compatível. Segurança como vocabulário
+  do domínio, não detalhe de view.
+- **Agregação por (artifact, IOC)**: um finding por indicador por arquivo, com
+  count e offsets — 250 matches não viram 250 findings.
+- **Generators no protocolo**: `iter_chunks` tipado como `Generator` (não
+  `Iterator`) para fechar handle em leitura parcial sem `contextlib` — vazamento
+  de FD em scan de 100 mil arquivos seria o bug silencioso do ano.
+
+**Verificar:** `src/wirs/application/orchestrator.py`,
+`src/wirs/ports/detection.py`, `src/wirs/ports/checksum.py`,
+`src/wirs/ports/reader.py`, `src/wirs/domain/redaction.py`,
+`tests/integration/test_orchestrator.py` · **Issue:** #43 (fechada).
+
+---
+
+## #44 — IOCs do operador: a última peça do 0.1.0 (WIRS-118)
+
+### O que é a flag e por que o scanner estava mudo sem ela
+
+O motor de IOC existia desde a #37, mas o CLI não tinha como alimentá-lo: sem
+entrada, `IocDetector([])` casava zero — o detector mais testado do projeto
+nunca rodava de verdade. A flag `--ioc` fecha o circuito com um formato
+mínimo e legível (`kind:value` por linha, `#` comenta, vazias ignoram), o
+mesmo schema validado da #36. Linha malformada, kind desconhecido ou arquivo
+ilegível viram exit 2 com a linha culpada na mensagem — erro de operador se
+paga na hora, não com scan silenciosamente incompleto.
+
+### Decisões de desenho
+
+- **Loader no CLI, não no orquestrador**: ler arquivo do operador é
+  composition root; o orquestrador continua recebendo objetos prontos. Cada
+  camada lê o que lhe pertence (alvo vs. config do operador).
+- **Falha de config é exit 2, nunca gap**: IOC inválido não é "cobertura
+  parcial" — é argumento errado. Gaps são sobre o alvo; exit 2 é sobre você.
+- **O TDD pegou a semântica do threshold**: meu primeiro tracer esperava exit
+  1 para `IOC.MATCH`, mas ele é MEDIUM e o default é `high` — o teste me
+  lembrou que severidade e threshold são independentes (a lição da #24,
+  exercida). Com `--fail-on medium`, falha como esperado.
+
+**Verificar:** `src/wirs/cli/app.py` (`load_iocs_file`),
+`tests/integration/test_scan.py` · **Issue:** #44 (fechada).

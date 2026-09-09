@@ -1,10 +1,9 @@
 """Plugin checksum provider (WIRS-065).
 
-Contrato assumido (doc oficial não mostra o JSON de plugins): lista de
-{"plugin", "file"?, "message"} — mesma base do core + slug do componente.
-Mensagens de skip (sem baseline oficial) estão tabeladas em
-`UNVERIFIED_MARKERS`. Tudo a confirmar contra WP-CLI real (integração
-pendente); divergência vira ProviderInvalidOutput, nunca chute.
+Contrato REAL (fonte wp-cli/checksum-command, lido em 2026-09-09): erros em
+JSON `[{plugin_name, file, message}]` ('File was added', 'Checksum does not
+match'); plugins sem baseline viram WARNINGS no stderr ("Could not retrieve
+the ... skipping") — nunca failure. Ver docs/providers/wp-cli.md.
 """
 
 from __future__ import annotations
@@ -18,33 +17,41 @@ from wirs.providers.wpcli import WpCliDoctor
 
 
 class FakeRunner(CommandRunner):
-    def __init__(self, version_out: str, verify_out: str, verify_code: int = 1) -> None:
+    def __init__(self, version_out: str, stdout: str, stderr: str = "", code: int = 1) -> None:
         self._version_out = version_out
-        self._verify_out = verify_out
-        self._verify_code = verify_code
+        self._stdout = stdout
+        self._stderr = stderr
+        self._code = code
         self.calls: list[list[str]] = []
 
     def run(self, argv, *, timeout_s=60.0, max_bytes=1048576):  # type: ignore[override]
         self.calls.append(list(argv))
         if argv[-1] == "--version":
             return CommandResult(0, self._version_out, "", 120, False)
-        return CommandResult(self._verify_code, self._verify_out, "", 900, False)
+        return CommandResult(self._code, self._stdout, self._stderr, 900, False)
 
 
 FAKE_JSON = json.dumps(
     [
         {
-            "plugin": "akismet",
+            "plugin_name": "akismet",
             "file": "akismet/akismet.php",
-            "message": "File doesn't verify against checksum",
+            "message": "Checksum does not match",
         },
-        {"plugin": "meu-premium", "message": "Plugin not found on WordPress.org"},
+        {
+            "plugin_name": "akismet",
+            "file": "akismet/readme.txt",
+            "message": "File was added",
+        },
     ]
+)
+FAKE_STDERR = (
+    "Warning: Could not retrieve the checksums for version 1.0 of plugin meu-premium, skipping.\n"
 )
 
 
-def _run(tmp_path, out: str = FAKE_JSON):
-    runner = FakeRunner("WP-CLI 2.10.0\n", out)
+def _run(tmp_path, out: str = FAKE_JSON, err: str = FAKE_STDERR):
+    runner = FakeRunner("WP-CLI 2.12.0\n", out, err)
     return runner, verify_plugin_checksums(
         LocalDirectoryTarget(tmp_path),
         runner=runner,
@@ -59,12 +66,13 @@ def test_json_por_plugin_normalizado(tmp_path) -> None:
     assert report.provider_id == "wp-cli-plugin-checksum"
     akismet = next(p for p in report.plugins if p.slug == "akismet")
     assert akismet.files[0].state is IntegrityState.MISMATCH
+    assert akismet.files[1].state is IntegrityState.UNEXPECTED  # 'File was added'
     assert akismet.success is False
-    assert "meu-premium" in report.unverified_plugins  # sem baseline, nunca failure
+    assert "meu-premium" in report.unverified_plugins  # skip no stderr, nunca failure
     assert all(p.slug != "meu-premium" for p in report.plugins)
     argv = [c for c in runner.calls if "verify-checksums" in c][0]
     assert argv[1:4] == ["plugin", "verify-checksums", "--all"]
-    assert "--strict" in argv
+    assert "--strict" in argv and "--format=json" in argv
 
 
 def test_shape_do_core_rejeitado_e_falhas_propagadas(tmp_path) -> None:
@@ -73,8 +81,8 @@ def test_shape_do_core_rejeitado_e_falhas_propagadas(tmp_path) -> None:
     from wirs.domain import ProviderInvalidOutput, ProviderTimeout
     from wirs.infrastructure.command_runner import CommandResult as CR
 
-    core_shaped = FakeRunner("WP-CLI 2.10.0\n", '[{"file": "x.php", "message": "y"}]')
-    with pytest.raises(ProviderInvalidOutput):  # sem slug: não é contrato de plugin
+    core_shaped = FakeRunner("WP-CLI 2.12.0\n", '[{"file": "x.php", "message": "y"}]')
+    with pytest.raises(ProviderInvalidOutput):  # sem plugin_name: não é contrato
         verify_plugin_checksums(
             LocalDirectoryTarget(tmp_path),
             runner=core_shaped,
@@ -82,8 +90,8 @@ def test_shape_do_core_rejeitado_e_falhas_propagadas(tmp_path) -> None:
             wp_command=["wp"],
         )
 
-    for ruim in ["não é json", '{"a": 1}', '[{"plugin": "a"}]']:
-        r = FakeRunner("WP-CLI 2.10.0\n", ruim)
+    for ruim in ["não é json", '{"a": 1}', '[{"plugin_name": "a"}]']:
+        r = FakeRunner("WP-CLI 2.12.0\n", ruim)
         with pytest.raises(ProviderInvalidOutput):
             verify_plugin_checksums(
                 LocalDirectoryTarget(tmp_path),
@@ -95,10 +103,10 @@ def test_shape_do_core_rejeitado_e_falhas_propagadas(tmp_path) -> None:
     class SlowRunner(FakeRunner):
         def run(self, argv, *, timeout_s=120.0, max_bytes=1048576):  # type: ignore[override]
             if argv[-1] == "--version":
-                return CR(0, "WP-CLI 2.10.0\n", "", 10, False)
+                return CR(0, "WP-CLI 2.12.0\n", "", 10, False)
             return CR(124, "", "", 120001, True)
 
-    slow = SlowRunner("", "")
+    slow = SlowRunner("", "", "")
     with pytest.raises(ProviderTimeout):
         verify_plugin_checksums(
             LocalDirectoryTarget(tmp_path),

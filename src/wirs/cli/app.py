@@ -12,7 +12,6 @@ Exit codes (Seção 10.8 do spec):
 
 from __future__ import annotations
 
-import uuid
 from collections import Counter
 from enum import IntEnum
 from pathlib import Path
@@ -22,14 +21,14 @@ from rich.console import Console
 from rich.table import Table
 
 from wirs import __version__
-from wirs.domain import (
-    Artifact,
-    CoverageEntry,
-    CoverageState,
-    LocalDirectoryTarget,
-    TargetError,
-)
-from wirs.infrastructure import InventoryGap, LocalArtifactSource
+from wirs.adapters.wordpress.discovery import WordPressAdapter
+from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
+from wirs.application.orchestrator import run_scan
+from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
+from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
+from wirs.infrastructure import ArtifactReader, LocalArtifactSource
+from wirs.infrastructure.reader import ReadBudget
+from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
 from wirs.reporting import CanonicalReport, render_report
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
@@ -71,13 +70,40 @@ def doctor() -> None:
         console.print(f"  {tool}: {state}")
 
 
+def load_iocs_file(path: Path) -> list[IOC]:
+    """Lê `kind:value` por linha (# comenta, vazias ignoram). Erro vira ValueError."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as e:
+        raise ValueError(f"arquivo de IOCs ilegível: {path} ({e})") from e
+    iocs: list[IOC] = []
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        kind_name, sep, value = line.partition(":")
+        try:
+            kind = IOCKind(kind_name.strip().lower())
+        except ValueError:
+            raise ValueError(f"{path}:{lineno}: kind desconhecido: {kind_name!r}") from None
+        if not sep or not value.strip():
+            raise ValueError(f"{path}:{lineno}: esperado `kind:valor`")
+        try:
+            iocs.append(IOC(kind=kind, value=value.strip()))
+        except ValueError as e:
+            raise ValueError(f"{path}:{lineno}: {e}") from e
+    return iocs
+
+
 @app.command()
 def scan(
     target: Path = typer.Argument(..., help="Diretório local ou snapshot a analisar."),
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
     format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
+    fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
+    ioc: Path | None = typer.Option(None, "--ioc", help="Arquivo de IOCs kind:value."),
 ) -> None:
-    """Executa um scan read-only sobre o target (Fase A: inventory + report)."""
+    """Executa um scan read-only sobre o target (orquestrador v1)."""
     if profile not in PROFILE_BUDGETS:
         console.print(f"[red]Perfil inválido:[/red] {profile}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
@@ -85,41 +111,55 @@ def scan(
         console.print(f"[red]Formato inválido:[/red] {format_}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
     try:
+        threshold = Severity(fail_on)
+    except ValueError:
+        console.print(f"[red]fail-on inválido:[/red] {fail_on}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from None
+    try:
         tgt = LocalDirectoryTarget(target)
     except TargetError as e:
         console.print(f"[red]Target inválido:[/red] {e}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    ioc_list: list[IOC] = []
+    if ioc is not None:
+        try:
+            ioc_list = load_iocs_file(ioc)
+        except ValueError as e:
+            console.print(f"[red]IOCs inválidos:[/red] {e}")
+            raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
     kinds: Counter[str] = Counter()
-    gaps = 0
-    for item in LocalArtifactSource().iter_artifacts(tgt):
-        if isinstance(item, Artifact):
-            kinds[item.kind.value] += 1
-        elif isinstance(item, InventoryGap):
-            gaps += 1
-    verified = sum(kinds.values())
-    coverage = CoverageEntry(
-        capability="filesystem",
-        state=CoverageState.PARTIAL if gaps else CoverageState.COMPLETE,
-        applicable_checks=verified + gaps,
-        verified=verified,
-        failed=gaps,
-        note="detection em construção (Fase A)" if gaps else "",
-    )
-    report = CanonicalReport(
-        scan_id=f"scan_{uuid.uuid4().hex[:12]}",
-        target_root=str(tgt.root),
+    result = run_scan(
+        tgt,
         profile=profile,
-        findings=(),
-        coverage=(coverage,),
-        note="Fase A: inventory + report. Detecção chega na Fase B.",
+        source=LocalArtifactSource(),
+        adapters=[WordPressAdapter()],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
+        detectors=[IocDetector(ioc_list), PhpHeuristicsDetector(), UploadsExecutablePolicy()],
+        integrity=[WpCliCoreIntegrity(), WpCliPluginIntegrity()],
+    )
+    for artifact in result.artifacts:
+        kinds[artifact.kind.value] += 1
+    report = CanonicalReport(
+        scan_id=result.scan_id,
+        target_root=result.target_root,
+        profile=profile,
+        findings=result.findings,
+        coverage=result.coverage,
+        note="Orquestrador v1: inventory + detection + checksum (degrade gracioso).",
     )
     if format_ == "json":
         console.print_json(report.to_json())
     else:
         _print_terminal(report, kinds)
-    # Pipeline incompleto por construção: detectores ainda não existem.
-    raise typer.Exit(code=ExitCode.INCOMPLETE)
+    order = ["info", "low", "medium", "high", "critical"]
+    worst = max([order.index(f.severity.value) for f in result.findings], default=-1)
+    raise typer.Exit(
+        code=ExitCode.FINDINGS_OVER_THRESHOLD
+        if worst >= order.index(threshold.value)
+        else ExitCode.OK
+    )
 
 
 def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
@@ -134,7 +174,6 @@ def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
         inventory.add_row(kind, str(kinds[kind]))
     console.print(inventory)
     render_report(report, console)
-    console.print("[yellow]Scan incompleto:[/yellow] detecção em construção (Fase A).")
 
 
 def main() -> None:

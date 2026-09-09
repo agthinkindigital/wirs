@@ -1,6 +1,7 @@
 """Heurísticas PHP v0: sinais fracos + combinação explícita (spec T050–T054).
 
-Regras de combinação (a única inteligência aqui — todo o resto é lista):
+Devolve PROPOSTAS sem evidence_refs (o orquestrador cunha a Evidence e anexa
+a ref — invariante 2). Regras de combinação (a única inteligência aqui):
 - ENCODING + (DYNAMIC_EXECUTION | PROCESS | DYNAMIC_FUNCTION) → CHAIN/HIGH
 - 3+ famílias → CHAIN/HIGH
 - DYNAMIC_EXECUTION + (PROCESS | FILE_NET | DYNAMIC_FUNCTION) → COMBO/MEDIUM
@@ -15,7 +16,8 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-from wirs.domain import Artifact, Confidence, ConfidenceClass, Finding, Severity
+from wirs.domain import Artifact, Confidence, ConfidenceClass, Severity
+from wirs.ports.detection import ProposedFinding
 
 _DYNAMIC_EXECUTION = (
     rb"\beval\s*\(",
@@ -91,23 +93,28 @@ def analyze_php(
     artifact: Artifact,
     head: bytes,
     *,
-    evidence_refs: Sequence[str],
-) -> tuple[Finding, ...]:
-    """Um finding no máximo (o tier mais alto): sem duplicar por família."""
+    evidence_refs: Sequence[str] = (),
+) -> tuple[ProposedFinding, ...]:
+    """Uma proposta no máximo (o tier mais alto): sem duplicar por família.
+
+    `evidence_refs` existe por compatibilidade e é ignorado: a ref verdadeira
+    é anexada pelo orquestrador ao cunhar a Evidence.
+    """
+    _ = evidence_refs
     families = frozenset(signal_families(head))
     decided = _tier(families)
     if decided is None:
         return ()
     rule_id, severity, confidence = decided
     return (
-        Finding(
+        ProposedFinding(
             rule_id=rule_id,
             title="Padrões suspeitos de ofuscação/execução em PHP",
             category="heuristic",
             severity=severity,
             confidence=confidence,
-            artifact_ref=artifact.id,
-            evidence_refs=tuple(evidence_refs),
+            evidence_kind="php_heuristic",
+            evidence_content={"rule": rule_id, "signals": sorted(families)},
             attributes={"signals": sorted(families)},
         ),
     )

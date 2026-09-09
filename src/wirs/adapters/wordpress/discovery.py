@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import stat as statmod
 
+from wirs.adapters.wordpress.zones import classify as _classify
 from wirs.domain import Target
 from wirs.ports import PlatformDiscovery
 
@@ -43,3 +44,6 @@ class WordPressAdapter:
         if len(hit) < MIN_SIGNALS:
             return None
         return PlatformDiscovery(platform_id=self.id, signals=tuple(hit))
+
+    def classify(self, relative: str) -> str:
+        return _classify(relative).value

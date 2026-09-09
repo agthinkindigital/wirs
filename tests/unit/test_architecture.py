@@ -45,6 +45,41 @@ def test_detectors_nao_usam_subprocess() -> None:
     assert _violations("detectors", {"subprocess"}) == {}
 
 
+def test_application_so_conhece_domain_e_ports() -> None:
+    """Hexagonal sem burocracia: application depende de domain + ports, nada além."""
+    import ast as _ast
+
+    stdlib = {
+        "__future__",
+        "collections",
+        "dataclasses",
+        "enum",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "stat",
+        "time",
+        "types",
+        "typing",
+        "uuid",
+    }
+    bad: dict[str, set[str]] = {}
+    for py_file in sorted((SRC / "application").rglob("*.py")):
+        mods = _top_level_imports(py_file)
+        vendor = {m for m in mods if "." not in m} - stdlib - {"wirs"}
+        internal = set()
+        for node in _ast.walk(_ast.parse(py_file.read_text(encoding="utf-8"))):
+            if isinstance(node, _ast.ImportFrom) and (node.module or "").startswith("wirs."):
+                internal.add(node.module.split(".")[1])
+        internal -= {"domain", "ports"}
+        hits = vendor | internal
+        if hits:
+            bad[str(py_file.relative_to(SRC))] = hits
+    assert bad == {}
+
+
 def test_subprocess_so_via_command_runner() -> None:
     """WIRS-120: `import subprocess` fora da camada permitida quebra o build."""
     allowed = {"infrastructure/command_runner.py"}

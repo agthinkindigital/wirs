@@ -4,6 +4,8 @@ from wirs.providers.wp_checksum import (
     CoreChecksumReport,
     PluginChecksumReport,
     PluginResult,
+    WpCliCoreIntegrity,
+    WpCliPluginIntegrity,
     verify_core_checksum,
     verify_plugin_checksums,
 )
@@ -13,6 +15,8 @@ __all__ = [
     "CoreChecksumReport",
     "PluginChecksumReport",
     "PluginResult",
+    "WpCliCoreIntegrity",
+    "WpCliPluginIntegrity",
     "WpCliDoctor",
     "WpCliStatus",
     "verify_core_checksum",

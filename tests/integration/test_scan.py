@@ -22,12 +22,11 @@ def _fixture(tmp_path) -> str:
 def test_scan_json_com_coverage(tmp_path) -> None:
     result = runner.invoke(app, ["scan", _fixture(tmp_path), "--format", "json"])
 
-    assert result.exit_code == 3  # pipeline incompleto por construção (Fase A)
+    assert result.exit_code == 0  # sem findings: abaixo do threshold
     data = json.loads(result.output)
     assert data["schema_version"] == "1.0"
     assert data["findings"] == []
-    (cov,) = data["coverage"]
-    assert cov["capability"] == "filesystem"
+    (cov,) = [c for c in data["coverage"] if c["capability"] == "filesystem"]
     assert cov["state"] == "complete"
     assert cov["verified"] == 4  # root + 2 arquivos + 1 diretório
 
@@ -35,10 +34,27 @@ def test_scan_json_com_coverage(tmp_path) -> None:
 def test_scan_terminal_honesto(tmp_path) -> None:
     result = runner.invoke(app, ["scan", _fixture(tmp_path)])
 
-    assert result.exit_code == 3
+    assert result.exit_code == 0
     assert "Coverage" in result.output
     assert "filesystem" in result.output
-    assert "incompleto" in result.output
+
+
+def test_fail_on_threshold(tmp_path) -> None:
+    # Mini-WP com 2 sinais (discovery) + PHP em uploads (policy).
+    (tmp_path / "wp-includes").mkdir()
+    (tmp_path / "wp-includes" / "version.php").write_bytes(b"<?php // v")
+    (tmp_path / "wp-admin").mkdir()
+    up = tmp_path / "wp-content" / "uploads"
+    up.mkdir(parents=True)
+    (up / "evil.php").write_bytes(b"<?php // x")
+
+    padrao = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
+    assert padrao.exit_code == 1  # WP.UPLOAD.EXECUTABLE é HIGH >= high
+    data = json.loads(padrao.output)
+    assert any(f["rule_id"] == "WP.UPLOAD.EXECUTABLE" for f in data["findings"])
+
+    so_critical = runner.invoke(app, ["scan", str(tmp_path), "--fail-on", "critical"])
+    assert so_critical.exit_code == 0  # HIGH < critical: não falha
 
 
 def test_scan_com_gap_vira_partial(tmp_path, monkeypatch) -> None:
@@ -60,8 +76,10 @@ def test_scan_com_gap_vira_partial(tmp_path, monkeypatch) -> None:
     import json as jsonlib
 
     result = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
-    assert result.exit_code == 3
-    (cov,) = jsonlib.loads(result.output)["coverage"]
+    assert result.exit_code == 0  # PARTIAL não é finding: não falha
+    (cov,) = [
+        c for c in jsonlib.loads(result.output)["coverage"] if c["capability"] == "filesystem"
+    ]
     assert cov["state"] == "partial"
     assert cov["failed"] == 1
 
@@ -69,3 +87,39 @@ def test_scan_com_gap_vira_partial(tmp_path, monkeypatch) -> None:
 def test_scan_rejeita_perfil_e_formato(tmp_path) -> None:
     assert runner.invoke(app, ["scan", str(tmp_path), "--profile", "turbo"]).exit_code == 2
     assert runner.invoke(app, ["scan", str(tmp_path), "--format", "yaml"]).exit_code == 2
+
+
+def test_ioc_flag_gera_match(tmp_path) -> None:
+    (tmp_path / "t.php").write_bytes(b"<?php // SENTINELA_XYZ aqui")
+    iocs = tmp_path / "iocs.txt"
+    iocs.write_text(
+        "literal:SENTINELA_XYZ\n# comentario\n\ndomain:evil.example.com\n", encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(iocs), "--format", "json"])
+    data = json.loads(result.output)
+    assert any(f["rule_id"] == "IOC.MATCH" for f in data["findings"])  # MEDIUM: exit 0 no default
+    assert result.exit_code == 0
+
+    medio = runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(iocs), "--fail-on", "medium"])
+    assert medio.exit_code == 1  # MEDIUM >= medium: falha
+
+    sem_ioc = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
+    assert not any(f["rule_id"] == "IOC.MATCH" for f in json.loads(sem_ioc.output)["findings"])
+
+
+def test_ioc_invalido_vira_exit_2(tmp_path) -> None:
+    (tmp_path / "t.php").write_bytes(b"x")
+
+    assert (
+        runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(tmp_path / "falta.txt")]).exit_code
+        == 2
+    )
+
+    ruim = tmp_path / "ruim.txt"
+    ruim.write_text("nao-tem-dois-pontos\n", encoding="utf-8")
+    assert runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(ruim)]).exit_code == 2
+
+    kind_ruim = tmp_path / "kind.txt"
+    kind_ruim.write_text("foguete:xyz\n", encoding="utf-8")
+    assert runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(kind_ruim)]).exit_code == 2
