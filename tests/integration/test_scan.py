@@ -87,3 +87,39 @@ def test_scan_com_gap_vira_partial(tmp_path, monkeypatch) -> None:
 def test_scan_rejeita_perfil_e_formato(tmp_path) -> None:
     assert runner.invoke(app, ["scan", str(tmp_path), "--profile", "turbo"]).exit_code == 2
     assert runner.invoke(app, ["scan", str(tmp_path), "--format", "yaml"]).exit_code == 2
+
+
+def test_ioc_flag_gera_match(tmp_path) -> None:
+    (tmp_path / "t.php").write_bytes(b"<?php // SENTINELA_XYZ aqui")
+    iocs = tmp_path / "iocs.txt"
+    iocs.write_text(
+        "literal:SENTINELA_XYZ\n# comentario\n\ndomain:evil.example.com\n", encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(iocs), "--format", "json"])
+    data = json.loads(result.output)
+    assert any(f["rule_id"] == "IOC.MATCH" for f in data["findings"])  # MEDIUM: exit 0 no default
+    assert result.exit_code == 0
+
+    medio = runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(iocs), "--fail-on", "medium"])
+    assert medio.exit_code == 1  # MEDIUM >= medium: falha
+
+    sem_ioc = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
+    assert not any(f["rule_id"] == "IOC.MATCH" for f in json.loads(sem_ioc.output)["findings"])
+
+
+def test_ioc_invalido_vira_exit_2(tmp_path) -> None:
+    (tmp_path / "t.php").write_bytes(b"x")
+
+    assert (
+        runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(tmp_path / "falta.txt")]).exit_code
+        == 2
+    )
+
+    ruim = tmp_path / "ruim.txt"
+    ruim.write_text("nao-tem-dois-pontos\n", encoding="utf-8")
+    assert runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(ruim)]).exit_code == 2
+
+    kind_ruim = tmp_path / "kind.txt"
+    kind_ruim.write_text("foguete:xyz\n", encoding="utf-8")
+    assert runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(kind_ruim)]).exit_code == 2

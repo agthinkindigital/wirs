@@ -76,7 +76,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   `wirs scan`, config schema, `wirs doctor`, verbose/debug, exit codes, progress/cancel.
   Progresso ao vivo no terminal (barra, contadores, arquivo atual, mensagens de
   etapa, erros somados na tela) em WIRS-113/115.
-  Slices: #29 (WIRS-110, done). Orquestrador: #42 (WIRS-116), #43 (WIRS-117). (Fase A/B)
+  Slices: #29 (WIRS-110, done). Orquestrador: #42 (WIRS-116, done), #43 (WIRS-117, done).
+  Flag --ioc: #44 (WIRS-118). Restante (WIRS-111–115): config e progresso. (Fase A/B)
 
 - [**[E11] Hardening do Scanner**](https://github.com/agthinkindigital/wirs/issues/12) - `todo`
 

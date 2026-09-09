@@ -25,7 +25,7 @@ from wirs.adapters.wordpress.discovery import WordPressAdapter
 from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
 from wirs.application.orchestrator import run_scan
 from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
-from wirs.domain import LocalDirectoryTarget, Severity, TargetError
+from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
 from wirs.infrastructure.reader import ReadBudget
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
@@ -70,12 +70,38 @@ def doctor() -> None:
         console.print(f"  {tool}: {state}")
 
 
+def load_iocs_file(path: Path) -> list[IOC]:
+    """Lê `kind:value` por linha (# comenta, vazias ignoram). Erro vira ValueError."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as e:
+        raise ValueError(f"arquivo de IOCs ilegível: {path} ({e})") from e
+    iocs: list[IOC] = []
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        kind_name, sep, value = line.partition(":")
+        try:
+            kind = IOCKind(kind_name.strip().lower())
+        except ValueError:
+            raise ValueError(f"{path}:{lineno}: kind desconhecido: {kind_name!r}") from None
+        if not sep or not value.strip():
+            raise ValueError(f"{path}:{lineno}: esperado `kind:valor`")
+        try:
+            iocs.append(IOC(kind=kind, value=value.strip()))
+        except ValueError as e:
+            raise ValueError(f"{path}:{lineno}: {e}") from e
+    return iocs
+
+
 @app.command()
 def scan(
     target: Path = typer.Argument(..., help="Diretório local ou snapshot a analisar."),
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
     format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
     fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
+    ioc: Path | None = typer.Option(None, "--ioc", help="Arquivo de IOCs kind:value."),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if profile not in PROFILE_BUDGETS:
@@ -94,6 +120,13 @@ def scan(
     except TargetError as e:
         console.print(f"[red]Target inválido:[/red] {e}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    ioc_list: list[IOC] = []
+    if ioc is not None:
+        try:
+            ioc_list = load_iocs_file(ioc)
+        except ValueError as e:
+            console.print(f"[red]IOCs inválidos:[/red] {e}")
+            raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
     kinds: Counter[str] = Counter()
     result = run_scan(
@@ -103,7 +136,7 @@ def scan(
         adapters=[WordPressAdapter()],
         reader=ArtifactReader(),
         budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
-        detectors=[IocDetector([]), PhpHeuristicsDetector(), UploadsExecutablePolicy()],
+        detectors=[IocDetector(ioc_list), PhpHeuristicsDetector(), UploadsExecutablePolicy()],
         integrity=[WpCliCoreIntegrity(), WpCliPluginIntegrity()],
     )
     for artifact in result.artifacts:

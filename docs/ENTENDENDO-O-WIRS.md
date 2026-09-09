@@ -998,3 +998,32 @@ severidade pedida, 0 abaixo — CI consegue travar deploy em `HIGH+`.
 `src/wirs/ports/detection.py`, `src/wirs/ports/checksum.py`,
 `src/wirs/ports/reader.py`, `src/wirs/domain/redaction.py`,
 `tests/integration/test_orchestrator.py` · **Issue:** #43 (fechada).
+
+---
+
+## #44 — IOCs do operador: a última peça do 0.1.0 (WIRS-118)
+
+### O que é a flag e por que o scanner estava mudo sem ela
+
+O motor de IOC existia desde a #37, mas o CLI não tinha como alimentá-lo: sem
+entrada, `IocDetector([])` casava zero — o detector mais testado do projeto
+nunca rodava de verdade. A flag `--ioc` fecha o circuito com um formato
+mínimo e legível (`kind:value` por linha, `#` comenta, vazias ignoram), o
+mesmo schema validado da #36. Linha malformada, kind desconhecido ou arquivo
+ilegível viram exit 2 com a linha culpada na mensagem — erro de operador se
+paga na hora, não com scan silenciosamente incompleto.
+
+### Decisões de desenho
+
+- **Loader no CLI, não no orquestrador**: ler arquivo do operador é
+  composition root; o orquestrador continua recebendo objetos prontos. Cada
+  camada lê o que lhe pertence (alvo vs. config do operador).
+- **Falha de config é exit 2, nunca gap**: IOC inválido não é "cobertura
+  parcial" — é argumento errado. Gaps são sobre o alvo; exit 2 é sobre você.
+- **O TDD pegou a semântica do threshold**: meu primeiro tracer esperava exit
+  1 para `IOC.MATCH`, mas ele é MEDIUM e o default é `high` — o teste me
+  lembrou que severidade e threshold são independentes (a lição da #24,
+  exercida). Com `--fail-on medium`, falha como esperado.
+
+**Verificar:** `src/wirs/cli/app.py` (`load_iocs_file`),
+`tests/integration/test_scan.py` · **Issue:** #44 (aberta).
