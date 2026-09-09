@@ -910,3 +910,43 @@ leitura sem que nenhum detector precise saber dos outros.
 
 **Verificar:** `src/wirs/detectors/content.py`,
 `tests/unit/test_content_hints.py` · **Issue:** #38 (fechada).
+
+---
+
+## #42 — Orquestrador: quem manda no scan sem conhecer ferramenta (WIRS-116)
+
+### O que é o orquestrador e por que o scan era um script linear
+
+Até aqui, o `wirs scan` fazia tudo inline: lia, contava, montava coverage.
+Funcionava, mas cada capacidade nova (detector, provider) teria que ser
+costurada no CLI — e o CLI passaria a conhecer filesystem, adapters e regras,
+virando o acoplamento que a arquitetura proíbe. O `run_scan` inverte isso: o
+**pipeline mora em `application/` e só conhece `domain` + `ports`**.
+Implementações concretas (filesystem, adapters WordPress) entram por
+parâmetro, montadas no CLI como composition root. O CLI voltou a ser magro:
+valida, delega, renderiza.
+
+### Decisões de desenho
+
+- **Dependência só para dentro, verificada por teste**: o guarda de arquitetura
+  ganhou um irmão que varre `application/` e só aceita `domain` + `ports`
+  (+ stdlib). Se alguém importar infrastructure no orquestrador, o build quebra.
+- **Fonte e adapters injetados, nunca importados**: `run_scan(target,
+  profile, source, adapters)` — sem defaults concretos (default seria importar
+  infra no módulo e furar o guarda). Fake source e adapter vazio nos testes
+  provam a seam sem filesystem.
+- **`classify` virou parte do protocolo**: `PlatformAdapter` ganhou o método
+  de zona (string no vocabulário do adapter), e o `WordPressAdapter` o
+  implementa delegando ao classifier da #31. Zones deixaram de ser função
+  solta e viraram capability de plataforma — Laravel fará o mesmo sem tocar
+  no orquestrador.
+- **ScanResult congela a passada**: artifacts, gaps, discovery, zones por ID,
+  coverage e findings (vazios até a #43). Entre CLI e relatório não trafega
+  mais lógica, só esse objeto.
+- **Corrigido de passagem**: o `classify` do adapter tinha entrado sem o
+  import (sobra de um turno ambíguo) — o teste novo quebrou na hora, como deve
+  ser, e a correção foi trivial porque a seam já existia.
+
+**Verificar:** `src/wirs/application/orchestrator.py`,
+`src/wirs/ports/source.py`, `tests/integration/test_orchestrator.py` ·
+**Issue:** #42 (aberta).

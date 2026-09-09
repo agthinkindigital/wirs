@@ -12,7 +12,6 @@ Exit codes (Seção 10.8 do spec):
 
 from __future__ import annotations
 
-import uuid
 from collections import Counter
 from enum import IntEnum
 from pathlib import Path
@@ -22,14 +21,10 @@ from rich.console import Console
 from rich.table import Table
 
 from wirs import __version__
-from wirs.domain import (
-    Artifact,
-    CoverageEntry,
-    CoverageState,
-    LocalDirectoryTarget,
-    TargetError,
-)
-from wirs.infrastructure import InventoryGap, LocalArtifactSource
+from wirs.adapters.wordpress.discovery import WordPressAdapter
+from wirs.application.orchestrator import run_scan
+from wirs.domain import LocalDirectoryTarget, TargetError
+from wirs.infrastructure import LocalArtifactSource
 from wirs.reporting import CanonicalReport, render_report
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
@@ -91,28 +86,19 @@ def scan(
         raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
     kinds: Counter[str] = Counter()
-    gaps = 0
-    for item in LocalArtifactSource().iter_artifacts(tgt):
-        if isinstance(item, Artifact):
-            kinds[item.kind.value] += 1
-        elif isinstance(item, InventoryGap):
-            gaps += 1
-    verified = sum(kinds.values())
-    coverage = CoverageEntry(
-        capability="filesystem",
-        state=CoverageState.PARTIAL if gaps else CoverageState.COMPLETE,
-        applicable_checks=verified + gaps,
-        verified=verified,
-        failed=gaps,
-        note="detection em construção (Fase A)" if gaps else "",
+    result = run_scan(
+        tgt, profile=profile, source=LocalArtifactSource(), adapters=[WordPressAdapter()]
     )
+    for artifact in result.artifacts:
+        kinds[artifact.kind.value] += 1
+    (coverage,) = result.coverage
     report = CanonicalReport(
-        scan_id=f"scan_{uuid.uuid4().hex[:12]}",
-        target_root=str(tgt.root),
+        scan_id=result.scan_id,
+        target_root=result.target_root,
         profile=profile,
         findings=(),
         coverage=(coverage,),
-        note="Fase A: inventory + report. Detecção chega na Fase B.",
+        note="Orquestrador v0: inventory + discovery + zones. Detecção na WIRS-117.",
     )
     if format_ == "json":
         console.print_json(report.to_json())

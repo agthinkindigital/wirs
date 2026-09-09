@@ -22,3 +22,7 @@ class PlatformAdapter(Protocol):
     def discover(self, target: Target) -> PlatformDiscovery | None:
         """Identifica a plataforma sem exigir banco. None = não detectado."""
         ...
+
+    def classify(self, relative: str) -> str:
+        """Zona de um path relativo posix, no vocabulário do adapter."""
+        ...

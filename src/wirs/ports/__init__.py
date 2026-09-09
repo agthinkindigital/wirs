@@ -3,5 +3,6 @@ ExternalAnalyzer, PlatformAdapter, CommandRunner, DatabaseReader, Reporter.
 """
 
 from wirs.ports.platform import PlatformAdapter, PlatformDiscovery
+from wirs.ports.source import ArtifactSource
 
-__all__ = ["PlatformAdapter", "PlatformDiscovery"]
+__all__ = ["ArtifactSource", "PlatformAdapter", "PlatformDiscovery"]
