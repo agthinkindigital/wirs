@@ -33,9 +33,8 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado em cada DAG). Fase B
-(slices) publicada em `main` — ver "Merge Fase B" abaixo. Próximo: FT-4
-(E04, operator baselines) ou fatiar o orquestrador do scan.
+DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado, Fase B em `main`).
+Orquestrador fatiado — DAG: #42 → #43.
 
 ## Merge Fase B (2026-09-09)
 
