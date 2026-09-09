@@ -623,3 +623,42 @@ um parser isolado, não o motor.
 `src/wirs/domain/integrity.py`, `tests/unit/test_core_checksum.py`,
 `tests/integration/test_wpcli_core.py`, `docs/providers/wp-cli.md` ·
 **Issue:** #33 (fechada).
+
+---
+
+## #34 — Plugins: o mesmo molde, um problema novo (UNVERIFIED) (WIRS-065)
+
+### O que é o provider de plugins e por que reaproveitar foi o teste real
+
+Verificar plugins é "igual ao core, mas por componente e com `--strict`".
+O valor desta slice não está no comando novo — está em **provar que a
+arquitetura anti-corruption funciona duas vezes**: a aplicação continua sem
+conhecer nenhum formato WP-CLI, porque o segundo provider reutiliza o mesmo
+executor, a mesma hierarquia de erros e o mesmo mapa de mensagens do core. Se
+a #33 tivesse vazado detalhe de vendor para a aplicação, a #34 doeria — não
+doeu: o trabalho foi só o formato por plugin + o caso novo.
+
+### Decisões de desenho
+
+- **Contrato assumido às claras**: a doc oficial não mostra o JSON de plugins,
+  então definimos `[{plugin, file?, message}]` (core + slug) e registramos
+  como ASSUMIDO em `docs/providers/wp-cli.md`, com integração real pendente.
+  Assunção documentada + parser estrito > adivinhação silenciosa.
+- **Sem baseline = UNVERIFIED, nunca failure**: plugin fora do WordPress.org
+  (premium/custom) cai em `unverified_plugins` via mensagens de skip
+  tabeladas — visível no coverage, jamais confundido com erro de provider.
+  É a invariante 7 ("sem baseline não é malicioso") atravessando a fronteira
+  do vendor.
+- **Shape do core é rejeitado aqui**: entrada sem `plugin` vira
+  `ProviderInvalidOutput` — cada comando tem seu contrato, e misturá-los
+  seria corrupção de camada.
+- **Executor extraído, não duplicado**: `_execute_verify` + `_stdout_or_raise`
+  servem core e plugins; a refatoração rodou com os testes da #33 verdes o
+  tempo todo (Regra de Ouro: nada de refactor em RED).
+- **Coverage por componente**: o report agrupa por slug (`PluginResult` com
+  `success` próprio) — o orquestrador futuro monta uma entry por plugin sem
+  precisar reparsear nada.
+
+**Verificar:** `src/wirs/providers/wp_checksum.py`,
+`tests/unit/test_plugin_checksum.py`,
+`tests/integration/test_wpcli_plugins.py` · **Issue:** #34 (aberta).

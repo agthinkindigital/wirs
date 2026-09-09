@@ -5,15 +5,23 @@
   ambiente com `wp` + fixture (`tests/integration/test_wpcli_core.py` pula sem eles).
 - **Doc oficial:** https://developer.wordpress.org/cli/commands/core/verify-checksums/
   (repositório do comando: https://github.com/wp-cli/checksum-command)
-- **Comandos usados:** `wp --version` (doctor) e
-  `wp core verify-checksums --include-root --format=json --path=<target>`
+- **Comandos usados:** `wp --version` (doctor),
+  `wp core verify-checksums --include-root --format=json --path=<target>` e
+  `wp plugin verify-checksums --all --strict --format=json --path=<target>`
   (`--version`/`--locale` quando WIRS-062 entregar a versão do alvo).
-- **Output:** `--format=json` emite lista `[{"file": str, "message": str}]`;
+- **Output core:** `--format=json` emite lista `[{"file": str, "message": str}]`;
   stdout vazio + exit 0 = tudo verificado. Mensagens conhecidas:
   `File doesn't verify against checksum` → MISMATCH,
   `File doesn't exist` → MISSING,
   `File should not exist`/`was added`/`non-WordPress` → UNEXPECTED.
   Qualquer outra forma = `ProviderInvalidOutput` (estrito de propósito).
+- **Output plugins (CONTRATO ASSUMIDO, a confirmar):** a doc oficial não mostra
+  o JSON de plugins. Assumimos lista de `{"plugin": slug, "file"?, "message"}`:
+  com `file` usa o mesmo mapa do core; sem `file` e com mensagem de skip
+  (`not found`, `doesn't exist`, `no checksum`, `skipped`, `unavailable`) o
+  slug vai para `unverified_plugins` (sem baseline, nunca failure). Entrada
+  fora disso = `ProviderInvalidOutput`. Integração real
+  (`tests/integration/test_wpcli_plugins.py`) valida quando houver `wp` + fixture.
 - **Exit codes:** diferente de zero quando algo diverge — é *sinal*, não erro:
   com JSON parseável, o report sai normal.
 - **Bootstrap:** roda no hook `before_wp_load`, antes do WP carregar
