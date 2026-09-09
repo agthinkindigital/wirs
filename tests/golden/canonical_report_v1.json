@@ -1,0 +1,72 @@
+{
+  "coverage": [
+    {
+      "applicable_checks": 1600,
+      "capability": "core_baseline",
+      "failed": 0,
+      "note": "",
+      "skipped": 0,
+      "state": "complete",
+      "unavailable": 0,
+      "verified": 1600
+    },
+    {
+      "applicable_checks": 14,
+      "capability": "plugin_baseline",
+      "failed": 0,
+      "note": "2 plugins premium sem baseline",
+      "skipped": 0,
+      "state": "partial",
+      "unavailable": 2,
+      "verified": 12
+    }
+  ],
+  "findings": [
+    {
+      "artifact_ref": "art_core",
+      "attributes": {
+        "actual_hash": "bbb",
+        "expected_hash": "aaa"
+      },
+      "category": "integrity",
+      "confidence": {
+        "class": "deterministic",
+        "score": null
+      },
+      "evidence_refs": [
+        "ev_core"
+      ],
+      "id": "fnd_556bae7c4eabcc31",
+      "provenance": null,
+      "rule_id": "WP.CORE.HASH_MISMATCH",
+      "severity": "critical",
+      "status": "open",
+      "title": "Arquivo do core diverge do baseline confiável"
+    },
+    {
+      "artifact_ref": "art_uploads",
+      "attributes": {},
+      "category": "policy",
+      "confidence": {
+        "class": "high",
+        "score": null
+      },
+      "evidence_refs": [
+        "ev_uploads"
+      ],
+      "id": "fnd_bb0f602968f14033",
+      "provenance": null,
+      "rule_id": "WP.UPLOAD.EXECUTABLE",
+      "severity": "high",
+      "status": "open",
+      "title": "Conteúdo executável em zona de uploads"
+    }
+  ],
+  "generated_at": "2026-09-09T12:00:00",
+  "note": "golden v1",
+  "profile": "soft",
+  "scan_id": "scan_golden_01",
+  "scanner_version": "0.0.1",
+  "schema_version": "1.0",
+  "target_root": "/srv/www/site"
+}
