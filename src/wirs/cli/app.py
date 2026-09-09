@@ -12,14 +12,28 @@ Exit codes (Seção 10.8 do spec):
 
 from __future__ import annotations
 
-import json
+import uuid
+from collections import Counter
 from enum import IntEnum
 from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from wirs import __version__
+from wirs.domain import (
+    Artifact,
+    CoverageEntry,
+    CoverageState,
+    LocalDirectoryTarget,
+    TargetError,
+)
+from wirs.infrastructure import InventoryGap, LocalArtifactSource
+from wirs.reporting import CanonicalReport
+
+# Budgets provisórios por perfil até WIRS-034 (large-file policy).
+PROFILE_BUDGETS = {"soft": 64 << 20, "balanced": 256 << 20, "fast": 1 << 30}
 
 app = typer.Typer(
     name="wirs",
@@ -63,32 +77,73 @@ def scan(
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
     format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
 ) -> None:
-    """Executa um scan read-only sobre o target (pipeline completo — em construção)."""
-    if profile not in ("soft", "balanced", "fast"):
+    """Executa um scan read-only sobre o target (Fase A: inventory + report)."""
+    if profile not in PROFILE_BUDGETS:
         console.print(f"[red]Perfil inválido:[/red] {profile}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
-    if not target.exists() or not target.is_dir():
-        console.print(f"[red]Target inválido:[/red] {target} (diretório inexistente)")
+    if format_ not in ("terminal", "json"):
+        console.print(f"[red]Formato inválido:[/red] {format_}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
+    try:
+        tgt = LocalDirectoryTarget(target)
+    except TargetError as e:
+        console.print(f"[red]Target inválido:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
-    # Skeleton honesto (Fase A): engine ainda não implementada — scan incompleto,
-    # coverage explícito, sem nenhum finding fabricado.
-    skeleton = {
-        "schema_version": "1.0",
-        "scanner_version": __version__,
-        "status": "incomplete",
-        "target": str(target),
-        "profile": profile,
-        "findings": [],
-        "coverage": {"filesystem": "NOT_APPLICABLE"},
-        "note": "ScanOrchestrator ainda não implementado (Fase A — Skeleton).",
-    }
+    kinds: Counter[str] = Counter()
+    gaps = 0
+    for item in LocalArtifactSource().iter_artifacts(tgt):
+        if isinstance(item, Artifact):
+            kinds[item.kind.value] += 1
+        elif isinstance(item, InventoryGap):
+            gaps += 1
+    verified = sum(kinds.values())
+    coverage = CoverageEntry(
+        capability="filesystem",
+        state=CoverageState.PARTIAL if gaps else CoverageState.COMPLETE,
+        applicable_checks=verified + gaps,
+        verified=verified,
+        failed=gaps,
+        note="detection em construção (Fase A)" if gaps else "",
+    )
+    report = CanonicalReport(
+        scan_id=f"scan_{uuid.uuid4().hex[:12]}",
+        target_root=str(tgt.root),
+        profile=profile,
+        findings=(),
+        coverage=(coverage,),
+        note="Fase A: inventory + report. Detecção chega na Fase B.",
+    )
     if format_ == "json":
-        console.print_json(json.dumps(skeleton))
+        console.print_json(report.to_json())
     else:
-        console.print("[yellow]Scan incompleto:[/yellow] engine em construção (Fase A).")
-        console.print(f"Target: {target} | Profile: {profile} | Coverage: NOT_APPLICABLE")
+        _print_terminal(report, kinds)
+    # Pipeline incompleto por construção: detectores ainda não existem.
     raise typer.Exit(code=ExitCode.INCOMPLETE)
+
+
+def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
+    console.print(
+        f"[bold]wirs[/bold] {__version__} · Target: {report.target_root} "
+        f"· Profile: {report.profile} · Mode: read-only"
+    )
+    summary = Table(title="Inventory")
+    summary.add_column("Kind")
+    summary.add_column("Count", justify="right")
+    for kind in sorted(kinds):
+        summary.add_row(kind, str(kinds[kind]))
+    console.print(summary)
+    cov_table = Table(title="Coverage")
+    cov_table.add_column("Capability")
+    cov_table.add_column("State")
+    cov_table.add_column("Verified", justify="right")
+    cov_table.add_column("Failed", justify="right")
+    for entry in report.coverage:
+        cov_table.add_row(
+            entry.capability, entry.state.value, str(entry.verified), str(entry.failed)
+        )
+    console.print(cov_table)
+    console.print("[yellow]Scan incompleto:[/yellow] detecção em construção (Fase A).")
 
 
 def main() -> None:

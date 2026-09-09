@@ -7,7 +7,8 @@ Antes de analisar ou alterar o projeto, leia nesta ordem:
 1. `AGENTS.md`
 2. `CONTEXT.md`
 3. `WIRS_MASTER_SPEC_PT-BR.md` (especificação viva — autoridade de produto e arquitetura)
-4. `docs/adr/` aplicáveis
+4. `docs/ARCHITECTURE.md` (como as peças se encaixam)
+5. `docs/adr/` aplicáveis
 5. GitHub Issues aplicáveis
 6. somente então, código, configuração e testes
 
@@ -80,3 +81,5 @@ Use a skill especializada quando a tarefa corresponder ao seu contrato:
 Uma tarefa relevante deve registrar objetivo, arquivos afetados, riscos,
 verificações executadas, pendências e atualizações de documentação. Não declare
 testes, comandos ou comportamentos que não possam ser reproduzidos no checkout atual.
+Toda slice concluída ganha uma seção em `docs/ENTENDENDO-O-WIRS.md` com a explicação
+da entrega (o quê, por quê, decisões) na linguagem das revisões.

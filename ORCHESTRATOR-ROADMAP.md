@@ -2,95 +2,101 @@
 
 O GitHub Issue de cada Epic é a fonte detalhada. Este arquivo resume objetivo,
 estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
-Issues serão criadas via `/to-issues` antes da execução de cada Epic.
 
 ## Epics
 
-### [E00] Fundação do Repositório — `todo`
+- [**[E00] Fundação do Repositório**](https://github.com/agthinkindigital/wirs/issues/1) - `in_progress`
 
-Python importável, boundaries de arquitetura, CI, SECURITY.md, ADRs.
-Issues: WIRS-001–WIRS-005. (Fase A — Skeleton)
+  Python importável, boundaries de arquitetura, CI, SECURITY.md, ADRs.
+  Slices: #17 (WIRS-001, done), #18 (WIRS-002). (Fase A — Skeleton)
 
-### [E01] Target e Artifact — `todo`
+- [**[E01] Target e Artifact**](https://github.com/agthinkindigital/wirs/issues/2) - `in_progress`
 
-Target model, SafePath, Artifact model, inventory seguro, special files, type hints.
-Issues: WIRS-010–WIRS-015. (Fase A — Skeleton)
+  Target model, SafePath, Artifact model, inventory seguro, special files, type hints.
+  Slices: #19 (WIRS-010), #20 (WIRS-011), #21 (WIRS-012), #22 (WIRS-013). (Fase A — Skeleton)
 
-### [E02] Evidence, Findings e Coverage — `todo`
+- [**[E02] Evidence, Findings e Coverage**](https://github.com/agthinkindigital/wirs/issues/3) - `in_progress`
 
-Schemas, severidade/confiança, Coverage model, Scan Manifest, versionamento.
-Issues: WIRS-020–WIRS-025. (Fase A — Skeleton)
+  Schemas, severidade/confiança, Coverage model, Scan Manifest, versionamento.
+  Slices: #23 (WIRS-020), #24 (WIRS-021), #25 (WIRS-023). (Fase A — Skeleton)
 
-### [E03] Reader, Hashing e Resource Control — `todo`
+- [**[E03] Reader, Hashing e Resource Control**](https://github.com/agthinkindigital/wirs/issues/4) - `in_progress`
 
-ArtifactReader read-only, HashService, profiles (soft/balanced/fast),
-scheduler central, large-file policy, benchmark.
-Issues: WIRS-030–WIRS-035. (Fase A/B)
+  ArtifactReader read-only, HashService, profiles (soft/balanced/fast),
+  scheduler central, large-file policy, benchmark.
+  Slices: #26 (WIRS-030), #27 (WIRS-031). (Fase A/B)
 
-### [E04] Baseline e Integrity — `todo`
+- [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `todo`
 
-Manifest schema, comparator, `baseline create`, ZIP baseline, trust explícito.
-Issues: WIRS-040–WIRS-046. (Fase C)
+  Manifest schema, comparator, `baseline create`, ZIP baseline, trust explícito.
+  Issues: WIRS-040–WIRS-046. (Fase C)
 
-### [E05] IOC e Rule Engine Genérico — `todo`
+- [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `todo`
 
-IOC schema, literal scanner, regex, zone policy engine, executable detector,
-PHP heuristics v0, entropy, rule metadata.
-Issues: WIRS-050–WIRS-058. (Fase B)
+  IOC schema, literal scanner, regex, zone policy engine, executable detector,
+  PHP heuristics v0, entropy, rule metadata.
+  Issues: WIRS-050–WIRS-058. (Fase B)
 
-### [E06] WordPress Adapter — `todo`
+- [**[E06] WordPress Adapter**](https://github.com/agthinkindigital/wirs/issues/7) - `todo`
 
-Discovery, zones, versão/locale, doctor, core/plugin checksum providers,
-premium baseline, MU-plugins, upload policy, config collector.
-Issues: WIRS-060–WIRS-069. (Fase B)
+  Discovery, zones, versão/locale, doctor, core/plugin checksum providers,
+  premium baseline, MU-plugins, upload policy, config collector.
+  Issues: WIRS-060–WIRS-069. (Fase B)
 
-### [E07] External Analyzer Providers — `todo`
+- [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `todo`
 
-Contrato ExternalAnalyzer, YARA, Wordfence CLI, Semgrep (fase 2), sandbox.
-Issues: WIRS-080–WIRS-085. (Fase C/E)
+  Contrato ExternalAnalyzer, YARA, Wordfence CLI, Semgrep (fase 2), sandbox.
+  Issues: WIRS-080–WIRS-085. (Fase C/E)
 
-### [E08] Reporting e Redaction — `todo`
+- [**[E08] Reporting e Redaction**](https://github.com/agthinkindigital/wirs/issues/9) - `in_progress`
 
-JSON canônico, terminal Rich, redaction, Markdown, atomic writer, HTML
-skeleton com design tokens (ref. OWASP ZAP melhorado), SARIF (futuro).
-Issues: WIRS-090–WIRS-096. (Fase A/B/C)
+  JSON canônico, terminal Rich, redaction, Markdown, atomic writer, HTML
+  skeleton com design tokens (ref. OWASP ZAP melhorado), SARIF (futuro).
+  Views com lista de findings com cap + paginação e contadores ao vivo.
+  Slices: #28 (WIRS-090). (Fase A/B/C)
 
-### [E09] Diagnosis e Correlation — `todo`
+- [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`
 
-Relation model, correlation engine, DX001–DX004, renderer, graph export (futuro).
-Issues: WIRS-100–WIRS-104. (Fase D)
+  Relation model, correlation engine, DX001–DX004, renderer, graph export (futuro).
+  Diagnoses rendem "próximos checks" e recomendações de higiene (limpeza de
+  arquivos/cache/banco como sugestão — remediação automática fora do scan).
+  Issues: WIRS-100–WIRS-104. (Fase D)
 
-### [E10] CLI e Configuração — `todo`
+- [**[E10] CLI e Configuração**](https://github.com/agthinkindigital/wirs/issues/11) - `in_progress`
 
-`wirs scan`, config schema, `wirs doctor`, verbose/debug, exit codes, progress/cancel.
-Issues: WIRS-110–WIRS-115. (Fase A)
+  `wirs scan`, config schema, `wirs doctor`, verbose/debug, exit codes, progress/cancel.
+  Progresso ao vivo no terminal (barra, contadores, arquivo atual, mensagens de
+  etapa, erros somados na tela) em WIRS-113/115.
+  Slices: #29 (WIRS-110). (Fase A)
 
-### [E11] Hardening do Scanner — `todo`
+- [**[E11] Hardening do Scanner**](https://github.com/agthinkindigital/wirs/issues/12) - `todo`
 
-CommandRunner obrigatório, output cap, env sanitizer, symlink/special suites,
-output injection tests, archive sandbox, regex fuzz, SBOM, rule signing.
-Issues: WIRS-120–WIRS-128. (contínuo)
+  CommandRunner obrigatório, output cap, env sanitizer, symlink/special suites,
+  output injection tests, archive sandbox, regex fuzz, SBOM, rule signing.
+  Issues: WIRS-120–WIRS-128. (contínuo)
 
-### [E12] Snapshot e Remote — `todo`
+- [**[E12] Snapshot e Remote**](https://github.com/agthinkindigital/wirs/issues/13) - `todo`
 
-Snapshot directory, archive target, SSH/SFTP read-only, snapshot manifest.
-Issues: WIRS-130–WIRS-136. (Fase F)
+  Snapshot directory, archive target, SSH/SFTP read-only, snapshot manifest.
+  Issues: WIRS-130–WIRS-136. (Fase F)
 
-### [E13] PHP Generic — `todo`
+- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `todo`
 
-Discovery, Composer inventory/baseline, zone policies, runtime config, rules.
-Issues: WIRS-140–WIRS-145. (Fase H)
+  Discovery, Composer inventory/baseline, zone policies, runtime config, rules.
+  Issues: WIRS-140–WIRS-145. (Fase H)
 
-### [E14] Runtime HTTP — `todo`
+- [**[E14] Runtime HTTP**](https://github.com/agthinkindigital/wirs/issues/15) - `todo`
 
-HTTP collector, redirects, origins, request profiles, correlação, browser provider.
-Issues: WIRS-150–WIRS-155. (Fase G)
+  HTTP collector, redirects, origins, request profiles, correlação, browser provider.
+  Issues: WIRS-150–WIRS-155. (Fase G)
 
-### [E15] AI Analysis Opcional — `todo`
+- [**[E15] AI Analysis Opcional**](https://github.com/agthinkindigital/wirs/issues/16) - `todo`
 
-AnalysisPacket, redaction gate, LLM provider interface, prompt-injection-safe
-framing. Invariante: IA não modifica fatos determinísticos.
-Issues: WIRS-160–WIRS-164. (pós-1.0)
+  AnalysisPacket, redaction gate, LLM provider interface, prompt-injection-safe
+  framing. Invariante: IA não modifica fatos determinísticos.
+  Inclui resumo em linguagem humana + recomendação de próximos passos (opt-in,
+  só sobre pacote redigido).
+  Issues: WIRS-160–WIRS-164. (pós-1.0)
 
 ## Marcos
 
