@@ -622,4 +622,4 @@ um parser isolado, não o motor.
 **Verificar:** `src/wirs/providers/wp_checksum.py`,
 `src/wirs/domain/integrity.py`, `tests/unit/test_core_checksum.py`,
 `tests/integration/test_wpcli_core.py`, `docs/providers/wp-cli.md` ·
-**Issue:** #33 (aberta).
+**Issue:** #33 (fechada).
