@@ -729,3 +729,42 @@ nasce: `ValueError` na construção, nunca no meio do scan.
 
 **Verificar:** `src/wirs/domain/ioc.py`, `tests/unit/test_ioc.py` ·
 **Issue:** #36 (fechada).
+
+---
+
+## #37 — Scanner literal: bytes, fronteira e a quarentena que ensinou (WIRS-051)
+
+### O que é o scanner e por que bytes, nunca texto
+
+Procurar um IOC num arquivo parece `grep`, mas `grep` lê texto — e alvo
+hostil tem binário, UTF-8 inválido e IOC partido no meio do buffer de
+leitura. O `scan_stream` opera **só em bytes**: recebe chunks (os mesmos do
+reader), carrega overlap de `max_len - 1` entre eles e acha o IOC mesmo
+cruzando a fronteira, com offset absoluto no stream. Cada match leva um
+contexto limitado (64 bytes por lado) em bytes crus — sem decodificar, sem
+inventar.
+
+### Decisões de desenho
+
+- **Regra do carry provada por contagem**: match com fim dentro do carry já
+  foi reportado; com fim além, é novo (cruzou a fronteira). Os testes pinam
+  offsets absolutos e o caso "um por chunk, nenhum cruzado" — fronteira sem
+  duplicar nem perder.
+- **Cap que preserva o count**: acima de 100 ocorrências por IOC, para de
+  guardar mas continua contando (`total_counts` exato + `truncated=True`).
+  Milhares de ocorrências não explodem o relatório (spec T042) e ninguém perde
+  a magnitude.
+- **SHA256 ignorado aqui, por desenho**: hash se compara via HashService no
+  orquestrador, não por busca literal — o scanner pula a kind sem erro.
+  Cada ferramenta no seu quadrado.
+- **Domain casa-insensitivo, resto exato**: DNS não distingue caixa; literal
+  de código, sim. A distinção mora no kind do IOC (#36), não em flag do
+  scanner.
+- **A quarentena do Defender**: o Windows Defender **apagou** a primeira
+  versão do teste por conter assinatura viva contígua. Virou regra registrada
+  no SECURITY.md: literais perigosos sempre fragmentados com `+` explícito
+  (o `ruff format` juntaria concatenação implícita de volta!) e comentário
+  `NOTA ANTI-AV`. Amostra que o AV come é teste que "passa" sem existir.
+
+**Verificar:** `src/wirs/detectors/ioc_scanner.py`,
+`tests/unit/test_ioc_scanner.py` · **Issue:** #37 (aberta).
