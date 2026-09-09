@@ -52,16 +52,21 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 
   JSON canônico, terminal Rich, redaction, Markdown, atomic writer, HTML
   skeleton com design tokens (ref. OWASP ZAP melhorado), SARIF (futuro).
+  Views com lista de findings com cap + paginação e contadores ao vivo.
   Slices: #28 (WIRS-090). (Fase A/B/C)
 
 - [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`
 
   Relation model, correlation engine, DX001–DX004, renderer, graph export (futuro).
+  Diagnoses rendem "próximos checks" e recomendações de higiene (limpeza de
+  arquivos/cache/banco como sugestão — remediação automática fora do scan).
   Issues: WIRS-100–WIRS-104. (Fase D)
 
 - [**[E10] CLI e Configuração**](https://github.com/agthinkindigital/wirs/issues/11) - `in_progress`
 
   `wirs scan`, config schema, `wirs doctor`, verbose/debug, exit codes, progress/cancel.
+  Progresso ao vivo no terminal (barra, contadores, arquivo atual, mensagens de
+  etapa, erros somados na tela) em WIRS-113/115.
   Slices: #29 (WIRS-110). (Fase A)
 
 - [**[E11] Hardening do Scanner**](https://github.com/agthinkindigital/wirs/issues/12) - `todo`
@@ -89,6 +94,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 
   AnalysisPacket, redaction gate, LLM provider interface, prompt-injection-safe
   framing. Invariante: IA não modifica fatos determinísticos.
+  Inclui resumo em linguagem humana + recomendação de próximos passos (opt-in,
+  só sobre pacote redigido).
   Issues: WIRS-160–WIRS-164. (pós-1.0)
 
 ## Marcos
