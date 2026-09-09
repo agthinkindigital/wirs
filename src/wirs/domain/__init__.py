@@ -3,11 +3,14 @@
 Proibido importar wordpress, yara, wordfence, rich, mysql, typer a partir daqui.
 """
 
-from wirs.domain.errors import TargetError, WirsError
+from wirs.domain.errors import SecurityBoundaryError, TargetError, WirsError
+from wirs.domain.safepath import SafePath
 from wirs.domain.target import LocalDirectoryTarget, Target, TargetKind
 
 __all__ = [
     "LocalDirectoryTarget",
+    "SafePath",
+    "SecurityBoundaryError",
     "Target",
     "TargetError",
     "TargetKind",

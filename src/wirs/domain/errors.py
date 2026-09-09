@@ -7,3 +7,7 @@ class WirsError(Exception):
 
 class TargetError(WirsError):
     """Alvo inválido — nunca produz scan vazio válido."""
+
+
+class SecurityBoundaryError(WirsError):
+    """Violação de fronteira de segurança (ex.: path escapa do root)."""
