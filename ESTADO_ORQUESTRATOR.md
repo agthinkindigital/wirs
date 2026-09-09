@@ -33,7 +33,16 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 completos (QA aprovado). FT-3 completo: #36→#37→#39→#41→#40→#38 (todas done).
+DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado em cada DAG). Fase B
+(slices) publicada em `main` — ver "Merge Fase B" abaixo. Próximo: FT-4
+(E04, operator baselines) ou fatiar o orquestrador do scan.
+
+## Merge Fase B (2026-09-09)
+
+FT-1 (13 slices) + FT-2 (6) + FT-3 (6) em `main`: núcleo seguro, integridade
+WordPress via WP-CLI, detecção (IOC/heurísticas/policy) e relatórios humanos.
+Ainda fora do `scan` (sem orquestrador): providers e detectores rodam isolados;
+profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 
 ## QA da DAG FT-3 (2026-09-09, APROVADA com ressalvas)
 

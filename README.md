@@ -68,9 +68,12 @@ INFO      14                     Database             NOT RUN
 
 ## Status do projeto
 
-Estamos na **Fase A — Skeleton**: fundação do motor genérico (target, artifact,
-evidence, finding, coverage, inventory seguro, JSON). O primeiro slice
-operacional com WordPress (Fase B — `0.1.0`) vem a seguir. Acompanhe pelo
+Fase A (núcleo seguro) e as slices da **Fase B** estão em `main`: discovery
+WordPress, zonas, doctor e providers de checksum via WP-CLI, IOC + scanner em
+streaming, hints compartilhados, heurísticas PHP v0, terminal e JSON canônico,
+redaction — tudo com testes e cobertura honesta. Falta para o `0.1.0`
+operacional: plugar providers e detectores no `scan` (orquestrador), profile
+`soft` formal e E2E com WordPress real. Acompanhe pelo
 [roadmap](ORCHESTRATOR-ROADMAP.md) e pela [especificação viva](WIRS_MASTER_SPEC_PT-BR.md)
 (em português).
 
