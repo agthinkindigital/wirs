@@ -37,6 +37,26 @@ DAG atual: FT-1 + FT-2 + FT-3 + orquestrador + WIRS-053 + WIRS-119 (todas done).
 Sessão real validada: WP cru → 0 findings; adulterado → MISMATCH + UNEXPECTED.
 Pronto para merge em `main` como 0.1.0 + sessão no site do operador.
 
+## Sessão site real (2026-09-09, somente leitura, dados anonimizados)
+
+- Full-tree (~5 GB / ~70 mil arquivos) **não concluiu em 30 min**: sem progresso
+  ao vivo, sem política de arquivo grande e com dupla leitura por arquivo, o
+  scan não escala — evidência para WIRS-034 (large-file) e WIRS-113/115
+  (progresso), já no roadmap.
+- Escopos funcionaram: uploads (~700 MB) → 0 findings, exit 0; arquivos custom
+  em `wp-content/` → zonas corretas, sem policy/heurística.
+- **Core via WP-CLI direto: 1 warning** — `readme.html` ausente (hardening
+  comum, benigno). Resto íntegro.
+- **Policy em cache legítimo**: templates compilados em `uploads/cache`
+  disparam em massa — caso textbook para allowlist de cache, não para
+  silenciar a regra (e origem da política de scan de cache em etapa separada).
+- **MU-plugins desconhecidos**: auto-executam; origem sempre a confirmar
+  manualmente (caso para WIRS-067).
+- **Plugins majoritariamente premium** → UNVERIFIED por desenho, mas sempre
+  escaneados por heurísticas/IOC — nunca pulados (origem da regra E04
+  "premium nunca é skip").
+- Nada foi escrito no alvo em nenhum momento.
+
 ## Sessão WP real (2026-09-09)
 
 - WP oficial pristino + WP-CLI 2.12.0: **0 findings**, 3338 suprimidos,
