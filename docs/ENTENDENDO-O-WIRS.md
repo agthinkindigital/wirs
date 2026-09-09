@@ -767,4 +767,4 @@ inventar.
   `NOTA ANTI-AV`. Amostra que o AV come é teste que "passa" sem existir.
 
 **Verificar:** `src/wirs/detectors/ioc_scanner.py`,
-`tests/unit/test_ioc_scanner.py` · **Issue:** #37 (aberta).
+`tests/unit/test_ioc_scanner.py` · **Issue:** #37 (fechada).
