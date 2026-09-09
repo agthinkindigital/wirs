@@ -728,4 +728,4 @@ nasce: `ValueError` na construção, nunca no meio do scan.
   operador (futuro) e o scanner em streaming da #37.
 
 **Verificar:** `src/wirs/domain/ioc.py`, `tests/unit/test_ioc.py` ·
-**Issue:** #36 (aberta).
+**Issue:** #36 (fechada).
