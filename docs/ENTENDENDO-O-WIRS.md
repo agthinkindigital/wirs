@@ -879,3 +879,34 @@ nossa, os dados são deles, e os dois nunca se misturam.
 
 **Verificar:** `src/wirs/reporting/terminal.py`,
 `tests/unit/test_terminal.py` · **Issue:** #40 (fechada).
+
+---
+
+## #38 — Hints: um passo de leitura, N respostas (WIRS-054)
+
+### O que são os hints e por que o passo único importa
+
+Ler disco é a operação mais cara do scanner — cada byte lido duas vezes é
+tempo e I/O jogados fora, crítico em hospedagem compartilhada. Os hints
+resolvem isso na raiz: **um passo sobre os bytes serve N respostas**.
+`extract_hints` recebe o head do arquivo uma vez e devolve `is_text` +
+`executable` juntos. Quando o scheduler (futuro) plugar essa função no stream
+compartilhado do reader, hash, IOC, heurísticas e hints beberão da mesma
+leitura sem que nenhum detector precise saber dos outros.
+
+### Decisões de desenho
+
+- **Reuso por delegação, provado por contrato**: `executable` chama
+  `looks_executable` da #35 — e o teste asserta acordo amostra a amostra, não
+  a implementação. Se alguém duplicar a lógica, o contrato continua valendo;
+  se mudarem o detector, os hints acompanham sem edição.
+- **Texto = sem NUL e UTF-8 válido**: NUL denuncia binário mesmo quando o
+  resto decodifica (UTF-8 aceita `\x00`); latin-1 e sequências inválidas caem
+  para binário. Vazio conta como texto — nada há de binário nele.
+- **Assinatura final antes do scheduler**: bytes entram, hints imutáveis
+  saem. O orquestrador futuro só conecta; nada aqui será reassinado.
+- **Sem dobra com mismatch extensão/conteúdo**: essa comparação (WIRS-015) é
+  outra slice — hints expõem os fatos, regras julgam.
+
+**Verificar:** `src/wirs/detectors/content.py`,
+`tests/unit/test_content_hints.py` · **Issue:** #38 (aberta).
