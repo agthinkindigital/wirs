@@ -878,4 +878,4 @@ nossa, os dados são deles, e os dois nunca se misturam.
   suite intacta — e a prova E2E no fixture confirma as três tabelas.
 
 **Verificar:** `src/wirs/reporting/terminal.py`,
-`tests/unit/test_terminal.py` · **Issue:** #40 (aberta).
+`tests/unit/test_terminal.py` · **Issue:** #40 (fechada).
