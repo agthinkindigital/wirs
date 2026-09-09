@@ -499,4 +499,42 @@ nenhum** — só `lstat`, que nunca segue symlink e nunca abre arquivo.
 
 **Verificar:** `src/wirs/ports/platform.py`,
 `src/wirs/adapters/wordpress/discovery.py`,
-`tests/unit/test_wordpress_discovery.py` · **Issue:** #30 (aberta).
+`tests/unit/test_wordpress_discovery.py` · **Issue:** #30 (fechada).
+
+---
+
+## #31 — Zones: o mapa de expectativas do WordPress (WIRS-061)
+
+### O que são as zonas e por que o mesmo arquivo significa coisas diferentes por lugar
+
+Um `loader.php` em `mu-plugins/` (carregado automaticamente) e o mesmo nome
+em `uploads/` (conteúdo que deveria ser inerte) são situações opostas — mas o
+filesystem genérico vê dois arquivos iguais. As zonas resolvem isso: dividem
+o WordPress em 9 regiões, cada uma com sua **expectativa** (core protegido
+espera igualdade com upstream; uploads espera não-executável; cache espera
+churn). Regras futuras não perguntam "o que é este arquivo?" no vazio —
+perguntam "o que significa este arquivo *nesta zona*?".
+
+### Decisões de desenho
+
+- **Função pura sobre path relativo**: `classify("a/b") -> Zona`, sem I/O,
+  sem banco, sem estado. Testável por tabela, reusável por qualquer pipeline —
+  inclusive futuros adapters com suas próprias zonas.
+- **Raiz em três destinos**: arquivo oficial (lista estável do core:
+  `index.php`, `wp-login.php`, `xmlrpc.php`...) → protegido (comparável com
+  upstream); config visível (`wp-config.php`, `.htaccess`...) → especial
+  (política/heurística, nunca igualdade); desconhecido (`backup.zip`) →
+  especial também, porque raiz é área sensível e merece atenção, não
+  silêncio.
+- **Desconhecido tem endereço, não limbo**: `wp-content/custom/x` e o próprio
+  `wp-content` viram `OTHER`; fora de `wp-content`, desconhecido aninhado vira
+  `OTHER`. Toda entrada classifica em algo — "não sei onde pôr" não existe.
+- **MU-plugin é zona, não veredito**: classificar como `MU_PLUGINS` apenas
+  posiciona; dizer se é malicioso é trabalho de regra futura com evidência.
+  A zona informa, nunca condena — coerente com "sem baseline não é malicioso".
+- **Sem dobra de caixa**: `wp-admin` casa o diretório e os filhos pela mesma
+  regra de prefixo. Maiúsculas não são dobradas (Linux é case-sensitive;
+  preservar é o comportamento honesto).
+
+**Verificar:** `src/wirs/adapters/wordpress/zones.py`,
+`tests/unit/test_wordpress_zones.py` · **Issue:** #31 (aberta).
