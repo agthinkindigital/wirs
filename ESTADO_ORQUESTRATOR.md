@@ -18,7 +18,7 @@
 
 - [x] `AGENTS.md` (protocolo WIRS + 14 invariantes)
 - [x] `CONTEXT.md` (glossário: core, confiança, baselines, zones WP)
-- [x] `docs/agents/` (domain, issue-tracker, triage-labels)
+- [x] `docs/agents/README.md` (domínio, tracker, triage)
 - [x] `docs/adr/` (ADR-001..010 conforme Seção 14.13 do spec)
 - [x] `ORCHESTRATOR-ROADMAP.md` (E00–E15)
 - [ ] Issues GitHub via `/to-issues` (após scaffold)

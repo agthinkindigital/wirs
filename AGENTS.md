@@ -7,7 +7,8 @@ Antes de analisar ou alterar o projeto, leia nesta ordem:
 1. `AGENTS.md`
 2. `CONTEXT.md`
 3. `WIRS_MASTER_SPEC_PT-BR.md` (especificação viva — autoridade de produto e arquitetura)
-4. `docs/adr/` aplicáveis
+4. `docs/ARCHITECTURE.md` (como as peças se encaixam)
+5. `docs/adr/` aplicáveis
 5. GitHub Issues aplicáveis
 6. somente então, código, configuração e testes
 
