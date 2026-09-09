@@ -701,4 +701,4 @@ adapter Laravel, a policy serve a futuras zonas.
 **Verificar:** `src/wirs/detectors/executable.py`,
 `src/wirs/adapters/wordpress/policies.py`,
 `tests/unit/test_upload_policy.py`,
-`tests/fixtures/wordpress/uploads_php/` · **Issue:** #35 (aberta).
+`tests/fixtures/wordpress/uploads_php/` · **Issue:** #35 (fechada).

@@ -33,7 +33,19 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 completo (QA aprovado). FT-2: #30 (done) → #31 (done) → #32 (done) → #33 (done) → #34 (done) → #35.
+DAG atual: FT-1 completo (QA aprovado). FT-2 completo: #30→#31→#32→#33→#34→#35 (todas done).
+
+## QA da DAG FT-2 (2026-09-09, APROVADA com ressalvas)
+
+- Suite: 96 passed, 4 skipped (symlink/fifo/wp-cli ausentes neste Windows; rodam no CI Linux).
+- Ruff check + format + mypy strict + guardas: limpos.
+- Cadeia E2E sobre fixture uploads_php: discovery=None (correto — fixture não
+  é install completo, anti-falso-positivo funciona) + policy gera
+  WP.UPLOAD.EXECUTABLE/high no evil.php e nada no jpg/plugin.
+- Aceites das 6 slices conferidos um a um (evidências nos comentários).
+- Ressalvas: (1) contratos JSON de plugins assumidos — integração real pendente
+  de ambiente com WP-CLI; (2) providers ainda não plugados no `scan`
+  (orquestrador é FT-3); (3) QA formal de Epic fica para a Fase B.
 
 ## QA da DAG FT-1 (2026-09-09, APROVADA com ressalvas)
 
