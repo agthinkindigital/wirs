@@ -32,12 +32,17 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   Refresh automatizado de manifests upstream (ex.: checksums do WordPress.org
   por versão, com provenance e cache offline) + zonas derivadas do manifest
   em vez de listas manuais.
+  Premium/custom nunca é skip: baseline do operador (ZIP/manifest) + código
+  sempre submetido a heurísticas/IOC + UNVERIFIED com detalhes acionáveis para
+  decisão humana.
   Issues: WIRS-040–WIRS-046. (Fase C)
 
 - [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `in_progress`
 
   IOC schema, literal scanner, regex, zone policy engine, executable detector,
   PHP heuristics v0, entropy, rule metadata.
+  Scan em fases: corpo primeiro, cache (regenerável) como etapa adicional sob
+  demanda/flag — se nada no corpo, vale consultar o cache antes de encerrar.
   Slices FT-3: #36 (WIRS-050), #37 (WIRS-051), #38 (WIRS-054), #39 (WIRS-055).
   Restante (WIRS-052, 056, 057, 058): fatiar na Fase C.
   Issues: WIRS-050–WIRS-058. (Fase B)
@@ -53,6 +58,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 - [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `todo`
 
   Contrato ExternalAnalyzer, YARA, Wordfence CLI, Semgrep (fase 2), sandbox.
+  Inteligência de versões/higiene (componente desatualizado ou recurso
+  essencial a remover) como *contexto*, nunca como prova de comprometimento.
   Issues: WIRS-080–WIRS-085. (Fase C/E)
 
 - [**[E08] Reporting e Redaction**](https://github.com/agthinkindigital/wirs/issues/9) - `in_progress`

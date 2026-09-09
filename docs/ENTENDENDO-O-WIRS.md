@@ -259,6 +259,13 @@ aceitará baselines do operador). Plugin fora do WordPress.org nunca aparece
 nos resultados do provider — só nos avisos — então o scanner extrai os slugs
 dali: visível no coverage, jamais confundido com erro.
 
+E atenção ao ponto que mais importa na prática: `UNVERIFIED` não é pulado.
+O código premium é varrido por heurísticas e IOC como qualquer outro — só o
+que o baseline confiável *verificou* é absolvido (ver #45). Sem baseline, sem
+absolvição: o relatório entrega os achados e **você decide** (remover,
+atualizar, isolar, aceitar o risco). Ferramenta que pula premium em silêncio
+esconde justamente onde webshell gosta de morar.
+
 **Verificar:** premium em `unverified_plugins`, nunca em findings · **Issue:** #34.
 
 ---
