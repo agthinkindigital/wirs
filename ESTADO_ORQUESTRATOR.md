@@ -33,8 +33,17 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado, Fase B em `main`).
-Orquestrador: #42 (done) → #43 (done). Próximo: FT-4 (E04) ou polimento 0.1.0.
+DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado). Orquestrador #42/#43
+done. Flag --ioc #44 (done). Pronto para merge em `main` como 0.1.0.
+
+## QA do orquestrador + --ioc (2026-09-09, APROVADA com ressalvas)
+
+- Suite: 131 passed, 4 skipped; ruff + format + mypy strict + guardas limpos.
+- E2E real: scan em WP adulterado gera WP.UPLOAD.EXECUTABLE/high (exit 1,
+  exit 0 com --fail-on critical); provider core validado contra WP-CLI 2.12.0
+  real (contratos corrigidos — ver #33/#34).
+- Ressalvas: (1) plugin JSON validado via fonte, sem execução com DB;
+  (2) QA formal de Epic fica para o fechamento do 0.1.0.
 
 ## Merge Fase B (2026-09-09)
 

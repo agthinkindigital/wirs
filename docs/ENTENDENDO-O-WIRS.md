@@ -1026,4 +1026,4 @@ paga na hora, não com scan silenciosamente incompleto.
   exercida). Com `--fail-on medium`, falha como esperado.
 
 **Verificar:** `src/wirs/cli/app.py` (`load_iocs_file`),
-`tests/integration/test_scan.py` · **Issue:** #44 (aberta).
+`tests/integration/test_scan.py` · **Issue:** #44 (fechada).
