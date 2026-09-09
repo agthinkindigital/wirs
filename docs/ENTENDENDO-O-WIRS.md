@@ -426,3 +426,37 @@ humanos falam com as views.
 
 **Verificar:** `src/wirs/reporting/canonical.py`,
 `tests/unit/test_canonical.py`, `tests/golden/` · **Issue:** #28 (fechada).
+
+---
+
+## #29 — `wirs scan`: o primeiro comando que conta a verdade (WIRS-110)
+
+### O que é o scan mínimo e por que ele sai com exit 3
+
+Até aqui, cada peça foi testada isolada; o `wirs scan` é a primeira vez que
+elas trabalham juntas: valida o target (`LocalDirectoryTarget`, inválido →
+exit 2), roda o inventory de verdade, dobra os resultados num `CoverageEntry`
+de filesystem, monta o `CanonicalReport` e imprime JSON ou terminal. E sai com
+**exit 3** — pipeline incompleto por construção. Seria tentador retornar 0
+("nenhum finding!"), mas sem detectores isso seria o falso negativo
+institucionalizado: o relatório diz "Fase A" com todas as letras, e o exit
+code concorda.
+
+### Decisões de desenho
+
+- **Gaps viram PARTIAL automaticamente**: cada `InventoryGap` conta como
+  `failed` na entry — o teste com `scandir` sabotado prova a dobra
+  inventory→coverage sem camada intermediária.
+- **`findings` vazio, sem vergonha**: lista vazia com nota explícita, nunca
+  omitida. Ausência de findings com coverage honesto é informação; sem
+  coverage seria propaganda.
+- **Budgets por perfil provisórios** (soft 64 MiB, balanced 256, fast 1 GiB):
+  marcados como provisórios até a large-file policy (#034) — número chutado
+  documentado vale mais que número mágico silencioso.
+- **Terminal como view, não como segunda fonte**: a tabela Rich consome o
+  mesmo `CanonicalReport` do JSON. Duas saídas, uma verdade.
+- **`scan_id` único por execução** (`uuid4`): aqui determinismo seria bug —
+  cada execução real é um evento distinto, diferente dos IDs de modelo.
+
+**Verificar:** `src/wirs/cli/app.py`, `tests/integration/test_scan.py` ·
+**Issue:** #29 (fechada).
