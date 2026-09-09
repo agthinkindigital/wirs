@@ -587,24 +587,25 @@ esperado. Ausência vira dado que o coverage consome; só o inesperado vira erro
 O WP-CLI já sabe verificar o core contra os checksums oficiais — reinventar
 isso seria vaidade. O trabalho do WIRS é outro: **executar com segurança,
 normalizar a saída para o modelo interno e registrar provenance**. O
-`verify_core_checksum` roda `verify-checksums --include-root --format=json
---path=<alvo>`, traduz a lista `[{file, message}]` para `FileIntegrity`
+`verify_core_checksum` roda `verify-checksums --include-root --path=<alvo>`,
+traduz as linhas `Warning: <msg>: <file>` para `FileIntegrity`
 (MATCH/MISMATCH/MISSING/UNEXPECTED) e devolve um `CoreChecksumReport` com
 provider, versão e sucesso. A aplicação nunca vê o formato do vendor — essa é
-a anti-corruption layer funcionando: se o WP-CLI mudar o JSON amanhã, quebra
+a anti-corruption layer funcionando: se o WP-CLI mudar a saída amanhã, quebra
 um parser isolado, não o motor.
 
 ### Decisões de desenho
 
-- **Contrato lido da doc oficial, não da memória**: a página do comando
-  confirmou hook `before_wp_load`, download de md5 por versão+locale e o
-  formato da lista — e o contrato ficou registrado em
-  `docs/providers/wp-cli.md` (exigência da DoD de provider). O que a doc não
-  dizia (stdout vazio no sucesso), foi tratado defensivamente.
-- **Exit != 0 é sinal, não erro**: o WP-CLI sai diferente de zero quando algo
-  diverge — com JSON parseável, o report sai normal. Só vira
-  `ProviderExecutionError` quando não há stdout aproveitável. Confundir
-  "encontrou divergência" com "ferramenta quebrou" seria o erro clássico aqui.
+- **Contrato validado contra binário real, não só contra doc**: a doc oficial
+  sugeria `--format=json` para o core — o WP-CLI 2.12.0 real **rejeita** a flag.
+  Descobrimos baixando o WordPress oficial, adulterando de propósito e rodando
+  de verdade: o core fala em linhas de texto no STDERR
+  (`Warning: <msg>: <file>`), stdout vazio, e foi esse formato que o parser
+  implementa. Doc sem validação é rumor com URL.
+- **Exit != 0 é sinal, não erro**: com linhas parseáveis, o report sai normal
+  mesmo com exit 1; sem warnings e com falha, é `ProviderExecutionError`
+  (quebrou antes de verificar, ex.: sem rede). Confundir "divergiu" com
+  "quebrou" seria o erro clássico aqui.
 - **Mensagem desconhecida = `ProviderInvalidOutput`, nunca chute**: classificar
   um aviso novo como benigno seria o falso negativo silencioso; recusar alto
   força atualização explícita do parser + coverage degradado. Segurança antes
@@ -640,15 +641,17 @@ doeu: o trabalho foi só o formato por plugin + o caso novo.
 
 ### Decisões de desenho
 
-- **Contrato assumido às claras**: a doc oficial não mostra o JSON de plugins,
-  então definimos `[{plugin, file?, message}]` (core + slug) e registramos
-  como ASSUMIDO em `docs/providers/wp-cli.md`, com integração real pendente.
-  Assunção documentada + parser estrito > adivinhação silenciosa.
+- **Contrato lido do fonte, não chutado**: a doc não mostrava o JSON de plugins,
+  então lemos o `Checksum_Plugin_Command.php` oficial: erros em
+  `[{plugin_name, file, message}]` (`'File was added'`,
+  `'Checksum does not match'`). E o achado maior: skips moram nos **warnings
+  do STDERR**, nunca no JSON — registrado em `docs/providers/wp-cli.md`.
+  Fonte lida + parser estrito é melhor que adivinhação silenciosa.
 - **Sem baseline = UNVERIFIED, nunca failure**: plugin fora do WordPress.org
-  (premium/custom) cai em `unverified_plugins` via mensagens de skip
-  tabeladas — visível no coverage, jamais confundido com erro de provider.
-  É a invariante 7 ("sem baseline não é malicioso") atravessando a fronteira
-  do vendor.
+  nunca aparece no JSON — só nos warnings (`Could not retrieve ... skipping`,
+  `main file is missing`, `custom file`). O parser extrai os slugs dali para
+  `unverified_plugins`: visível no coverage, jamais confundido com erro de
+  provider. É a invariante 7 atravessando a fronteira do vendor.
 - **Shape do core é rejeitado aqui**: entrada sem `plugin` vira
   `ProviderInvalidOutput` — cada comando tem seu contrato, e misturá-los
   seria corrupção de camada.

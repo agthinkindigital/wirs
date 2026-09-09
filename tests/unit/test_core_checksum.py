@@ -1,13 +1,11 @@
 """Core checksum provider (WIRS-064).
 
-Contrato WP-CLI (doc oficial `wp core verify-checksums`): roda em
-`before_wp_load`, baixa md5 do WordPress.org por versão+locale, `--format=json`
-emite LISTA de {"file", "message"} e exit != 0 quando algo diverge.
+Contrato REAL (WP-CLI 2.12.0, validado contra binário em 2026-09-09): o core
+NÃO aceita --format — tudo sai em texto no STDERR ("Warning: <msg>: <file>").
+Ver docs/providers/wp-cli.md.
 """
 
 from __future__ import annotations
-
-import json
 
 from wirs.domain import IntegrityState, LocalDirectoryTarget
 from wirs.infrastructure.command_runner import CommandResult, CommandRunner
@@ -16,48 +14,48 @@ from wirs.providers.wpcli import WpCliDoctor
 
 
 class FakeRunner(CommandRunner):
-    def __init__(self, version_out: str, verify_out: str, verify_code: int = 1) -> None:
+    def __init__(self, version_out: str, stdout: str, stderr: str, code: int = 1) -> None:
         self._version_out = version_out
-        self._verify_out = verify_out
-        self._verify_code = verify_code
+        self._stdout = stdout
+        self._stderr = stderr
+        self._code = code
         self.calls: list[list[str]] = []
 
     def run(self, argv, *, timeout_s=60.0, max_bytes=1048576):  # type: ignore[override]
         self.calls.append(list(argv))
         if argv[-1] == "--version":
             return CommandResult(0, self._version_out, "", 120, False)
-        return CommandResult(self._verify_code, self._verify_out, "", 900, False)
+        return CommandResult(self._code, self._stdout, self._stderr, 900, False)
 
 
-FAKE_JSON = json.dumps(
-    [
-        {"file": "wp-includes/version.php", "message": "File doesn't verify against checksum"},
-        {"file": "readme.html", "message": "File doesn't exist"},
-        {"file": "evil.php", "message": "File should not exist"},
-    ]
+# Saída real de um core adulterado (stdout vazio, tudo no stderr).
+FAKE_STDERR = (
+    "Warning: File doesn't verify against checksum: wp-includes/version.php\n"
+    "Warning: File should not exist: evil.php\n"
+    "Error: WordPress installation doesn't verify against checksums.\n"
 )
 
 
-def test_json_normalizado(tmp_path) -> None:
-    runner = FakeRunner("WP-CLI 2.10.0\n", FAKE_JSON)
+def test_texto_real_normalizado(tmp_path) -> None:
+    runner = FakeRunner("WP-CLI 2.12.0\n", "", FAKE_STDERR)
     doctor = WpCliDoctor(runner=runner)
     report = verify_core_checksum(
         LocalDirectoryTarget(tmp_path),
         runner=runner,
         doctor=doctor,
         wp_command=["wp"],
-        provider_version="2.10.0",
+        provider_version="2.12.0",
     )
 
     assert report.provider_id == "wp-cli-core-checksum"
-    assert report.provider_version == "2.10.0"
+    assert report.provider_version == "2.12.0"
     por_arquivo = {f.path: f.state for f in report.files}
     assert por_arquivo["wp-includes/version.php"] is IntegrityState.MISMATCH
-    assert por_arquivo["readme.html"] is IntegrityState.MISSING
     assert por_arquivo["evil.php"] is IntegrityState.UNEXPECTED
     argv = [c for c in runner.calls if "verify-checksums" in c][0]
-    assert argv[:4] == ["wp", "core", "verify-checksums", "--include-root"]
-    assert "--format=json" in argv  # exit != 0 é sinal, não erro: parseou normal
+    assert argv[:3] == ["wp", "core", "verify-checksums"]
+    assert "--include-root" in argv
+    assert not any(a.startswith("--format") for a in argv)  # core real não aceita --format
 
 
 def _doctor(runner: FakeRunner) -> WpCliDoctor:
@@ -70,12 +68,11 @@ def test_malformed_vira_invalid_output(tmp_path) -> None:
     from wirs.domain import ProviderInvalidOutput
 
     for ruim in [
-        "não é json",
-        '{"a": 1}',
-        '[{"file": 1}]',
-        '[{"file": "x.php", "message": "Mensagem do futuro"}]',
+        "Warning: Mensagem do futuro: x.php\n",
+        "Warning: File frobnicate: x.php\n",
+        "Warning:\n",
     ]:
-        runner = FakeRunner("WP-CLI 2.10.0\n", ruim)
+        runner = FakeRunner("WP-CLI 2.12.0\n", "", ruim)
         with pytest.raises(ProviderInvalidOutput):
             verify_core_checksum(
                 LocalDirectoryTarget(tmp_path),
@@ -83,6 +80,18 @@ def test_malformed_vira_invalid_output(tmp_path) -> None:
                 doctor=_doctor(runner),
                 wp_command=["wp"],
             )
+
+
+def test_success_sem_warnings_vira_vazio(tmp_path) -> None:
+    runner = FakeRunner("WP-CLI 2.12.0\n", "Success: WordPress installation verifies.\n", "")
+    runner._code = 0
+    report = verify_core_checksum(
+        LocalDirectoryTarget(tmp_path),
+        runner=runner,
+        doctor=_doctor(runner),
+        wp_command=["wp"],
+    )
+    assert report.files == () and report.success is True
 
 
 def test_stdout_vazio_com_erro_vira_execution_error(tmp_path) -> None:
@@ -94,10 +103,10 @@ def test_stdout_vazio_com_erro_vira_execution_error(tmp_path) -> None:
     class FailRunner(FakeRunner):
         def run(self, argv, *, timeout_s=60.0, max_bytes=1048576):  # type: ignore[override]
             if argv[-1] == "--version":
-                return CR(0, "WP-CLI 2.10.0\n", "", 10, False)
+                return CR(0, "WP-CLI 2.12.0\n", "", 10, False)
             return CR(1, "", "Error: sem stdout", 10, False)
 
-    runner = FailRunner("", "")
+    runner = FailRunner("", "", "")
     with pytest.raises(ProviderExecutionError):
         verify_core_checksum(
             LocalDirectoryTarget(tmp_path), runner=runner, doctor=_doctor(runner), wp_command=["wp"]
@@ -113,10 +122,10 @@ def test_timeout_vira_provider_timeout(tmp_path) -> None:
     class SlowRunner(FakeRunner):
         def run(self, argv, *, timeout_s=60.0, max_bytes=1048576):  # type: ignore[override]
             if argv[-1] == "--version":
-                return CR(0, "WP-CLI 2.10.0\n", "", 10, False)
+                return CR(0, "WP-CLI 2.12.0\n", "", 10, False)
             return CR(124, "", "", 60001, True)
 
-    runner = SlowRunner("", "")
+    runner = SlowRunner("", "", "")
     with pytest.raises(ProviderTimeout):
         verify_core_checksum(
             LocalDirectoryTarget(tmp_path), runner=runner, doctor=_doctor(runner), wp_command=["wp"]
