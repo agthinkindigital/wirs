@@ -1044,7 +1044,7 @@ porque a sessão testou de verdade em vez de acreditar no fake.
 
 **Verificar:** `src/wirs/infrastructure/command_runner.py`,
 `src/wirs/providers/wpcli.py`, `tests/unit/test_wpcli_doctor.py` ·
-**Issue:** #46 (aberta).
+**Issue:** #46 (fechada).
 
 ---
 

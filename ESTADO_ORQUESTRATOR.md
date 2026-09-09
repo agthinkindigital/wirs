@@ -33,8 +33,18 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 + FT-3 completos (QA aprovado). Orquestrador #42/#43
-done. Flag --ioc #44 (done). Pronto para merge em `main` como 0.1.0.
+DAG atual: FT-1 + FT-2 + FT-3 + orquestrador + WIRS-053 + WIRS-119 (todas done).
+Sessão real validada: WP cru → 0 findings; adulterado → MISMATCH + UNEXPECTED.
+Pronto para merge em `main` como 0.1.0 + sessão no site do operador.
+
+## Sessão WP real (2026-09-09)
+
+- WP oficial pristino + WP-CLI 2.12.0: **0 findings**, 3338 suprimidos,
+  exit 0. Plugin sem wp-config: FAILED honesto (nada a verificar sem config).
+- Adulterado (version.php + evil.php): **2 findings** (MISMATCH critical +
+  UNEXPECTED medium), exit 1. Heurísticas só nos divergentes.
+- Correções que a sessão forçou: contratos reais do WP-CLI (#33/#34),
+  supressão por arquivo (não tudo-ou-nada), `.cmd` no Windows (#46).
 
 ## QA do orquestrador + --ioc (2026-09-09, APROVADA com ressalvas)
 
