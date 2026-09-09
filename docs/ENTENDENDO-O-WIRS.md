@@ -661,4 +661,4 @@ doeu: o trabalho foi só o formato por plugin + o caso novo.
 
 **Verificar:** `src/wirs/providers/wp_checksum.py`,
 `tests/unit/test_plugin_checksum.py`,
-`tests/integration/test_wpcli_plugins.py` · **Issue:** #34 (aberta).
+`tests/integration/test_wpcli_plugins.py` · **Issue:** #34 (fechada).
