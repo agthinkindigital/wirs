@@ -662,3 +662,43 @@ doeu: o trabalho foi só o formato por plugin + o caso novo.
 **Verificar:** `src/wirs/providers/wp_checksum.py`,
 `tests/unit/test_plugin_checksum.py`,
 `tests/integration/test_wpcli_plugins.py` · **Issue:** #34 (fechada).
+
+---
+
+## #35 — Uploads: onde PHP é notícia, não paisagem (WIRS-068)
+
+### O que é a policy e por que ela separa "parece executável" de "é proibido aqui"
+
+PHP dentro de `wp-content/plugins` é paisagem; o mesmo PHP dentro de
+`wp-content/uploads` é notícia — a zona de uploads deveria conter mídia
+inerte. A policy codifica exatamente essa distinção em duas metades
+independentes (o Exercício 7 do spec): `looks_executable` responde "este
+conteúdo parece executável?" (genérico, sem saber o que é WordPress) e
+`check_uploads_executable` responde "e nesta zona, isso pode?" (só dispara em
+`UPLOADS`). Separadas, as metades são reusáveis — o detector serve ao futuro
+adapter Laravel, a policy serve a futuras zonas.
+
+### Decisões de desenho
+
+- **Conteúdo, não extensão**: `evil.php` acusa pelo `<?php`, mas `foto.jpg`
+  com magic JPEG passa e — detalhe que salva SVGs legítimos — `<?xml` não é
+  PHP. Extensão é alegação do invasor; conteúdo é evidência.
+- **HIGH/HIGH, nunca "malware"**: severidade alta (forte violação de
+  expectativa, spec Q17) com confiança HIGH — não DETERMINISTIC, porque zona
+  é convenção, não baseline oficial. O finding informa prioridade de análise,
+  não veredito.
+- **Allowlist do operador com `fnmatch`**: exceções legítimas (plugin que
+  grava PHP em uploads) entram como padrões de config — stdlib, sem DSL
+  própria antes da hora.
+- **Evidence exigida, não fabricada**: a função recebe `evidence_refs` como
+  parâmetro obrigatório — a policy não inventa proveniência; o pipeline
+  futuro fornece.
+- **Fixtures inertes dos dois lados**: `evil.php` (positivo, sem backend
+  funcional), `foto.jpg` binário real e plugin legítimo (negativos) vivem em
+  `tests/fixtures/wordpress/uploads_php/` — positivo sem os dois negativos
+  seria teste pela metade.
+
+**Verificar:** `src/wirs/detectors/executable.py`,
+`src/wirs/adapters/wordpress/policies.py`,
+`tests/unit/test_upload_policy.py`,
+`tests/fixtures/wordpress/uploads_php/` · **Issue:** #35 (aberta).
