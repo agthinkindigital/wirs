@@ -768,3 +768,38 @@ inventar.
 
 **Verificar:** `src/wirs/detectors/ioc_scanner.py`,
 `tests/unit/test_ioc_scanner.py` · **Issue:** #37 (fechada).
+
+---
+
+## #39 — Heurísticas: sinal fraco sozinho, cadeia explícita combinada (WIRS-055)
+
+### O que são as heurísticas e por que isolado nunca é critical
+
+`eval(` sozinho aparece em código legítimo; `base64_decode(` sozinho também.
+O erro clássico dos scanners é transformar coincidência em veredito. O
+`analyze_php` trabalha em dois tempos: primeiro coleta **famílias de sinais**
+(execução dinâmica, encoding, processo, arquivo/rede, função dinâmica,
+literal encoded) sobre bytes crus; depois aplica uma **tabela de combinação
+explícita** — e só ela decide. Isolado fraco: silêncio ou LOW. Encoding +
+execução: HIGH. Três famílias: HIGH. E **nunca CRITICAL**: heurística não tem
+patente de certeza; o teto é HIGH por desenho, com teste travando isso.
+
+### Decisões de desenho
+
+- **Um finding no máximo (o tier mais alto)**: sem duplicar por família. O
+  relatório recebe a conclusão, e os sinais vão em `attributes` para auditoria.
+- **Regex em bytes, case-insensitive, sem decode**: mesmo arquivo binário não
+  quebra a análise — e minificação JS legítima passa ilesa (sem tokens PHP,
+  sem finding).
+- **Backticks contam**: o operador de shell do PHP (`` `...` ``) é execução
+  disfarçada de pontuação — entra como função dinâmica.
+- **Fixtures sem `eval`**: a cadeia positiva usa `assert(+base64+gzinflate` —
+  exercita encoding+execução sem o token que provoca o antivírus. A regra
+  anti-AV da #37 vale para fixtures também; os 4 arquivos foram verificados
+  legíveis após escrita.
+- **Negativos em maioria**: base64 isolado, plugin limpo e JS minificado —
+  positivo sem negativos seria teste pela metade (padrão firmado na #35).
+
+**Verificar:** `src/wirs/detectors/php_heuristics.py`,
+`tests/unit/test_php_heuristics.py`,
+`tests/fixtures/wordpress/heuristics/` · **Issue:** #39 (aberta).
