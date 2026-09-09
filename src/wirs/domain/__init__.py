@@ -7,6 +7,11 @@ from wirs.domain.artifact import Artifact, ArtifactKind, ArtifactMetadata
 from wirs.domain.coverage import CoverageEntry, CoverageState
 from wirs.domain.errors import (
     BudgetExceeded,
+    ProviderError,
+    ProviderExecutionError,
+    ProviderInvalidOutput,
+    ProviderTimeout,
+    ProviderUnavailable,
     ReadCancelled,
     SecurityBoundaryError,
     TargetError,
@@ -14,6 +19,7 @@ from wirs.domain.errors import (
 )
 from wirs.domain.evidence import Evidence, Provenance, RedactionState
 from wirs.domain.finding import Confidence, ConfidenceClass, Finding, Severity
+from wirs.domain.integrity import FileIntegrity, IntegrityState
 from wirs.domain.safepath import SafePath
 from wirs.domain.target import LocalDirectoryTarget, Target, TargetKind
 
@@ -27,9 +33,16 @@ __all__ = [
     "CoverageEntry",
     "CoverageState",
     "Evidence",
+    "FileIntegrity",
     "Finding",
+    "IntegrityState",
     "LocalDirectoryTarget",
     "Provenance",
+    "ProviderError",
+    "ProviderExecutionError",
+    "ProviderInvalidOutput",
+    "ProviderTimeout",
+    "ProviderUnavailable",
     "ReadCancelled",
     "RedactionState",
     "SafePath",

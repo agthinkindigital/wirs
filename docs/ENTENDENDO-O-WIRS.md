@@ -577,3 +577,49 @@ esperado. Ausência vira dado que o coverage consome; só o inesperado vira erro
 **Verificar:** `src/wirs/infrastructure/command_runner.py`,
 `src/wirs/providers/wpcli.py`, `tests/unit/test_wpcli_doctor.py` ·
 **Issue:** #32 (fechada).
+
+---
+
+## #33 — Checksums: perguntando ao WordPress.org sem acreditar cego (WIRS-064)
+
+### O que é o provider e por que ele traduz em vez de repassar
+
+O WP-CLI já sabe verificar o core contra os checksums oficiais — reinventar
+isso seria vaidade. O trabalho do WIRS é outro: **executar com segurança,
+normalizar a saída para o modelo interno e registrar provenance**. O
+`verify_core_checksum` roda `verify-checksums --include-root --format=json
+--path=<alvo>`, traduz a lista `[{file, message}]` para `FileIntegrity`
+(MATCH/MISMATCH/MISSING/UNEXPECTED) e devolve um `CoreChecksumReport` com
+provider, versão e sucesso. A aplicação nunca vê o formato do vendor — essa é
+a anti-corruption layer funcionando: se o WP-CLI mudar o JSON amanhã, quebra
+um parser isolado, não o motor.
+
+### Decisões de desenho
+
+- **Contrato lido da doc oficial, não da memória**: a página do comando
+  confirmou hook `before_wp_load`, download de md5 por versão+locale e o
+  formato da lista — e o contrato ficou registrado em
+  `docs/providers/wp-cli.md` (exigência da DoD de provider). O que a doc não
+  dizia (stdout vazio no sucesso), foi tratado defensivamente.
+- **Exit != 0 é sinal, não erro**: o WP-CLI sai diferente de zero quando algo
+  diverge — com JSON parseável, o report sai normal. Só vira
+  `ProviderExecutionError` quando não há stdout aproveitável. Confundir
+  "encontrou divergência" com "ferramenta quebrou" seria o erro clássico aqui.
+- **Mensagem desconhecida = `ProviderInvalidOutput`, nunca chute**: classificar
+  um aviso novo como benigno seria o falso negativo silencioso; recusar alto
+  força atualização explícita do parser + coverage degradado. Segurança antes
+  de conveniência.
+- **Hierarquia de erros do spec virou código**: `ProviderUnavailable`,
+  `ProviderTimeout`, `ProviderInvalidOutput`, `ProviderExecutionError` —
+  cada falha tem nome, e cada nome vira Coverage em vez de abortar o scan.
+- **Doctor injetável**: o provider recebe o doctor pronto (o teste injeta o
+  fake), em vez de criá-lo escondido — sem isso, o fake do teste nunca seria
+  consultado e o teste mentiria. O TDD pegou as duas armadilhas (lookup
+  incondicional e chamada errada no fake).
+- **Integração real quando existir**: o teste de integração pula sem `wp` ou
+  fixture — skip explícito documentado, não cobertura fingida.
+
+**Verificar:** `src/wirs/providers/wp_checksum.py`,
+`src/wirs/domain/integrity.py`, `tests/unit/test_core_checksum.py`,
+`tests/integration/test_wpcli_core.py`, `docs/providers/wp-cli.md` ·
+**Issue:** #33 (aberta).
