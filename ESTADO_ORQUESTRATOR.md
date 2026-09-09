@@ -33,7 +33,7 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual (ordem de dependência): #18 (done) → #19 (done) → #20 (done) → #21 (done) → #22 (done) → #23 (done) → #24 (done) → #25 (done) → #26 (done) → #27 (done) → {#28, #29}.
+DAG atual (ordem de dependência): #18 (done) → #19 (done) → #20 (done) → #21 (done) → #22 (done) → #23 (done) → #24 (done) → #25 (done) → #26 (done) → #27 (done) → #28 (done) → #29.
 
 ## Próximos passos
 
