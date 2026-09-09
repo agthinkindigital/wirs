@@ -702,3 +702,30 @@ adapter Laravel, a policy serve a futuras zonas.
 `src/wirs/adapters/wordpress/policies.py`,
 `tests/unit/test_upload_policy.py`,
 `tests/fixtures/wordpress/uploads_php/` · **Issue:** #35 (fechada).
+
+---
+
+## #36 — IOC: o vocabulário dos sinais conhecidos (WIRS-050)
+
+### O que é o IOC e por que tipo validado, não string solta
+
+"Procurar `eval(` nos arquivos" parece trivial até o dia em que um IOC
+malformado (SHA com 63 chars, domain com espaço) gera falso negativo
+silencioso ou quebra o scanner no meio. O `IOC` amarra **tipo + valor
+validados**: 5 kinds (literal, domain, URL fragment, path fragment, SHA-256),
+cada um com sua regra — SHA exige 64 hex, domain exige charset válido e é
+normalizado para minúsculo, literal não pode ser vazio. IOC inválido nem
+nasce: `ValueError` na construção, nunca no meio do scan.
+
+### Decisões de desenho
+
+- **Normalizar em vez de só validar**: domain vai para minúsculo (DNS não
+  distingue caixa), SHA maiúsculo desce — o mesmo indicador escrito de dois
+  jeitos é o mesmo IOC, com o mesmo ID.
+- **ID sem o `label`**: a nota humana ("webshell X") viaja junto mas não
+  compõe a identidade — renomear a nota não duplica o indicador.
+- **Round-trip total**: o schema é a ponte entre o arquivo `iocs.txt` do
+  operador (futuro) e o scanner em streaming da #37.
+
+**Verificar:** `src/wirs/domain/ioc.py`, `tests/unit/test_ioc.py` ·
+**Issue:** #36 (aberta).

@@ -20,6 +20,7 @@ from wirs.domain.errors import (
 from wirs.domain.evidence import Evidence, Provenance, RedactionState
 from wirs.domain.finding import Confidence, ConfidenceClass, Finding, Severity
 from wirs.domain.integrity import FileIntegrity, IntegrityState
+from wirs.domain.ioc import IOC, IOCKind
 from wirs.domain.safepath import SafePath
 from wirs.domain.target import LocalDirectoryTarget, Target, TargetKind
 
@@ -36,6 +37,8 @@ __all__ = [
     "FileIntegrity",
     "Finding",
     "IntegrityState",
+    "IOC",
+    "IOCKind",
     "LocalDirectoryTarget",
     "Provenance",
     "ProviderError",
