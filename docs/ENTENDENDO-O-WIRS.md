@@ -802,4 +802,4 @@ patente de certeza; o teto é HIGH por desenho, com teste travando isso.
 
 **Verificar:** `src/wirs/detectors/php_heuristics.py`,
 `tests/unit/test_php_heuristics.py`,
-`tests/fixtures/wordpress/heuristics/` · **Issue:** #39 (aberta).
+`tests/fixtures/wordpress/heuristics/` · **Issue:** #39 (fechada).

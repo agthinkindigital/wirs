@@ -33,7 +33,7 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 completos (QA aprovado). FT-3: #36 (done) → #37 (done) → #39 + {#38, #40, #41 livres}.
+DAG atual: FT-1 + FT-2 completos (QA aprovado). FT-3: #36 (done) → #37 (done) → #39 (done) + {#38, #40, #41 livres}.
 
 ## QA da DAG FT-2 (2026-09-09, APROVADA com ressalvas)
 
