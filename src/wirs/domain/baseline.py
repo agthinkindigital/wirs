@@ -14,6 +14,8 @@ from enum import Enum
 from types import MappingProxyType
 from typing import Any
 
+from wirs.domain.integrity import FileIntegrity, IntegrityState
+
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -101,3 +103,32 @@ class BaselineManifest:
             created_at=None if created is None else datetime.fromisoformat(str(created)),
             id=str(data.get("id", "")),
         )
+
+
+def compare_baseline(
+    manifest: BaselineManifest, actual: Mapping[str, str]
+) -> tuple[FileIntegrity, ...]:
+    """Compara manifest contra hashes reais: match/mismatch/missing/unexpected."""
+    restante = dict(actual)
+    resultado: list[FileIntegrity] = []
+    for path, expected in manifest.files.items():
+        digest = restante.pop(path, None)
+        if digest is None:
+            resultado.append(
+                FileIntegrity(path=path, state=IntegrityState.MISSING, expected=expected)
+            )
+        elif digest == expected:
+            resultado.append(
+                FileIntegrity(
+                    path=path, state=IntegrityState.MATCH, expected=expected, actual=digest
+                )
+            )
+        else:
+            resultado.append(
+                FileIntegrity(
+                    path=path, state=IntegrityState.MISMATCH, expected=expected, actual=digest
+                )
+            )
+    for path, digest in restante.items():
+        resultado.append(FileIntegrity(path=path, state=IntegrityState.UNEXPECTED, actual=digest))
+    return tuple(resultado)

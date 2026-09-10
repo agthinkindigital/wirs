@@ -4,7 +4,7 @@ Proibido importar wordpress, yara, wordfence, rich, mysql, typer a partir daqui.
 """
 
 from wirs.domain.artifact import Artifact, ArtifactKind, ArtifactMetadata
-from wirs.domain.baseline import BaselineManifest, BaselineTrust
+from wirs.domain.baseline import BaselineManifest, BaselineTrust, compare_baseline
 from wirs.domain.coverage import CoverageEntry, CoverageState
 from wirs.domain.errors import (
     BudgetExceeded,
@@ -61,6 +61,7 @@ __all__ = [
     "TargetError",
     "TargetKind",
     "WirsError",
+    "compare_baseline",
     "redact_mapping",
     "redact_text",
 ]

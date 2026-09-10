@@ -456,3 +456,30 @@ não-confiável, declarada como tal) e a provenance do pacote. Sem isso,
 
 **Verificar:** `src/wirs/domain/baseline.py`,
 `tests/unit/test_baseline_manifest.py` · **Issue:** #48.
+
+---
+
+## #49 — Comparar: quatro respostas, não duas (WIRS-041)
+
+### O que o scan busca
+
+Dado o manifest (#48) e os hashes reais da árvore, cada arquivo recebe um de
+quatro vereditos: `match` (idêntico), `mismatch` (mudou — com esperado e real
+lado a lado), `missing` (o manifest promete, o disco não entrega) e
+`unexpected` (o disco tem, o manifest não conhece). Todo extra em escopo
+protegido entra como `unexpected`, não como curiosidade.
+
+### Por que foi desenhado assim
+
+- **Quatro estados em vez de "igual/diferente"**: ausente e extra são perguntas
+  diferentes ("removeram?" vs "plantaram?") e merecem severidades e próximos
+  checks diferentes. Colapsar tudo em "diverge" joga fora a investigação.
+- **Mismatch carrega os dois hashes**: a evidência comparável é o que permite
+  ao analista (ou à correlação futura) decidir se foi 1 byte ou reescrita
+  total — sem reler o disco.
+- **Puro e reutilizável**: a função compara manifest contra mapa de hashes,
+  sem saber de filesystem, WP-CLI ou CLI — o mesmo código servirá ao ZIP (#51)
+  e ao mapping premium (#52).
+
+**Verificar:** `compare_baseline` em `src/wirs/domain/baseline.py`,
+`tests/unit/test_baseline_compare.py` · **Issue:** #49.
