@@ -512,3 +512,31 @@ calcula SHA-256 de cada arquivo regular e grava manifest com provenance
 **Verificar:** `wirs baseline create --help`,
 `src/wirs/infrastructure/baseline.py`,
 `tests/integration/test_baseline_create.py` · **Issue:** #50.
+
+---
+
+## #51 — ZIP confiável sem cair em armadilha (WIRS-043)
+
+### O que o scan busca
+
+Gerar o mesmo manifest a partir do ZIP que o fornecedor (ou você) guardou:
+extrai isolado, calcula SHA-256 por arquivo e identifica o pacote pelo hash do
+próprio ZIP. Manifest do ZIP ≡ manifest do diretório extraído — a embalagem
+não muda a fotografia.
+
+### Por que foi desenhado assim
+
+- **ZIP é input hostil clássico**: `../../evil.php` (zip-slip), symlink que
+  aponta para fora e bomba de expansão são os três ataques testados — travessia
+  vira erro de fronteira, symlink nunca é materializado, expansão tem teto.
+  Baseline que deixa o ZIP escrever fora do destino não é baseline, é
+  vulnerabilidade.
+- **Hash do ZIP como identidade do pacote**: o `package_hash` aqui é o SHA-256
+  do arquivo ZIP — amarra "este manifest fala *deste* pacote", permitindo
+  re-verificar a embalagem antes de confiar no conteúdo.
+- **Extração nunca executa**: copiar bytes não roda lifecycle script; não há
+  caminho de código entre "abrir o ZIP" e "rodar algo dele".
+
+**Verificar:** `src/wirs/infrastructure/archive.py`,
+`tests/unit/test_baseline_archive.py`,
+`tests/security/test_baseline_archive_attack.py` · **Issue:** #51.

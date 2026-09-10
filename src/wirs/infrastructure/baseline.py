@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from wirs.domain import ArtifactKind, BaselineManifest, BaselineTrust, LocalDirectoryTarget
+from wirs.infrastructure.archive import extract_zip_safely
 from wirs.infrastructure.filesystem import InventoryGap, LocalArtifactSource
 from wirs.infrastructure.hashing import HashService
 from wirs.infrastructure.reader import ArtifactReader, ReadBudget
@@ -28,6 +29,24 @@ class BaselineBuilder:
         reader = reader or ArtifactReader()
         self._hashes = HashService(reader)
         self._budget = budget or ReadBudget(max_bytes=1 << 30)
+
+    def build_archive(self, archive: Path, *, component_id: str, version: str) -> BaselineManifest:
+        """Manifest de ZIP confiável: extrai isolado e identifica pelo hash do ZIP."""
+        import tempfile
+
+        package_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+        with tempfile.TemporaryDirectory(prefix="wirs-baseline-") as tmp:
+            extracted = extract_zip_safely(archive, Path(tmp) / "pkg")
+            manifest = self.build(extracted, component_id=component_id, version=version)
+        return BaselineManifest(
+            component_id=manifest.component_id,
+            version=manifest.version,
+            source=f"archive:{archive.resolve()}",
+            trust=manifest.trust,
+            files=dict(manifest.files),
+            package_hash=package_hash,
+            created_at=manifest.created_at,
+        )
 
     def build(self, root: Path, *, component_id: str, version: str) -> BaselineManifest:
         target = LocalDirectoryTarget(root)
