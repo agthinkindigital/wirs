@@ -153,6 +153,7 @@ def test_checksum_ausente_degrada_e_scan_continua(tmp_path) -> None:
 
     class DeadProvider:
         id = "wp-cli-core-checksum"
+        platforms = ()
 
         def verify(self, target):
             raise ProviderUnavailable("sem wp aqui")
@@ -173,6 +174,45 @@ def test_checksum_ausente_degrada_e_scan_continua(tmp_path) -> None:
     assert ck.capability == "wp-cli-core-checksum" and ck.state.value == "unavailable"
 
 
+def test_sem_stream_sem_segunda_leitura(tmp_path) -> None:
+    from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
+    from wirs.domain import IOC, IOCKind
+
+    (tmp_path / "a.txt").write_bytes(b"hello world")
+    target = LocalDirectoryTarget(tmp_path)
+    leituras = 0
+    base = ArtifactReader()
+
+    class SpyReader(ArtifactReader):
+        def iter_chunks(self, artifact, budget, *, should_stop=None):
+            nonlocal leituras
+            leituras += 1
+            yield from base.iter_chunks(artifact, budget, should_stop=should_stop)
+
+    run_scan(
+        target,
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=SpyReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[PhpHeuristicsDetector()],
+    )
+    assert leituras == 1  # só o head; stream completo só com IOC
+
+    leituras = 0
+    run_scan(
+        target,
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=SpyReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[IocDetector([IOC(kind=IOCKind.LITERAL, value="zzz")])],
+    )
+    assert leituras == 2  # head + stream do IOC
+
+
 def test_verificado_por_baseline_suprime_heuristicas(tmp_path) -> None:
     from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
     from wirs.detectors.builtin import PhpHeuristicsDetector
@@ -183,6 +223,7 @@ def test_verificado_por_baseline_suprime_heuristicas(tmp_path) -> None:
 
     class CoreOk:
         id = "fake-baseline"
+        platforms = ()
 
         def verify(self, target):
             return [
@@ -222,6 +263,7 @@ def test_divergente_continua_escrutinado(tmp_path) -> None:
 
     class CoreParcial:
         id = "fake-baseline"
+        platforms = ()
 
         def verify(self, target):
             return [

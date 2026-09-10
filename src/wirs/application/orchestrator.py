@@ -125,12 +125,15 @@ def _covered(relative: str, prefixes: tuple[str, ...]) -> bool:
 
 
 def _integrity_phase(
-    target: Target, providers: Sequence[IntegrityProvider]
+    target: Target, platform_id: str | None, providers: Sequence[IntegrityProvider]
 ) -> tuple[list[Finding], list[CoverageEntry], tuple[str, ...], tuple[str, ...]]:
     findings: list[Finding] = []
     coverage: list[CoverageEntry] = []
     covered: list[str] = []
+    diverged: list[str] = []
     for provider in providers:
+        if provider.platforms and platform_id not in provider.platforms:
+            continue
         try:
             components = provider.verify(target)
         except ProviderError as e:
@@ -216,7 +219,9 @@ def run_scan(
 
     # Integridade ANTES da detecção: baseline confiável absolve (WIRS-053).
     # Divergentes continuam escaneados (correlação DX001 precisa dos dois lados).
-    ck_findings, ck_coverage, covered, diverged = _integrity_phase(target, integrity)
+    ck_findings, ck_coverage, covered, diverged = _integrity_phase(
+        target, found.platform_id if found else None, integrity
+    )
     all_evidence: list[Evidence] = []
     all_findings: list[Finding] = list(ck_findings)
     suppressed = 0

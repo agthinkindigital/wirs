@@ -13,6 +13,7 @@ Exit codes (Seção 10.8 do spec):
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from enum import IntEnum
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
 from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
 from wirs.infrastructure.reader import ReadBudget
+from wirs.ports.detection import Detector
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
 from wirs.reporting import CanonicalReport, render_report
 
@@ -68,6 +70,14 @@ def doctor() -> None:
         found = shutil.which(tool)
         state = f"[green]available[/green] ({found})" if found else "[yellow]unavailable[/yellow]"
         console.print(f"  {tool}: {state}")
+
+
+def build_detectors(ioc_list: Sequence[IOC]) -> list[Detector]:
+    """Detectores do scan; IOC só entra com lista (evita 2ª leitura à toa)."""
+    detectors: list[Detector] = [PhpHeuristicsDetector(), UploadsExecutablePolicy()]
+    if ioc_list:
+        detectors.insert(0, IocDetector(list(ioc_list)))
+    return detectors
 
 
 def load_iocs_file(path: Path) -> list[IOC]:
@@ -136,7 +146,7 @@ def scan(
         adapters=[WordPressAdapter()],
         reader=ArtifactReader(),
         budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
-        detectors=[IocDetector(ioc_list), PhpHeuristicsDetector(), UploadsExecutablePolicy()],
+        detectors=build_detectors(ioc_list),
         integrity=[WpCliCoreIntegrity(), WpCliPluginIntegrity()],
     )
     for artifact in result.artifacts:

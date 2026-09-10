@@ -123,3 +123,15 @@ def test_ioc_invalido_vira_exit_2(tmp_path) -> None:
     kind_ruim = tmp_path / "kind.txt"
     kind_ruim.write_text("foguete:xyz\n", encoding="utf-8")
     assert runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(kind_ruim)]).exit_code == 2
+
+
+def test_build_detectors_so_com_iocs() -> None:
+    from wirs.cli.app import build_detectors
+    from wirs.detectors.builtin import IocDetector
+    from wirs.domain import IOC, IOCKind
+
+    sem = build_detectors([])
+    assert not any(isinstance(d, IocDetector) for d in sem)
+
+    com = build_detectors([IOC(kind=IOCKind.LITERAL, value="x")])
+    assert sum(isinstance(d, IocDetector) for d in com) == 1
