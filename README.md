@@ -68,13 +68,12 @@ INFO      14                     Database             NOT RUN
 
 ## Status do projeto
 
-Fase A (núcleo seguro) e as slices da **Fase B** estão em `main`: discovery
-WordPress, zonas, doctor e providers de checksum via WP-CLI, IOC + scanner em
-streaming, hints compartilhados, heurísticas PHP v0, terminal e JSON canônico,
-redaction — tudo com testes e cobertura honesta. Falta para o `0.1.0`
-operacional: plugar providers e detectores no `scan` (orquestrador), profile
-`soft` formal e E2E com WordPress real. Acompanhe pelo
-[roadmap](ORCHESTRATOR-ROADMAP.md) e pela [especificação viva](WIRS_MASTER_SPEC_PT-BR.md)
+**0.1.0** — scanner WordPress operacional: discovery, zonas, checksums oficiais
+via WP-CLI, IOC em streaming, heurísticas PHP, policy de uploads, redaction,
+JSON canônico e terminal — tudo com testes e cobertura honesta. Falta para as
+próximas fases: baselines custom (0.2), banco + diagnoses (0.3), analyzers
+externos (0.4). Acompanhe pelo [roadmap](ORCHESTRATOR-ROADMAP.md), pelo
+[changelog](CHANGELOG.md) e pela [especificação viva](WIRS_MASTER_SPEC_PT-BR.md)
 (em português).
 
 ## Instalação

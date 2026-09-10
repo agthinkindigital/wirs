@@ -1,6 +1,6 @@
 [project]
 name = "wirs"
-version = "0.0.1"
+version = "0.1.0"
 description = "WordPress Incident Response Scanner — motor generico de scanning para resposta a incidentes, integridade e orquestracao de evidencias"
 readme = "README.md"
 license = { text = "MIT" }

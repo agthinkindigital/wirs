@@ -28,5 +28,8 @@ class ComponentIntegrity:
 @runtime_checkable
 class IntegrityProvider(Protocol):
     id: str
+    # Plataformas atendidas; vazio = qualquer uma. Orquestrador só chama quando
+    # a plataforma detectada está incluída (evita FAILED barulhento em subdir).
+    platforms: tuple[str, ...]
 
     def verify(self, target: Target) -> list[ComponentIntegrity]: ...

@@ -1,0 +1,22 @@
+{
+  "coverage": [
+    {
+      "applicable_checks": 4,
+      "capability": "filesystem",
+      "failed": 0,
+      "note": "",
+      "skipped": 0,
+      "state": "complete",
+      "unavailable": 0,
+      "verified": 4
+    }
+  ],
+  "findings": [],
+  "generated_at": "REPRODUCIBLE-EXAMPLE",
+  "note": "Orquestrador v1: inventory + detection + checksum (degrade gracioso).",
+  "profile": "soft",
+  "scan_id": "scan_example",
+  "scanner_version": "0.1.0",
+  "schema_version": "1.0",
+  "target_root": "C:\\Users\\Leonardo\\AppData\\Local\\Temp\\opencode\\qa-fixture"
+}

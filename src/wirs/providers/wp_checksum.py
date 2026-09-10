@@ -281,6 +281,7 @@ class WpCliCoreIntegrity:
     """Adapter WP-CLI → seam IntegrityProvider (montado no CLI)."""
 
     id = "wp-cli-core-checksum"
+    platforms: tuple[str, ...] = ("wordpress",)
 
     def __init__(
         self,
@@ -315,6 +316,7 @@ class WpCliPluginIntegrity:
     """Adapter WP-CLI → seam IntegrityProvider (montado no CLI)."""
 
     id = "wp-cli-plugin-checksum"
+    platforms: tuple[str, ...] = ("wordpress",)
 
     def __init__(
         self,
