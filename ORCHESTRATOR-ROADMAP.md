@@ -26,7 +26,7 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   scheduler central, large-file policy, benchmark.
   Slices: #26 (WIRS-030), #27 (WIRS-031). (Fase A/B)
 
-- [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `todo`
+- [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `in_progress`
 
   Manifest schema, comparator, `baseline create`, ZIP baseline, trust explícito.
   Refresh automatizado de manifests upstream (ex.: checksums do WordPress.org
@@ -35,6 +35,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   Premium/custom nunca é skip: baseline do operador (ZIP/manifest) + código
   sempre submetido a heurísticas/IOC + UNVERIFIED com detalhes acionáveis para
   decisão humana.
+  Slices FT-4: #48 (WIRS-040), #49 (WIRS-041), #50 (WIRS-042), #51 (WIRS-043),
+  #52 (WIRS-066). Restante (WIRS-044, 045, 046): Fase C.
   Issues: WIRS-040–WIRS-046. (Fase C)
 
 - [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `in_progress`
