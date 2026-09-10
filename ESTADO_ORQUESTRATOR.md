@@ -33,7 +33,8 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: release 0.1.0 em andamento (issue #47). Próximo: FT-4 (E04).
+DAG atual: **v0.1.0 publicada** (tag + Release com artefatos). Próximo: FT-4
+(E04, baselines custom/premium — Fase C / 0.2).
 
 ## Release 0.1.0 (2026-09-10, em andamento)
 
