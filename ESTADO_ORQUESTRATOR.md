@@ -33,9 +33,14 @@
 - [x] Epics FT-1 (#1, #2, #3, #4, #9, #11) com checklist de slices + `in_progress`
 - [x] Roadmap com links diretos Epic→Issue
 
-DAG atual: FT-1 + FT-2 + FT-3 + orquestrador + WIRS-053 + WIRS-119 (todas done).
-Sessão real validada: WP cru → 0 findings; adulterado → MISMATCH + UNEXPECTED.
-Pronto para merge em `main` como 0.1.0 + sessão no site do operador.
+DAG atual: release 0.1.0 em andamento (issue #47). Próximo: FT-4 (E04).
+
+## Release 0.1.0 (2026-09-10, em andamento)
+
+- Docs sincronizados (README/ROADMAP/ESTADO/CHANGELOG), acceptance marcado nas
+  30 slices + 8 Epics, QA completo verde (137 passed), E2E Windows local +
+  Linux via CI, golden regenerado (só versão), exemplo reproduzível em
+  docs/examples/scan-example.json.
 
 ## Sessão site real (2026-09-09, somente leitura, dados anonimizados)
 

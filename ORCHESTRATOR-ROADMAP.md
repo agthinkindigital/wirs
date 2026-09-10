@@ -119,8 +119,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 
 | Marco | Epics | Saída verificável |
 |---|---|---|
-| M1 Skeleton 0.0.x (Fase A) | E00, E01, E02, E03(parcial), E08(parcial), E10(parcial) | `wirs scan tests/fixtures/generic/clean_tree` produz report válido |
-| M2 WordPress slice 0.1.0 (Fase B) | E05, E06, E10 | discovery + core/plugin integrity + zone policy + IOC + heurísticas + terminal/JSON |
+| M1 Skeleton 0.0.x (Fase A) — `done` | E00, E01, E02, E03(parcial), E08(parcial), E10(parcial) | `wirs scan tests/fixtures/generic/clean_tree` produz report válido |
+| M2 WordPress slice 0.1.0 (Fase B) — `done` | E05, E06, E10 | discovery + core/plugin integrity + zone policy + IOC + heurísticas + terminal/JSON |
 | M3 Custom + YARA 0.2.0 (Fase C) | E04, E07(parcial) | operator baselines + YARA + Markdown |
 | M4 Application state 0.3.0 (Fase D) | E09, DB (WIRS-070–073) | DB IOC + diagnoses iniciais |
 | M5 Ecossistema 0.4.0 (Fase E) | E07 | Wordfence + Semgrep opcional |

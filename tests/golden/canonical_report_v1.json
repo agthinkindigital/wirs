@@ -66,7 +66,7 @@
   "note": "golden v1",
   "profile": "soft",
   "scan_id": "scan_golden_01",
-  "scanner_version": "0.0.1",
+  "scanner_version": "0.1.0",
   "schema_version": "1.0",
   "target_root": "/srv/www/site"
 }
