@@ -34,7 +34,7 @@
 - [x] Roadmap com links diretos Epic→Issue
 
 DAG atual: **v0.1.0 publicada** (tag + Release com artefatos). FT-4: #48 (done),
-#49 (done) → {#50, #51, #52}.
+#49 (done), #50 (done) → {#51, #52}.
 
 ## Release 0.1.0 (2026-09-10, em andamento)
 
