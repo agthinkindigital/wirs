@@ -28,6 +28,7 @@ from wirs.application.orchestrator import run_scan
 from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
 from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
+from wirs.infrastructure.baseline import BaselineBuilder
 from wirs.infrastructure.reader import ReadBudget
 from wirs.ports.detection import Detector
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
@@ -51,6 +52,38 @@ class ExitCode(IntEnum):
     INCOMPLETE = 3
     INTERNAL_ERROR = 4
     INVALID_RULEPACK = 5
+
+
+baseline_app = typer.Typer(
+    name="baseline",
+    help="Baselines do operador: criar e inspecionar manifests (WIRS-042).",
+    no_args_is_help=True,
+)
+app.add_typer(baseline_app, name="baseline")
+
+
+@baseline_app.command("create")
+def baseline_create(
+    directory: Path = typer.Argument(..., help="Diretório limpo a fingerprintar."),
+    name: str = typer.Option(..., "--name", help="ID do componente no manifest."),
+    version: str = typer.Option("0.0.0", "--version", help="Versão do componente."),
+    output: Path | None = typer.Option(None, "--output", help="Arquivo do manifest."),
+) -> None:
+    """Gera manifest SHA-256 de um diretório (só lê; symlink não entra)."""
+    try:
+        manifest = BaselineBuilder().build(directory, component_id=name, version=version)
+    except (TargetError, ValueError) as e:
+        console.print(f"[red]Baseline inválido:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    dest = output or Path(f"{name}-baseline.json")
+    try:
+        import json
+
+        dest.write_text(json.dumps(manifest.to_dict(), indent=2) + "\n", encoding="utf-8")
+    except OSError as e:
+        console.print(f"[red]Não consegui escrever:[/red] {dest} ({e})")
+        raise typer.Exit(code=ExitCode.INTERNAL_ERROR) from e
+    console.print(f"manifest: {dest} ({len(manifest.files)} arquivos)")
 
 
 @app.command()

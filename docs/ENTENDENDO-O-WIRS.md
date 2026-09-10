@@ -483,3 +483,32 @@ protegido entra como `unexpected`, não como curiosidade.
 
 **Verificar:** `compare_baseline` em `src/wirs/domain/baseline.py`,
 `tests/unit/test_baseline_compare.py` · **Issue:** #49.
+
+---
+
+## #50 — Fotografar o limpo: `baseline create` (WIRS-042)
+
+### O que o scan busca
+
+Transformar "o plugin premium íntegro que você tem" num manifest verificável:
+`wirs baseline create ./componente-limpo --name X` percorre o diretório,
+calcula SHA-256 de cada arquivo regular e grava manifest com provenance
+(origem, data, hash do pacote). O manifest gerado verifica o próprio diretório
+— tudo `match` — provando que a fotografia é fiel antes de ser usada.
+
+### Por que foi desenhado assim
+
+- **Só lê, nunca executa**: o builder usa o mesmo inventory sem-follow e o
+  mesmo reader `rb` do scan — gerar baseline de um pacote nunca roda nada
+  dele. Symlinks (inclusive para fora) e arquivos especiais ficam de fora:
+  não são conteúdo verificável por hash.
+- **Provenance junto do hash**: `source` guarda o diretório de origem,
+  `created_at` a data, `package_hash` o resumo do pacote inteiro — porque um
+  manifest sem "quando e de onde" vira verdade sem dono.
+- **Trust de operador, declarado**: o manifest nasce `TRUSTED_OPERATOR` — vale
+  o quanto vale a sua certeza de que aquele diretório estava limpo. A
+  ferramenta não finge que sabe mais do que você disse a ela.
+
+**Verificar:** `wirs baseline create --help`,
+`src/wirs/infrastructure/baseline.py`,
+`tests/integration/test_baseline_create.py` · **Issue:** #50.
