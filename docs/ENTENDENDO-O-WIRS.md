@@ -428,3 +428,31 @@ zerados *com* baseline verificado valem ouro; sem baseline, valem uma
 investigação.
 
 **Verificar:** sessão real (cru → 0 findings; adulterado → 2) · **Issue:** #45.
+
+---
+
+## #48 — Manifest: a origem confiável por escrito
+
+### O que o scan busca
+
+Comparar com "o original" exige ter o original descrito em algum lugar
+confiável: o manifest lista cada arquivo esperado com seu SHA-256, quem
+garante aquilo (upstream oficial, operador, release assinada — ou referência
+não-confiável, declarada como tal) e a provenance do pacote. Sem isso,
+"diverge do quê?" não tem resposta — e é por isso que premium sem manifest é
+`UNVERIFIED`, não "suspeito".
+
+### Por que foi desenhado assim
+
+- **Confiança em 4 níveis, não binária**: oficial, operador, assinada e
+  referência não-confiável (que serve para diff, nunca para acusar violação).
+  A linguagem do relatório muda com o nível — nem "limpo" falso, nem acusação
+  sem base.
+- **Manifest hostil não atravessa**: `../../`, absoluto, duplicata e hash
+  inválido morrem na construção — porque manifest vem de fora (operador,
+  download, ZIP) e tudo de fora é input até prova em contrário.
+- **Uma forma canônica por arquivo**: `a/../a.php` e `a.php` são o mesmo; o
+  manifest guarda uma forma só, para a comparação nunca divergir por sintaxe.
+
+**Verificar:** `src/wirs/domain/baseline.py`,
+`tests/unit/test_baseline_manifest.py` · **Issue:** #48.
