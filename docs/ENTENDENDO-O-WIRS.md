@@ -540,3 +540,36 @@ não muda a fotografia.
 **Verificar:** `src/wirs/infrastructure/archive.py`,
 `tests/unit/test_baseline_archive.py`,
 `tests/security/test_baseline_archive_attack.py` · **Issue:** #51.
+
+---
+
+## #52 — Premium com dono: mapping path→manifest (WIRS-066)
+
+### O que o scan busca
+
+Fechar a promessa "premium nunca é skip": `wirs scan --baseline mapping.json`
+associa cada diretório de plugin/theme ao seu manifest. Mapeado e íntegro vira
+`covers` (absolvido como baseline confiável, sem heurística redundante);
+mapeado e adulterado gera `WP.PLUGIN.HASH_MISMATCH` + `UNEXPECTED_FILE`;
+**não-mapeado continua `UNVERIFIED`** — com a lacuna nomeada no coverage
+(`baseline:plugin:premium`, parcial), nunca uma acusação.
+
+### Por que foi desenhado assim
+
+- **O mapping é explícito, não adivinhado**: o scanner não tenta descobrir
+  sozinho qual manifest vale para qual pasta — confiança delegada sem
+  declaração seria chute. O JSON `{dir: manifest}` é a sua assinatura dizendo
+  "este pacote eu garanto".
+- **Reuso total**: o provider monta `BaselineBuilder` (#50) + `compare_baseline`
+  (#49) sobre o seam `IntegrityProvider` — o orquestrador nem percebe que não
+  é WP-CLI: findings, covers e coverage saem no mesmo idioma.
+- **UNVERIFIED nomeado é acionável**: a entrada de coverage diz *qual*
+  componente está sem baseline — o próximo passo (gerar manifest, #50) é
+  óbvio. Lacuna anônima vira "algo não verificado em algum lugar", que ninguém
+  resolve.
+- **E2E prova os três destinos**: limpo (exit 0, zero findings), adulterado
+  (exit 1, mismatch + unexpected) e sem mapping (exit 0, parcial nomeado).
+
+**Verificar:** `wirs scan --help`,
+`src/wirs/providers/operator_baseline.py`,
+`tests/integration/test_premium_baseline.py` · **Issue:** #52.

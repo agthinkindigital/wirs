@@ -30,7 +30,9 @@ from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetErro
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
 from wirs.infrastructure.baseline import BaselineBuilder
 from wirs.infrastructure.reader import ReadBudget
+from wirs.ports.checksum import IntegrityProvider
 from wirs.ports.detection import Detector
+from wirs.providers.operator_baseline import OperatorBaselineIntegrity, load_baseline_mapping
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
 from wirs.reporting import CanonicalReport, render_report
 
@@ -145,6 +147,9 @@ def scan(
     format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
     fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
     ioc: Path | None = typer.Option(None, "--ioc", help="Arquivo de IOCs kind:value."),
+    baseline: Path | None = typer.Option(
+        None, "--baseline", help="Mapping JSON dir→manifest (WIRS-066)."
+    ),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if profile not in PROFILE_BUDGETS:
@@ -172,6 +177,14 @@ def scan(
             raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
     kinds: Counter[str] = Counter()
+    integrity_providers: list[IntegrityProvider] = [WpCliCoreIntegrity(), WpCliPluginIntegrity()]
+    if baseline is not None:
+        try:
+            mapping = load_baseline_mapping(baseline)
+        except ValueError as e:
+            console.print(f"[red]Baseline inválido:[/red] {e}")
+            raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+        integrity_providers.append(OperatorBaselineIntegrity(mapping))
     result = run_scan(
         tgt,
         profile=profile,
@@ -180,7 +193,7 @@ def scan(
         reader=ArtifactReader(),
         budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
         detectors=build_detectors(ioc_list),
-        integrity=[WpCliCoreIntegrity(), WpCliPluginIntegrity()],
+        integrity=integrity_providers,
     )
     for artifact in result.artifacts:
         kinds[artifact.kind.value] += 1
