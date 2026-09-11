@@ -58,6 +58,8 @@ tratar paths como dados inseguros, redigir secrets na fronteira de coleta
 
 ## Skills
 
+Mapa de todas as skills e finalidade no projeto: `SKILL_MAP.md`.
+
 Use a skill especializada quando a tarefa corresponder ao seu contrato:
 
 - `orchestrator`: governança, roadmap, Issues, execução e QA.
