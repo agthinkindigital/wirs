@@ -149,7 +149,7 @@ def scan(
     fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
     ioc: Path | None = typer.Option(None, "--ioc", help="Arquivo de IOCs kind:value."),
     baseline: Path | None = typer.Option(
-        None, "--baseline", help="Mapping JSON dir→manifest (WIRS-066)."
+        None, "--baseline", help="Mapping JSON dir->manifest (WIRS-066)."
     ),
     report_file: Path | None = typer.Option(
         None, "--report", help="Grava o JSON canônico neste arquivo (WIRS-119)."

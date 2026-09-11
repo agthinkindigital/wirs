@@ -105,11 +105,26 @@ do stdout continua parseável por automação.
 
 ## Primeiro scan
 
-Analise um diretório ou snapshot local:
+O comando é sempre `wirs scan <pasta> [opções]`, onde `<pasta>` é o
+diretório local ou snapshot a analisar. Exemplo mínimo:
 
 ```bash
 wirs scan /srv/www/site
 ```
+
+### Todas as opções do `scan`
+
+| Opção | Preenchimento | Padrão | Efeito |
+|---|---|---|---|
+| `<pasta>` (argumento) | caminho do diretório | — | Alvo do scan (obrigatório) |
+| `--profile` | `soft`, `balanced`, `fast` | `soft` | Orçamento de recursos (1 worker, limites de leitura) |
+| `--format` | `terminal`, `json` | `terminal` | View de saída; JSON é o canônico |
+| `--fail-on` | `info`, `low`, `medium`, `high`, `critical` | `high` | Severidade mínima para exit 1 |
+| `--ioc` | caminho de arquivo `kind:value` | — | IOCs literais extras (ex.: `literal:eval(`) |
+| `--baseline` | caminho de mapping JSON | — | `{dir: manifest}` do operador (premium/custom) |
+| `--report` | caminho do arquivo | — | Grava o JSON canônico (fora do alvo, atômico) |
+| `--gui` | (flag) | — | Tela Rich de acompanhamento no stderr |
+| `--cli` | (flag) | ligado | Guia textual de progresso no stderr |
 
 Use o perfil conservador e gere JSON para automação:
 
@@ -135,6 +150,14 @@ completo está lá, ou nada foi escrito.
 
 Um [relatório JSON de exemplo](docs/examples/scan-example.json) mostra o modelo
 canônico sem exigir uma instalação WordPress local.
+
+### Outros comandos
+
+| Comando | Para quê |
+|---|---|
+| `wirs doctor` | Ambiente e providers detectados (`wp`, `yara`, `wordfence`) |
+| `wirs version` | Versão do scanner |
+| `wirs baseline create <dir> --name X [--version V] [--output F]` | Manifest SHA-256 de um diretório limpo |
 
 ### Exit codes
 
