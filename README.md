@@ -119,6 +119,16 @@ Adicione uma lista de IOCs no formato `kind:value`:
 wirs scan /srv/www/site --ioc iocs.txt --fail-on high
 ```
 
+Grave o relatório canônico em arquivo (sempre JSON, fora do alvo):
+
+```bash
+wirs scan /srv/www/site --format json --report ./scan.json
+```
+
+Sem `--report`, o JSON vai para o stdout (dá para redirecionar com `>`).
+O arquivo existente é sobrescrito via escrita atômica: ou o report
+completo está lá, ou nada foi escrito.
+
 Um [relatório JSON de exemplo](docs/examples/scan-example.json) mostra o modelo
 canônico sem exigir uma instalação WordPress local.
 

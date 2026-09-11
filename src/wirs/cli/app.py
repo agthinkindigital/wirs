@@ -34,7 +34,7 @@ from wirs.ports.checksum import IntegrityProvider
 from wirs.ports.detection import Detector
 from wirs.providers.operator_baseline import OperatorBaselineIntegrity, load_baseline_mapping
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
-from wirs.reporting import CanonicalReport, render_report
+from wirs.reporting import CanonicalReport, render_report, write_text_atomic
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
 PROFILE_BUDGETS = {"soft": 64 << 20, "balanced": 256 << 20, "fast": 1 << 30}
@@ -150,6 +150,9 @@ def scan(
     baseline: Path | None = typer.Option(
         None, "--baseline", help="Mapping JSON dir→manifest (WIRS-066)."
     ),
+    report_file: Path | None = typer.Option(
+        None, "--report", help="Grava o JSON canônico neste arquivo (WIRS-119)."
+    ),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if profile not in PROFILE_BUDGETS:
@@ -177,6 +180,15 @@ def scan(
             raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
     kinds: Counter[str] = Counter()
+    report_dest: Path | None = None
+    if report_file is not None:
+        candidate = Path(report_file).expanduser()
+        if _dentro_do_target(candidate, tgt.root):
+            console.print(
+                f"[red]Report dentro do target (scan não escreve no alvo):[/red] {candidate}"
+            )
+            raise typer.Exit(code=ExitCode.INVALID_TARGET)
+        report_dest = candidate
     integrity_providers: list[IntegrityProvider] = [WpCliCoreIntegrity(), WpCliPluginIntegrity()]
     if baseline is not None:
         try:
@@ -205,10 +217,19 @@ def scan(
         coverage=result.coverage,
         note="Orquestrador v1: inventory + detection + checksum (degrade gracioso).",
     )
+    payload = report.to_json()  # uma serialização: stdout e arquivo idênticos
     if format_ == "json":
-        console.print_json(report.to_json())
+        console.print_json(payload)
     else:
         _print_terminal(report, kinds)
+    if report_dest is not None:
+        try:
+            write_text_atomic(report_dest, payload)
+        except OSError as e:
+            console.print(f"[red]Não consegui gravar o report:[/red] {e}")
+            raise typer.Exit(code=ExitCode.INTERNAL_ERROR) from e
+        if format_ != "json":
+            console.print(f"report: {report_dest}")
     order = ["info", "low", "medium", "high", "critical"]
     worst = max([order.index(f.severity.value) for f in result.findings], default=-1)
     raise typer.Exit(
@@ -216,6 +237,15 @@ def scan(
         if worst >= order.index(threshold.value)
         else ExitCode.OK
     )
+
+
+def _dentro_do_target(candidate: Path, root: Path) -> bool:
+    """Report nunca mora no alvo (invariante 1: scan não escreve no target)."""
+    try:
+        resolved = candidate.resolve()
+    except OSError:
+        return False
+    return resolved == root or root in resolved.parents
 
 
 def _print_terminal(report: CanonicalReport, kinds: Counter[str]) -> None:
