@@ -21,24 +21,50 @@ carregada quando a tarefa corresponde ao seu contrato.
 > (`rglob SKILL.md` + built-ins) soma **85**. Falta 1 para esclarecer — sem
 > chute: nenhuma skill foi inventada para fechar a conta.
 
+## Desambiguação (ler antes de invocar quando houver dúvida)
+
+Regra: o nome sugere, o **contrato** decide. Pares que mais causam equívoco:
+
+| Dúvida | Decisão |
+|---|---|
+| `orchestrator` vs `developer` vs `roadmap` | `orchestrator` governa a DAG inteira; `developer` é consulta/coordenação pontual por agentes; `roadmap` só lê/atualiza Epics e links — nunca executa |
+| `grill-me` vs `grill-with-docs` vs `grill-feature-with-docs` vs `gepetto` vs `requirements-clarity` | `grill-me`: interrogatório puro do plano; `grill-with-docs`: plano contra o modelo de domínio; `grill-feature-with-docs`: módulo existente + docs; `gepetto`: plano formal multi-LLM; `requirements-clarity`: duas perguntas (Why?/Simpler?) antes de implementar |
+| `to-issues` vs `to-prd` vs `triage` | `to-prd` escreve o PRD; `to-issues` fatia em Issues; `triage` opera Issues existentes (estados, não criação) |
+| `qa-analyst` vs `qa-test-planner` vs `secure-e2e` vs `diagnose` | `qa-analyst`: ciclo completo e portão de DAG; `qa-test-planner`: gera casos/planos (insumo do QA); `secure-e2e`: executa E2E + segurança via Playwright; `diagnose`: bug duro já observado (reproduzir→corrigir) |
+| `tdd` vs `prototype` vs `scaffold-mvp` | `tdd`: código definitivo em slices; `prototype`: descartável para validar ideia; `scaffold-mvp`: bootstrap de projeto novo vazio |
+| `handoff` vs `session-handoff` | `handoff`: compacta conversa para outro agente; `session-handoff`: inclui salvamento de estado em milestones |
+| `skill-creator` vs `write-a-skill` vs `command-creator` vs `plugin-forge` vs `mcp-builder` vs `customize-opencode` | `skill-creator`: criar/otimizar skills com evals; `write-a-skill`: criar skill simples; `command-creator`: slash commands; `plugin-forge`: plugins/marketplace; `mcp-builder`: servidores MCP; `customize-opencode`: config do opencode (nunca código do app) |
+| `slides` vs `marp-slide` | `slides`: HTML estratégico com Chart.js; `marp-slide`: Markdown→slides Marp |
+| `design-system` vs `design-system-starter` | `design-system`: o adotado (tokens 3 camadas + specs); `design-system-starter`: kit genérico — não usar aqui |
+| `ui-ux-pro-max` vs `ui-styling` vs `design` | `ui-ux-pro-max`: inteligência de interface (CLI/reports); `ui-styling`: implementação (shadcn/Tailwind); `design`: identidade/marca completa |
+| `archify` vs `c4-architecture` vs `mermaid-diagrams` vs `excalidraw` vs `draw-io` | `archify`: HTML standalone explorável (pt-BR); `c4-architecture`: C4 via Mermaid; `mermaid-diagrams`: sintaxe Mermaid; `excalidraw`: arquivos `.excalidraw` via subagentes; `draw-io`: XML `.drawio`/AWS icons |
+| `query-docs` vs `perplexity` vs `codex`/`gemini` vs `web-to-markdown` | `query-docs`: docs de libs via Context7; demais CLIs externos e buscas genéricas: não usar (canais do projeto) |
+| `edit-article` vs `crafting-effective-readmes` vs `writing-clearly-and-concisely` vs `humanizer` vs `professional-communication` | `edit-article`: reescrever seção existente; `crafting-effective-readmes`: estrutura de README; `writing-clearly-and-concisely`: prosa em geral; `humanizer`: tom; `professional-communication`: mensagens corporativas |
+| `improve-codebase-architecture` vs `reducing-entropy` vs `naming-analyzer` vs `agent-md-refactor` | Arquitetura orientada ao domínio / deletar código (só sob pedido) / nomes / docs de agente |
+| `commit-work` vs `setup-pre-commit` vs `dependency-updater` | Commits / hooks / updates de deps |
+| `lesson-learned` vs `ship-learn-next` | Lições do git history / transformar aprendizado em ação |
+| `jira` vs `triage`/`to-issues` | Tracker é GitHub — `jira` nunca |
+| `secure-e2e` (Playwright web) vs E2E do WIRS | E2E do scanner é CLI + fixtures (pytest); `secure-e2e` só quando houver UI web/HTML |
+| `caveman` vs `zoom-out` | Comprimir comunicação / ampliar contexto — eixos opostos, não intercambiáveis |
+
 ## Núcleo de engenharia (ciclo TDD → Issues → QA)
 
-| Skill | Status | Uso no WIRS |
-|---|---|---|
-| `orchestrator` | ATIVA | Governança, DAG, QA de fechamento (FT-1…FT-4) |
-| `setup-skills` | ATIVA | Artefatos de governança; GitHub como tracker obrigatório |
-| `roadmap` | PREVISTA | Epics E## e links; consultar antes de qualquer planejamento |
-| `to-issues` | ATIVA | Fatiamento FT-4 (#48–52), UX #53–55; padrão de corpo de Issue |
-| `tdd` | ATIVA | Slices verticais RED→GREEN; proibido horizontal slice |
-| `diagnose` | PREVISTA | Bugs duros/regressões (reproduzir→minimizar→instrumentar→fix) |
-| `secure-e2e` | PREVISTA | E2E + negative testing (fuzz/archive/injection, §9.1 do spec) |
-| `qa-analyst` | PREVISTA | Portão obrigatório de DAG (FT-4 pendente) e de Epic |
-| `qa-test-planner` | PREVISTA | Planos de teste, casos manuais e regressão (complementa `qa-analyst`) |
-| `developer` | PREVISTA | Coordenação por agentes (alternativa/consulta ao `orchestrator`) |
-| `query-docs` | PREVISTA | Contratos WP-CLI/YARA/Wordfence via Context7 antes de integrar |
-| `triage` | PREVISTA | Vocabulário `needs-triage/ready-for-agent/...` nas Issues |
-| `to-prd` | PREVISTA | PRDs futuros (ex.: wizard #54) a partir do contexto |
-| `skill-judge` | ATIVA | Critério knowledge-delta para avaliar skills e docs |
+| Skill | Status | Uso no WIRS | Gatilho (quando invocar) |
+|---|---|---|---|
+| `orchestrator` | ATIVA | Governança, DAG, QA de fechamento (FT-1…FT-4) | "orquestre", fim/início de DAG, revisão de QA da entrega |
+| `setup-skills` | ATIVA | Artefatos de governança; GitHub como tracker obrigatório | Projeto novo ou governança quebrada |
+| `roadmap` | PREVISTA | Epics E## e links; consultar antes de qualquer planejamento | "roadmap", "epic", "marco", "prioridade entre fases" |
+| `to-issues` | ATIVA | Fatiamento FT-4 (#48–52), UX #53–55; padrão de corpo de Issue | "fatie", "crie issues", "decomponha o plano" |
+| `tdd` | ATIVA | Slices verticais RED→GREEN; proibido horizontal slice | "implemente", "construa a slice", "bug com teste" |
+| `diagnose` | PREVISTA | Bugs duros/regressões (reproduzir→minimizar→instrumentar→fix) | "está quebrado", "debugue", "regressão de performance" |
+| `secure-e2e` | PREVISTA | E2E + negative testing (§9.1 do spec; Playwright só com UI web) | "teste e2e", "negative testing", "valide segurança" |
+| `qa-analyst` | PREVISTA | Portão obrigatório de DAG (FT-4 pendente) e de Epic | "QA", "plano de testes", "revise a entrega" |
+| `qa-test-planner` | PREVISTA | Planos de teste, casos manuais e regressão (complementa `qa-analyst`) | "casos de teste", "plano de regressão" |
+| `query-docs` | PREVISTA | Contratos WP-CLI/YARA/Wordfence via Context7 antes de integrar | "docs da lib", "contrato do provider", "API mudou?" |
+| `triage` | PREVISTA | Vocabulário `needs-triage/ready-for-agent/...` nas Issues | "triage", "organize as issues", "prepare para agente" |
+| `to-prd` | PREVISTA | PRDs futuros (ex.: wizard #54) a partir do contexto | "crie um PRD" |
+| `developer` | PREVISTA | Coordenação por agentes (alternativa/consulta ao `orchestrator`) | "coordene agentes", "audite pré-condições" |
+| `skill-judge` | ATIVA | Critério knowledge-delta para avaliar skills e docs | "avalie a skill", "a skill presta?" |
 
 ## Linguagem e decisão antes de implementar
 

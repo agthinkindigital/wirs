@@ -68,6 +68,10 @@ class BaselineManifest:
     def __post_init__(self) -> None:
         if not self.component_id:
             raise ValueError("component_id obrigatório")
+        if not self.version:
+            raise ValueError("version obrigatória")
+        if not self.source:
+            raise ValueError("source obrigatória (provenance)")
         normalized: dict[str, str] = {}
         for raw_path, digest in dict(self.files).items():
             path = _canonical_path(raw_path)

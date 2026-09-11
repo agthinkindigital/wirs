@@ -59,6 +59,10 @@ def test_travessia_duplicata_hash_e_confianca() -> None:
         _base(files={"a.php": "zzz"})
     with pytest.raises(ValueError):
         _base(component_id="")
+    with pytest.raises(ValueError, match="version"):
+        _base(version="")
+    with pytest.raises(ValueError, match="source"):
+        _base(source="")
     with pytest.raises(ValueError):
         BaselineTrust("confio-muito")  # type: ignore[call-arg]
 
