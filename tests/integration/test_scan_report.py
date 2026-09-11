@@ -25,7 +25,7 @@ def test_report_grava_json_canonico() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        do_stdout = json.loads(result.output)
+        do_stdout = json.loads(result.stdout)
         do_arquivo = json.loads(destino.read_text(encoding="utf-8"))
         assert do_arquivo == do_stdout
         assert do_arquivo["schema_version"] == "1.0"

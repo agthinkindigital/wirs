@@ -25,6 +25,7 @@ from wirs import __version__
 from wirs.adapters.wordpress.discovery import WordPressAdapter
 from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
 from wirs.application.orchestrator import run_scan
+from wirs.cli.progress import CliProgress, GuiProgress
 from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
 from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
@@ -153,6 +154,8 @@ def scan(
     report_file: Path | None = typer.Option(
         None, "--report", help="Grava o JSON canônico neste arquivo (WIRS-119)."
     ),
+    gui: bool = typer.Option(False, "--gui", help="Tela de acompanhamento (WIRS-139)."),
+    cli: bool = typer.Option(False, "--cli", help="Guia visual em texto (padrão)."),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if profile not in PROFILE_BUDGETS:
@@ -180,6 +183,10 @@ def scan(
             raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
 
     kinds: Counter[str] = Counter()
+    if gui and cli:
+        console.print("[red]Escolha um: --gui ou --cli[/red]")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET)
+    monitor = GuiProgress() if gui else CliProgress()
     report_dest: Path | None = None
     if report_file is not None:
         candidate = Path(report_file).expanduser()
@@ -206,6 +213,7 @@ def scan(
         budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
         detectors=build_detectors(ioc_list),
         integrity=integrity_providers,
+        on_event=monitor,
     )
     for artifact in result.artifacts:
         kinds[artifact.kind.value] += 1

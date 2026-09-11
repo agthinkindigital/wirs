@@ -99,6 +99,10 @@ Confira o ambiente antes do primeiro scan:
 wirs doctor
 ```
 
+Por padrão o scan mostra o andamento em texto (`--cli`); com `--gui` abre
+uma tela de acompanhamento. O progresso vai para o stderr, então o JSON
+do stdout continua parseável por automação.
+
 ## Primeiro scan
 
 Analise um diretório ou snapshot local:

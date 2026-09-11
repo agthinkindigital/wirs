@@ -42,7 +42,7 @@ def test_premium_mapeado_limpo_nao_gera_findings() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        report = json.loads(result.output)
+        report = json.loads(result.stdout)
         assert report["findings"] == []
 
 
@@ -69,7 +69,7 @@ def test_premium_adulterado_gera_mismatch_e_unexpected() -> None:
         )
 
         assert result.exit_code == 1, result.output
-        rules = {f["rule_id"] for f in json.loads(result.output)["findings"]}
+        rules = {f["rule_id"] for f in json.loads(result.stdout)["findings"]}
         assert "WP.PLUGIN.HASH_MISMATCH" in rules
         assert "WP.PLUGIN.UNEXPECTED_FILE" in rules
 
@@ -85,7 +85,7 @@ def test_premium_sem_mapping_continua_unverified() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        report = json.loads(result.output)
+        report = json.loads(result.stdout)
         assert report["findings"] == []
         # Sem baseline (nem oficial, nem de operador): lacuna nomeada, nunca acusação.
         lacunas = {c["capability"]: c["state"] for c in report["coverage"]}
