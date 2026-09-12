@@ -36,7 +36,8 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   sempre submetido a heurísticas/IOC + UNVERIFIED com detalhes acionáveis para
   decisão humana.
   Slices FT-4: #48 (WIRS-040, done), #49 (WIRS-041, done), #50 (WIRS-042, done),
-  #51 (WIRS-043, done), #52 (WIRS-066, done). Restante (WIRS-044, 045, 046): Fase C.
+  #51 (WIRS-043, done), #52 (WIRS-066, done). Fase C: #56 (WIRS-044), #57 (WIRS-045),
+  #58 (WIRS-046).
   Issues: WIRS-040–WIRS-046. (Fase C)
 
 - [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `in_progress`
