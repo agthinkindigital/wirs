@@ -80,3 +80,29 @@ def test_conteudo_hostil_neutralizado() -> None:
     assert "[bold]" in text  # markup aparece como texto, não formata
     assert "?" in text  # newline virou caractere visível
     assert "HIGH" in text and "high" in text.lower()  # severidade em texto
+
+
+def test_card_mostra_arquivo_nao_so_id() -> None:
+    from wirs.reporting.canonical import CanonicalReport
+
+    com_path = Finding(
+        rule_id="WP.UPLOAD.EXECUTABLE",
+        title="t",
+        category="policy",
+        severity=Severity.HIGH,
+        confidence=Confidence(ConfidenceClass.HIGH),
+        artifact_ref="art_abc",
+        evidence_refs=("ev_1",),
+        attributes={"path": "wp-content/uploads/evil.php", "zone": "wp-content-uploads"},
+    )
+    console = Console(record=True, width=120)
+    render_report(
+        CanonicalReport(
+            scan_id="s", target_root="/t", profile="soft", findings=(com_path,), coverage=()
+        ),
+        console=console,
+    )
+    text = console.export_text()
+
+    assert "wp-content/uploads/evil.php" in text
+    assert "art_abc" not in text  # ID interno não vaza quando há path

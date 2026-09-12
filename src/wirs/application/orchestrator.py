@@ -127,6 +127,8 @@ def _detect_file(
                 provenance=INTERNAL_PROVENANCE,
             )
             evidences.append(ev)
+            atributos = dict(proposed.attributes)
+            atributos.setdefault("path", artifact.path.relative)
             findings.append(
                 Finding(
                     rule_id=proposed.rule_id,
@@ -136,7 +138,7 @@ def _detect_file(
                     confidence=proposed.confidence,
                     artifact_ref=artifact.id,
                     evidence_refs=(ev.id,),
-                    attributes=proposed.attributes,
+                    attributes=atributos,
                 )
             )
     return evidences, findings

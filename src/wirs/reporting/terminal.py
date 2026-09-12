@@ -59,11 +59,17 @@ def render_report(report: CanonicalReport, console: Console | None = None) -> No
         card.add_column("Campo")
         card.add_column("Valor")
         card.add_row("Title", sanitize(finding.title))
+        caminho = finding.attributes.get("path")
+        if isinstance(caminho, str) and caminho:
+            card.add_row("File", sanitize(caminho))
+        else:
+            card.add_row("Artifact", sanitize(finding.artifact_ref))
         card.add_row("Category", sanitize(finding.category))
         card.add_row("Confidence", finding.confidence.class_.value.upper())
-        card.add_row("Artifact", sanitize(finding.artifact_ref))
         card.add_row("Evidence", ", ".join(sanitize(r) for r in finding.evidence_refs))
         for key in sorted(finding.attributes):
+            if key == "path":
+                continue  # já exibido como File
             card.add_row(sanitize(f"attr:{key}"), sanitize(str(finding.attributes[key])))
         console.print(card)
 
