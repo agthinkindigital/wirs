@@ -26,6 +26,7 @@ from wirs.adapters.wordpress.discovery import WordPressAdapter
 from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
 from wirs.application.orchestrator import run_scan
 from wirs.cli.progress import CliProgress, GuiProgress
+from wirs.cli.wizard import run_wizard
 from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
 from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
@@ -143,7 +144,7 @@ def load_iocs_file(path: Path) -> list[IOC]:
 
 @app.command()
 def scan(
-    target: Path = typer.Argument(..., help="Diretório local ou snapshot a analisar."),
+    target: Path | None = typer.Argument(None, help="Diretório local ou snapshot a analisar."),
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
     format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
     fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
@@ -156,8 +157,24 @@ def scan(
     ),
     gui: bool = typer.Option(False, "--gui", help="Tela de acompanhamento (WIRS-139)."),
     cli: bool = typer.Option(False, "--cli", help="Guia visual em texto (padrão)."),
+    wizard: bool = typer.Option(False, "--wizard", help="Assistente interativo (WIRS-129)."),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
+    if wizard:
+        try:
+            answers = run_wizard(target_arg=target)
+        except EOFError:
+            console.print("[red]Sem entrada interativa: use flags (ex.: --help).[/red]")
+            raise typer.Exit(code=ExitCode.INVALID_TARGET) from None
+        except ValueError as e:
+            console.print(f"[red]Wizard:[/red] {e}")
+            raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+        if answers is None:
+            raise typer.Exit(code=ExitCode.OK)
+        target, format_, report_file = answers.target, answers.format, answers.report
+    if target is None:
+        console.print("[red]Target obrigatório (ou use --wizard).[/red]")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET)
     if profile not in PROFILE_BUDGETS:
         console.print(f"[red]Perfil inválido:[/red] {profile}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)

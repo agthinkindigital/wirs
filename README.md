@@ -125,6 +125,7 @@ wirs scan /srv/www/site
 | `--report` | caminho do arquivo | — | Grava o JSON canônico (fora do alvo, atômico) |
 | `--gui` | (flag) | — | Tela Rich de acompanhamento no stderr |
 | `--cli` | (flag) | ligado | Guia textual de progresso no stderr |
+| `--wizard` | (flag) | — | Assistente interativo: plataforma, formatos, target, confirmação |
 
 Use o perfil conservador e gere JSON para automação:
 
