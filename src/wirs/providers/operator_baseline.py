@@ -94,6 +94,7 @@ class OperatorBaselineIntegrity:
                     component=_slug(rel),
                     files=files,
                     covers=(f"{rel}/",),
+                    trust=manifest.trust,
                 )
             )
         for rel in sorted(_sem_mapping(target, self._mapping)):

@@ -17,6 +17,7 @@ from wirs import __version__ as scanner_version
 from wirs.domain import (
     Artifact,
     ArtifactKind,
+    BaselineTrust,
     Confidence,
     ConfidenceClass,
     CoverageEntry,
@@ -43,6 +44,13 @@ _SEVERITY_BY_STATE = {
     IntegrityState.MISMATCH: (Severity.CRITICAL, "HASH_MISMATCH"),
     IntegrityState.MISSING: (Severity.HIGH, "FILE_MISSING"),
     IntegrityState.UNEXPECTED: (Severity.MEDIUM, "UNEXPECTED_FILE"),
+}
+
+# WIRS-044: linguagem de diff (referência fraca), nunca de violação confiável.
+_REFERENCE_SUFFIX = {
+    IntegrityState.MISMATCH: "REFERENCE_DIFF",
+    IntegrityState.MISSING: "REFERENCE_MISSING",
+    IntegrityState.UNEXPECTED: "REFERENCE_UNEXPECTED",
 }
 
 
@@ -172,15 +180,23 @@ def _integrity_phase(
                 )
                 continue
             prefix = "WP.CORE" if component.component == "wordpress-core" else "WP.PLUGIN"
+            reference = component.trust is BaselineTrust.UNVERIFIED_REFERENCE
             for item in component.files:
                 severity, suffix = _SEVERITY_BY_STATE[item.state]
+                confidence = ConfidenceClass.DETERMINISTIC
+                state_label = item.state.value
+                if reference:
+                    # WIRS-044: diff contra referência fraca, nunca "violação confiável".
+                    suffix = _REFERENCE_SUFFIX[item.state]
+                    confidence = ConfidenceClass.HIGH
+                    state_label = f"reference-{item.state.value}"
                 findings.append(
                     Finding(
                         rule_id=f"{prefix}.{suffix}",
-                        title=f"{component.component}: {item.path} ({item.state.value})",
+                        title=f"{component.component}: {item.path} ({state_label})",
                         category="integrity",
                         severity=severity,
-                        confidence=Confidence(ConfidenceClass.DETERMINISTIC),
+                        confidence=Confidence(confidence),
                         artifact_ref=item.path,
                         evidence_refs=(),
                         provenance=Provenance(
@@ -190,6 +206,7 @@ def _integrity_phase(
                             "component": component.component,
                             "path": item.path,
                             "note": item.note,
+                            "trust": (component.trust.value if component.trust else "unknown"),
                         },
                     )
                 )

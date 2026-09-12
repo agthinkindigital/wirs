@@ -573,3 +573,30 @@ mapeado e adulterado gera `WP.PLUGIN.HASH_MISMATCH` + `UNEXPECTED_FILE`;
 **Verificar:** `wirs scan --help`,
 `src/wirs/providers/operator_baseline.py`,
 `tests/integration/test_premium_baseline.py` · **Issue:** #52.
+
+---
+
+## #56 — Violação ou diferença? O trust decide a frase (WIRS-044)
+
+### O que o scan busca
+
+Nem todo "diferente do manifest" é acusação: contra baseline confiável
+(`TRUSTED_OPERATOR`, `TRUSTED_UPSTREAM`), divergência é `HASH_MISMATCH`
+determinístico; contra referência não-confiável (`UNVERIFIED_REFERENCE`), o
+mesmo byte diferente é `REFERENCE_DIFF` com confiança `HIGH` — um diff para
+investigar, nunca uma "violação de integridade".
+
+### Por que foi desenhado assim
+
+- **A frase é parte da evidência**: "violação" autoriza ação (reinstalar,
+  bloquear); "diferença" pede investigação. Chamar diff de violação é como
+  testemunha que exagera — contamina a decisão do analista.
+- **Confiança rebaixada junto**: `DETERMINISTIC`→`HIGH` comunica que o fato
+  (bytes diferem) é certo, mas a conclusão (adulteração) não tem fiador. O
+  atributo `trust` no finding mostra o fiador — ou a ausência dele.
+- **Vale para os três estados**: mismatch, missing e unexpected ganham o
+  prefixo `REFERENCE_` — porque "arquivo sumiu da referência fraca" também
+  não é "arquivo removido por invasor".
+
+**Verificar:** `_REFERENCE_SUFFIX` em `src/wirs/application/orchestrator.py`,
+`tests/integration/test_reference_trust.py` · **Issue:** #56.
