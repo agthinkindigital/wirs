@@ -32,7 +32,7 @@ dev = [
   "mypy>=1.10",
 ]
 # Providers externos sao sempre opcionais (P10 do spec):
-# yara = ["yara-python>=4.3"]
+yara = ["yara-python>=4.5"]
 # mysql = ["mysql-connector-python>=8.4"]
 
 [project.scripts]
@@ -67,6 +67,10 @@ exclude = ["WIRS_MASTER_SPEC_PT-BR.md"]
 python_version = "3.11"
 strict = true
 show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "yara.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

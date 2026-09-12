@@ -657,3 +657,33 @@ com o motivo nomeado — nunca erro silencioso.
 
 **Verificar:** `src/wirs/infrastructure/baseline_sign.py`,
 `tests/integration/test_signed_manifest.py` · **Issue:** #58.
+
+---
+
+## #61 — Assinaturas alugadas: YARA como provider opcional (WIRS-081)
+
+### O que o scan busca
+
+O que as heurísticas não sabem nomear: assinaturas YARA descrevem malware
+conhecido por padrão de bytes ("webshell que decodifica e executa"), e o
+match diz *qual regra* pegou, com tags e namespace. É o vocabulário pronto
+da comunidade, em vez de reinventar um corpus concorrente.
+
+### Por que foi desenhado assim
+
+- **Opcional de verdade**: sem `yara-python`, o scan continua e o coverage
+  marca `UNAVAILABLE` — assinatura é reforço, nunca pré-requisito. Ferramenta
+  que aborta sem o plugin opcional está blefando sobre "opcional".
+- **Bytes do reader, nunca path direto**: o YARA recebe o conteúdo já lido
+  sob budget — o analyzer não abre arquivo por conta própria, então limite
+  de tamanho e recusa de especiais continuam valendo.
+- **Timeout por arquivo, não por scan**: regra lenta trava aquele arquivo,
+  não a investigação inteira. Degradar parcial é o comportamento padrão do
+  WIRS para tudo que é externo.
+- **Regra sem severidade declarada vira `medium`**: YARA não promete
+  gravidade, só casamento de padrão — a severidade honesta de "casou, sem
+  contexto" é média, e a regra original viaja junto para você julgar.
+
+**Verificar:** `src/wirs/providers/yara_provider.py`,
+`tests/unit/test_yara_provider.py`, `docs/providers/yara-python.md` ·
+**Issue:** #61.
