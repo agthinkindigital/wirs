@@ -175,7 +175,7 @@ def _integrity_phase(
                         state=CoverageState.PARTIAL,
                         applicable_checks=1,
                         unavailable=1,
-                        note="sem baseline oficial",
+                        note=component.note or "sem baseline oficial",
                     )
                 )
                 continue

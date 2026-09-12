@@ -116,6 +116,61 @@ def baseline_cache_store(
     console.print(f"cache: {dest}")
 
 
+def _read_key_file(path: Path) -> bytes:
+    """Lê chave de arquivo (nunca de arg — spec 19.8). Erro vira ValueError."""
+    try:
+        key = Path(path).read_bytes()
+    except OSError as e:
+        raise ValueError(f"chave ilegível: {path} ({e})") from e
+    if not key.strip():
+        raise ValueError(f"chave vazia: {path}")
+    return key
+
+
+@baseline_app.command("sign")
+def baseline_sign(
+    manifest_file: Path = typer.Argument(..., help="Manifest JSON a assinar."),
+    key_file: Path = typer.Option(..., "--key-file", help="Arquivo com a chave HMAC."),
+) -> None:
+    """Assina manifest (HMAC-SHA256, .sig destacado)."""
+    from wirs.infrastructure.baseline_sign import sign_manifest
+
+    try:
+        dest = sign_manifest(manifest_file, _read_key_file(key_file))
+    except ValueError as e:
+        console.print(f"[red]Assinatura inválida:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    console.print(f"signed: {dest}")
+
+
+@baseline_app.command("verify-sig")
+def baseline_verify_sig(
+    manifest_file: Path = typer.Argument(..., help="Manifest JSON a verificar."),
+    key_file: Path = typer.Option(..., "--key-file", help="Arquivo com a chave HMAC."),
+) -> None:
+    """Verifica a assinatura destacada (.sig) offline."""
+    from wirs.infrastructure.baseline_sign import (
+        SignatureInvalid,
+        SignatureMissing,
+        check_signature,
+    )
+
+    try:
+        key = _read_key_file(key_file)
+    except ValueError as e:
+        console.print(f"[red]Chave inválida:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    try:
+        check_signature(manifest_file, key)
+    except SignatureMissing as e:
+        console.print(f"[red]Sem assinatura:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    except SignatureInvalid as e:
+        console.print(f"[red]Assinatura inválida:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    console.print(f"ok: {manifest_file}")
+
+
 @app.command()
 def version() -> None:
     """Exibe a versão do scanner."""
@@ -201,6 +256,7 @@ def scan(
     cli: bool = typer.Option(False, "--cli", help="Guia visual em texto (padrão)."),
     wizard: bool = typer.Option(False, "--wizard", help="Assistente interativo (WIRS-129)."),
     cache_dir: Path | None = typer.Option(None, "--cache-dir", help="Cache de baselines."),
+    sign_key: Path | None = typer.Option(None, "--sign-key", help="Chave p/ manifests (WIRS-046)."),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if wizard:
@@ -265,7 +321,16 @@ def scan(
         except ValueError as e:
             console.print(f"[red]Baseline inválido:[/red] {e}")
             raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
-        integrity_providers.append(OperatorBaselineIntegrity(mapping, BaselineCache(cache_dir)))
+        key: bytes | None = None
+        if sign_key is not None:
+            try:
+                key = _read_key_file(sign_key)
+            except ValueError as e:
+                console.print(f"[red]Chave inválida:[/red] {e}")
+                raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+        integrity_providers.append(
+            OperatorBaselineIntegrity(mapping, BaselineCache(cache_dir), key)
+        )
     result = run_scan(
         tgt,
         profile=profile,

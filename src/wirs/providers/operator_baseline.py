@@ -18,6 +18,13 @@ from wirs.domain.errors import ProviderInvalidOutput
 from wirs.domain.integrity import FileIntegrity, IntegrityState
 from wirs.infrastructure.baseline import BaselineBuilder
 from wirs.infrastructure.baseline_cache import BaselineCache, CachedBaseline
+from wirs.infrastructure.baseline_sign import (
+    SignatureInvalid,
+    SignatureMissing,
+    SignatureNotChecked,
+    check_signature,
+    sig_path,
+)
 from wirs.ports.checksum import ComponentIntegrity
 
 PROVIDER_ID = "operator-baseline"
@@ -74,10 +81,16 @@ class OperatorBaselineIntegrity:
     id = PROVIDER_ID
     platforms: tuple[str, ...] = ("wordpress",)
 
-    def __init__(self, mapping: Mapping[str, str], cache: BaselineCache | None = None) -> None:
+    def __init__(
+        self,
+        mapping: Mapping[str, str],
+        cache: BaselineCache | None = None,
+        sign_key: bytes | None = None,
+    ) -> None:
         self._mapping = dict(mapping)
         self._builder = BaselineBuilder()
         self._cache = cache
+        self._sign_key = sign_key
 
     def _resolve(self, ref: str) -> tuple[BaselineManifest, str]:
         """Manifest de arquivo ou `cache:id:versão`. Retorna (manifest, staleness)."""
@@ -93,12 +106,32 @@ class OperatorBaselineIntegrity:
                 raise ProviderInvalidOutput(f"cache sem {ref!r} (rode `baseline cache-store`)")
             return cached.manifest, f"cache de {cached.age_days}d, origem {cached.origin}"
         manifest = _load_manifest(Path(ref))
+        sig = sig_path(Path(ref))
+        if sig.exists():
+            if self._sign_key is None:
+                raise SignatureNotChecked(f"assinatura presente mas sem chave (--sign-key): {ref}")
+            try:
+                check_signature(Path(ref), self._sign_key)
+            except (SignatureMissing, SignatureInvalid) as e:
+                raise ProviderInvalidOutput(str(e)) from e
         return manifest, ""
 
     def verify(self, target: Target) -> list[ComponentIntegrity]:
         out: list[ComponentIntegrity] = []
         for rel, ref in sorted(self._mapping.items()):
-            manifest, staleness = self._resolve(ref)
+            try:
+                manifest, staleness = self._resolve(ref)
+            except SignatureNotChecked as e:
+                out.append(
+                    ComponentIntegrity(
+                        provider_id=PROVIDER_ID,
+                        provider_version=None,
+                        component=_slug(rel),
+                        unverified=True,
+                        note=str(e),
+                    )
+                )
+                continue
             atual = self._builder.build(
                 target.root / rel, component_id=manifest.component_id, version=manifest.version
             )

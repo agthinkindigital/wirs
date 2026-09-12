@@ -628,3 +628,32 @@ vira "violação" por estar guardada.
 
 **Verificar:** `src/wirs/infrastructure/baseline_cache.py`,
 `tests/integration/test_baseline_cache.py` · **Issue:** #57.
+
+---
+
+## #58 — Assinado por quem? HMAC com chave em arquivo (WIRS-046)
+
+### O que o scan busca
+
+Amarrar "este manifest saiu do nosso CI": `baseline sign` grava um `.sig`
+destacado (HMAC-SHA256 sobre os bytes do manifest) e o scan confere quando
+há `--sign-key`. Manifest adulterado pós-assinatura não passa — nem no
+`verify-sig`, nem no scan. Sem chave, componente com `.sig` vira `UNVERIFIED`
+com o motivo nomeado — nunca erro silencioso.
+
+### Por que foi desenhado assim
+
+- **HMAC stdlib, sem dep nova**: para release interna/CI, segredo
+  compartilhado basta; assimétrico (chave pública distribuível) seria
+  gestão de chaves maior para um ganho que o caso de uso não pede.
+- **Chave em arquivo, nunca em arg**: `--key-file`, não `--key` — segredo
+  em linha de comando vaza para histórico e lista de processos (§19.8).
+- **Destacado, não embutido**: o `.sig` viaja ao lado do manifest sem
+  alterar o schema — manifests antigos continuam válidos e o cache (#57)
+  nem percebe a diferença.
+- **Sem chave = UNVERIFIED nomeado**: "assinatura presente mas sem chave"
+  no coverage — o operador sabe exatamente o que falta, em vez de receber
+  um "verificado" que ninguém verificou.
+
+**Verificar:** `src/wirs/infrastructure/baseline_sign.py`,
+`tests/integration/test_signed_manifest.py` · **Issue:** #58.

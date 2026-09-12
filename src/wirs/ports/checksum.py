@@ -22,6 +22,9 @@ class ComponentIntegrity:
     # Confiança do baseline usado (WIRS-044): referência não-confiável gera
     # linguagem de diff, nunca de violação de baseline confiável.
     trust: BaselineTrust | None = None
+    # Detalhe acionável do UNVERIFIED (ex.: "assinatura sem chave") — o
+    # orquestrador usa no lugar do "sem baseline oficial" genérico.
+    note: str = ""
     # Prefixos relativos que o provider VERIFICOU nesta run (baseline confiável
     # absolve). Inclui paths verificados mesmo quando outros divergiram: só os
     # divergentes (em `files`) continuam sujeitos a detecção (correlação DX001).
