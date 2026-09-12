@@ -141,7 +141,7 @@ wirs scan /srv/www/site --format terminal --report ./scan.json
 |---|---|---|---|
 | `<pasta>` (argumento) | caminho do diretório | — | Alvo do scan (obrigatório) |
 | `--profile` | `soft`, `balanced`, `fast` | `soft` | Orçamento de recursos (1 worker, limites de leitura) |
-| `--format` | `terminal`, `json` | `terminal` | View de saída; JSON é o canônico |
+| `--format` | `terminal`, `json`, `markdown` | `terminal` | View de saída; JSON é o canônico |
 | `--fail-on` | `info`, `low`, `medium`, `high`, `critical` | `high` | Severidade mínima para exit 1 |
 | `--ioc` | caminho de arquivo `kind:value` | — | IOCs literais extras (ex.: `literal:eval(`) |
 | `--baseline` | caminho de mapping JSON | — | `{dir: manifest}` do operador (premium/custom) |

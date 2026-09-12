@@ -54,6 +54,22 @@ def test_terminal_mostra_arquivo_do_finding(tmp_path) -> None:
     assert "art_" not in result.output
 
 
+def test_format_markdown(tmp_path) -> None:
+    (tmp_path / "wp-includes").mkdir()
+    (tmp_path / "wp-includes" / "version.php").write_bytes(b"<?php // v")
+    (tmp_path / "wp-admin").mkdir()
+    up = tmp_path / "wp-content" / "uploads"
+    up.mkdir(parents=True)
+    (up / "evil.php").write_bytes(b"<?php // x")
+
+    result = runner.invoke(app, ["scan", str(tmp_path), "--format", "markdown"])
+
+    assert result.exit_code == 1
+    assert result.stdout.startswith("# WIRS scan")
+    assert "WP.UPLOAD.EXECUTABLE" in result.stdout
+    assert "wp-content/uploads/evil.php" in result.stdout
+
+
 def test_fail_on_threshold(tmp_path) -> None:
     # Mini-WP com 2 sinais (discovery) + PHP em uploads (policy).
     (tmp_path / "wp-includes").mkdir()

@@ -17,8 +17,8 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 _PLATAFORMAS = {"1": "wordpress"}
-_FORMATOS = {"1": "terminal", "2": "json"}
-_FUTUROS = {"3", "4", "5"}
+_FORMATOS = {"1": "terminal", "2": "json", "3": "markdown"}
+_FUTUROS = {"4", "5"}
 
 
 @dataclass(frozen=True)
@@ -45,11 +45,13 @@ def run_wizard(
         raise ValueError("plataforma ainda não suportada. Use flags para wordpress.")
 
     formatos = Prompt.ask(
-        "Formatos, ex. 1,2 [1 terminal, 2 json, 3+ em breve]", default="1,2", console=console
+        "Formatos, ex. 1,2 [1 terminal, 2 json, 3 markdown, 4+ em breve]",
+        default="1,2",
+        console=console,
     )
     pedidos = {f.strip() for f in formatos.split(",") if f.strip()}
     if not pedidos or not pedidos <= set(_FORMATOS):
-        raise ValueError("escolha só entre 1 (terminal) e 2 (json).")
+        raise ValueError("escolha entre 1 (terminal), 2 (json) e 3 (markdown).")
 
     if target_arg is not None:
         alvo = target_arg
@@ -65,7 +67,7 @@ def run_wizard(
         if destino.strip():
             relatorio = Path(destino.strip()).expanduser()
 
-    tela = "terminal" if "1" in pedidos else "json"
+    tela = "terminal" if "1" in pedidos else ("markdown" if "3" in pedidos else "json")
     console.print(
         f"vai rodar: scan {alvo} --format {tela}" + (f" --report {relatorio}" if relatorio else "")
     )

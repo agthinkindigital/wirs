@@ -43,7 +43,7 @@ from wirs.ports.checksum import IntegrityProvider
 from wirs.ports.detection import Detector
 from wirs.providers.operator_baseline import OperatorBaselineIntegrity, load_baseline_mapping
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
-from wirs.reporting import CanonicalReport, render_report, write_text_atomic
+from wirs.reporting import CanonicalReport, render_markdown, render_report, write_text_atomic
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
 PROFILE_BUDGETS = {"soft": 64 << 20, "balanced": 256 << 20, "fast": 1 << 30}
@@ -243,7 +243,7 @@ def load_iocs_file(path: Path) -> list[IOC]:
 def scan(
     target: Path | None = typer.Argument(None, help="Diretório local ou snapshot a analisar."),
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
-    format_: str = typer.Option("terminal", "--format", help="Formato de saída: terminal, json."),
+    format_: str = typer.Option("terminal", "--format", help="Formato: terminal, json, markdown."),
     fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
     ioc: Path | None = typer.Option(None, "--ioc", help="Arquivo de IOCs kind:value."),
     baseline: Path | None = typer.Option(
@@ -277,7 +277,7 @@ def scan(
     if profile not in PROFILE_BUDGETS:
         console.print(f"[red]Perfil inválido:[/red] {profile}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
-    if format_ not in ("terminal", "json"):
+    if format_ not in ("terminal", "json", "markdown"):
         console.print(f"[red]Formato inválido:[/red] {format_}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
     try:
@@ -358,6 +358,8 @@ def scan(
     payload = report.to_json()  # uma serialização: stdout e arquivo idênticos
     if format_ == "json":
         console.print_json(payload)
+    elif format_ == "markdown":
+        console.print(render_markdown(report))
     else:
         _print_terminal(report, kinds)
     if report_dest is not None:
