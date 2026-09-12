@@ -36,8 +36,7 @@
 DAG atual: **v0.1.0 publicada** (tag + Release com artefatos).
 FT-4 completo: #48–#52 (done) → **QA da DAG APROVADA** (13/13 checks E2E +
 suite 150 passed + gates; 2 defeitos achados e corrigidos com regressão).
-UX sessão real: #53 (done, --report atômico), #55 (done, --cli/--gui),
-#54 (E10, HITL, wizard pendente).
+UX sessão real: #53 (done), #54 (done, wizard), #55 (done) — trilogia UX completa.
 
 ## Release 0.1.0 (2026-09-10, em andamento)
 

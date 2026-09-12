@@ -87,7 +87,7 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   etapa, erros somados na tela) em WIRS-113/115.
   Slices: #29 (WIRS-110, done). Orquestrador: #42 (WIRS-116, done), #43 (WIRS-117, done).
   Flag --ioc: #44 (WIRS-118). UX da sessão real: #53 (WIRS-119, --report/export, done),
-  #54 (WIRS-129, wizard), #55 (WIRS-139, --gui/--cli + progresso, done).
+  #54 (WIRS-129, wizard, done), #55 (WIRS-139, --gui/--cli + progresso, done).
   Restante (WIRS-111–115): config e progresso. (Fase A/B)
 
 - [**[E11] Hardening do Scanner**](https://github.com/agthinkindigital/wirs/issues/12) - `todo`
