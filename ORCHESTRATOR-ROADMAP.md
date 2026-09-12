@@ -72,7 +72,7 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   Views com lista de findings com cap + paginação e contadores ao vivo.
   Assets de demonstração (prints/GIF de runs reais) para o README quando houver
   detecção operando.
-  Slices: #28 (WIRS-090). (Fase A/B/C)
+  Slices: #28 (WIRS-090), #59 (WIRS-093, done). (Fase A/B/C)
 
 - [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`
 
