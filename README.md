@@ -76,28 +76,42 @@ Veja o [roadmap](ORCHESTRATOR-ROADMAP.md), o [changelog](CHANGELOG.md) e a
 
 ## Instalação
 
-Pré-requisitos: [Git](https://git-scm.com/) e
-[uv](https://docs.astral.sh/uv/). O `uv` prepara o ambiente Python 3.11+ usado
-pelo projeto.
+Escolha um caminho: **usar** (só o comando `wirs`) ou **desenvolver**
+(código + testes). Nos dois, o pré-requisito é o [uv](https://docs.astral.sh/uv/):
+no Windows, `scoop install uv` ou `winget install --id astral-sh.uv -e`.
 
-Instalação da release atual:
+### Só usar (recomendado para escanear)
+
+Em qualquer pasta, rode:
 
 ```bash
-git clone --branch v0.1.0 --depth 1 https://github.com/agthinkindigital/wirs.git
-cd wirs
-uv tool install .
-wirs version
+uv tool install git+https://github.com/agthinkindigital/wirs@main
 ```
 
-O fluxo funciona em Windows, Linux e macOS. WP-CLI e PHP são opcionais, mas
-necessários para verificar checksums oficiais de uma instalação WordPress.
-Quando ausentes, o scan continua e registra a lacuna no Coverage.
-
-Confira o ambiente antes do primeiro scan:
+Feche e reabra o terminal (o instalador registra o `wirs` no PATH).
+Confira:
 
 ```bash
+wirs version
 wirs doctor
 ```
+
+Se o terminal disser que `wirs` não existe, ele abriu antes do registro
+no PATH — feche tudo e abra de novo. O `wirs doctor` mostra os providers
+opcionais (`wp`, `yara`, `wordfence`); ausentes, o scan segue e registra
+a lacuna no Coverage.
+
+### Desenvolver
+
+```bash
+git clone https://github.com/agthinkindigital/wirs.git
+cd wirs
+git switch develop
+uv sync --extra dev
+uv run pytest
+```
+
+Detalhes do ambiente de dev em [Desenvolvimento](#desenvolvimento).
 
 Por padrão o scan mostra o andamento em texto (`--cli`); com `--gui` abre
 uma tela de acompanhamento. O progresso vai para o stderr, então o JSON
@@ -105,11 +119,20 @@ do stdout continua parseável por automação.
 
 ## Primeiro scan
 
-O comando é sempre `wirs scan <pasta> [opções]`, onde `<pasta>` é o
-diretório local ou snapshot a analisar. Exemplo mínimo:
+O formato é sempre `wirs scan <pasta> [opções]`, onde `<pasta>` é o
+diretório a analisar e toda opção com valor **exige o valor junto**
+(`--report` sozinho falha — ele precisa do caminho do arquivo).
+
+Exemplo completo no Windows (ajuste as pastas para as suas):
 
 ```bash
-wirs scan /srv/www/site
+wirs scan "C:\sites\meu-wordpress" --format terminal --report "C:\Users\Voce\Downloads\wirs-reports\scan.json"
+```
+
+No Linux/macOS, a mesma ideia:
+
+```bash
+wirs scan /srv/www/site --format terminal --report ./scan.json
 ```
 
 ### Todas as opções do `scan`
@@ -123,6 +146,8 @@ wirs scan /srv/www/site
 | `--ioc` | caminho de arquivo `kind:value` | — | IOCs literais extras (ex.: `literal:eval(`) |
 | `--baseline` | caminho de mapping JSON | — | `{dir: manifest}` do operador (premium/custom) |
 | `--report` | caminho do arquivo | — | Grava o JSON canônico (fora do alvo, atômico) |
+| `--cache-dir` | caminho do diretório | `~/.wirs/cache` | Cache de baselines do operador |
+| `--sign-key` | caminho do arquivo-chave | — | Chave HMAC para manifests assinados |
 | `--gui` | (flag) | — | Tela Rich de acompanhamento no stderr |
 | `--cli` | (flag) | ligado | Guia textual de progresso no stderr |
 | `--wizard` | (flag) | — | Assistente interativo: plataforma, formatos, target, confirmação |
