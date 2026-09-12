@@ -8,6 +8,7 @@ UNAVAILABLE (nunca abort). Match só sobre bytes lidos pelo ArtifactReader
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from wirs.domain import Artifact, ArtifactKind
@@ -48,6 +49,36 @@ class YaraAnalyzer:
         self._budget = budget or ReadBudget(max_bytes=64 << 20)
         self._timeout_s = timeout_s
         self._rules = None
+
+    @classmethod
+    def from_pack(
+        cls,
+        pack: Path,
+        *,
+        experimental: bool = False,
+        reader: ArtifactReader | None = None,
+        budget: ReadBudget | None = None,
+        timeout_s: float = 60.0,
+    ) -> YaraAnalyzer:
+        """Monta analyzer do diretório de regras (.yar/.yara, ordenado).
+
+        `experimental/` entra só com experimental=True. Regras são concatenadas
+        numa única fonte (mesmo resultado de compilar arquivo a arquivo).
+        """
+        pack = Path(pack)
+        dirs = sorted(
+            d for d in pack.iterdir() if d.is_dir() and (experimental or d.name != "experimental")
+        )
+        fontes: list[str] = []
+        for directory in dirs:
+            for rule_file in sorted(directory.glob("*.yar")) + sorted(directory.glob("*.yara")):
+                try:
+                    fontes.append(rule_file.read_text(encoding="utf-8"))
+                except OSError as e:
+                    raise ProviderInvalidOutput(f"regra ilegível: {rule_file} ({e})") from e
+        if not fontes:
+            raise ProviderInvalidOutput(f"pack sem regras: {pack}")
+        return cls("\n".join(fontes), reader=reader, budget=budget, timeout_s=timeout_s)
 
     def available(self) -> AnalysisAvailability:
         if _yara is None:

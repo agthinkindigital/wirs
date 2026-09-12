@@ -687,3 +687,31 @@ da comunidade, em vez de reinventar um corpus concorrente.
 **Verificar:** `src/wirs/providers/yara_provider.py`,
 `tests/unit/test_yara_provider.py`, `docs/providers/yara-python.md` ·
 **Issue:** #61.
+
+---
+
+## #62 — Assinaturas da casa: pack YARA builtin (WIRS-082)
+
+### O que o scan busca
+
+Padrões de técnicas conhecidas em PHP: `eval` combinado com cadeia de
+decoding (webshell-like) e `include` com variável de input. Regras com
+nome, descrição, severidade e condição de tamanho — para o match dizer
+*o quê* casou, não só "casou algo".
+
+### Por que foi desenhado assim
+
+- **Técnicas, não malware**: as regras descrevem padrões de bytes; os
+  fixtures que as disparam são sintéticos sem backend real. Assinatura
+  boa nomeia a técnica para o analista reconhecer, não para o scanner
+  "provar infecção" sozinho.
+- **`experimental/` fora por default**: regra com falso-positivo conhecido
+  não entra no pack padrão — promoção segue maturidade (experimental →
+  beta → stable), nunca pressa.
+- **Severidade na regra, não no achismo**: cada regra declara a sua (high
+  para eval+decode, medium para include dinâmico) — o provider só usa
+  `medium` quando a regra não declara nada.
+
+**Verificar:** `rules/yara/builtin/php_webshell.yar`,
+`rules/yara/experimental/php_obfuscation.yar`,
+`tests/integration/test_yara_rules.py` · **Issue:** #62.
