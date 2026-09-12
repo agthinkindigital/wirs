@@ -63,7 +63,7 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   Contrato ExternalAnalyzer, YARA, Wordfence CLI, Semgrep (fase 2), sandbox.
   Inteligência de versões/higiene (componente desatualizado ou recurso
   essencial a remover) como *contexto*, nunca como prova de comprometimento.
-  Slices 0.2.0: #60 (WIRS-080, done), #61 (WIRS-081), #62 (WIRS-082).
+  Slices 0.2.0: #60 (WIRS-080, done), #61 (WIRS-081, done), #62 (WIRS-082).
   Issues: WIRS-080–WIRS-085. (Fase C/E)
 
 - [**[E08] Reporting e Redaction**](https://github.com/agthinkindigital/wirs/issues/9) - `in_progress`
