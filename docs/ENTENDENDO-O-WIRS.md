@@ -600,3 +600,31 @@ investigar, nunca uma "violação de integridade".
 
 **Verificar:** `_REFERENCE_SUFFIX` em `src/wirs/application/orchestrator.py`,
 `tests/integration/test_reference_trust.py` · **Issue:** #56.
+
+---
+
+## #57 — Cache com dono e idade: baseline guardado, não esquecido (WIRS-045)
+
+### O que o scan busca
+
+Reutilizar manifests sem rebaixar a confiança: `baseline cache-store`
+guarda o manifest em `~/.wirs/cache` com origem e data, e o mapping aceita
+`cache:premium:1.0` no lugar do arquivo. Quando o scan usa o cache, cada
+divergência carrega a idade e a origem ("cache de 12d, origem
+zip-do-fornecedor") — e referência fraca continua `REFERENCE_DIFF`, nunca
+vira "violação" por estar guardada.
+
+### Por que foi desenhado assim
+
+- **Cache com provenance ou não é cache**: sem origem e data, um manifest
+  guardado vira "verdade sem dono" — daqui a um ano ninguém sabe se ainda
+  vale. O envelope registra os três; a idade viaja até o finding.
+- **Staleness é dado, não expiração**: o scanner não decide sozinho quando
+  um baseline "venceu" (isso seria chute com data) — ele declara a idade e
+  deixa a decisão com você. Expiração silenciosa seria outro falso negativo.
+- **Ausente/corrompido = erro acionável**: cache sem a entrada falha
+  explicitamente ("rode `baseline cache-store`") em vez de verificar contra
+  vazio ou, pior, contra outro componente.
+
+**Verificar:** `src/wirs/infrastructure/baseline_cache.py`,
+`tests/integration/test_baseline_cache.py` · **Issue:** #57.

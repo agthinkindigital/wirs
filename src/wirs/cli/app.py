@@ -28,7 +28,14 @@ from wirs.application.orchestrator import run_scan
 from wirs.cli.progress import CliProgress, GuiProgress
 from wirs.cli.wizard import run_wizard
 from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
-from wirs.domain import IOC, IOCKind, LocalDirectoryTarget, Severity, TargetError
+from wirs.domain import (
+    IOC,
+    BaselineManifest,
+    IOCKind,
+    LocalDirectoryTarget,
+    Severity,
+    TargetError,
+)
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
 from wirs.infrastructure.baseline import BaselineBuilder
 from wirs.infrastructure.reader import ReadBudget
@@ -90,6 +97,25 @@ def baseline_create(
     console.print(f"manifest: {dest} ({len(manifest.files)} arquivos)")
 
 
+@baseline_app.command("cache-store")
+def baseline_cache_store(
+    manifest_file: Path = typer.Argument(..., help="Manifest JSON a guardar no cache."),
+    origin: str = typer.Option(..., "--origin", help="Provenance do pacote."),
+    cache_dir: Path | None = typer.Option(None, "--cache-dir", help="Raiz do cache."),
+) -> None:
+    """Guarda manifest no cache local (~/.wirs/cache) com provenance."""
+    from wirs.infrastructure.baseline_cache import BaselineCache
+
+    cache = BaselineCache(cache_dir)
+    try:
+        manifest = _load_manifest_cli(manifest_file)
+        dest = cache.store(manifest, origin=origin)
+    except (ValueError, OSError) as e:
+        console.print(f"[red]Cache inválido:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    console.print(f"cache: {dest}")
+
+
 @app.command()
 def version() -> None:
     """Exibe a versão do scanner."""
@@ -107,6 +133,22 @@ def doctor() -> None:
         found = shutil.which(tool)
         state = f"[green]available[/green] ({found})" if found else "[yellow]unavailable[/yellow]"
         console.print(f"  {tool}: {state}")
+
+
+def _load_manifest_cli(path: Path) -> BaselineManifest:
+    """Lê e valida manifest JSON. Erro vira ValueError."""
+    import json
+
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except OSError as e:
+        raise ValueError(f"manifest ilegível: {path} ({e})") from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"manifest inválido: {path} ({e})") from e
+    try:
+        return BaselineManifest.from_dict(data)
+    except (ValueError, KeyError, TypeError) as e:
+        raise ValueError(f"manifest fora do schema: {path} ({e})") from e
 
 
 def build_detectors(ioc_list: Sequence[IOC]) -> list[Detector]:
@@ -158,6 +200,7 @@ def scan(
     gui: bool = typer.Option(False, "--gui", help="Tela de acompanhamento (WIRS-139)."),
     cli: bool = typer.Option(False, "--cli", help="Guia visual em texto (padrão)."),
     wizard: bool = typer.Option(False, "--wizard", help="Assistente interativo (WIRS-129)."),
+    cache_dir: Path | None = typer.Option(None, "--cache-dir", help="Cache de baselines."),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if wizard:
@@ -215,12 +258,14 @@ def scan(
         report_dest = candidate
     integrity_providers: list[IntegrityProvider] = [WpCliCoreIntegrity(), WpCliPluginIntegrity()]
     if baseline is not None:
+        from wirs.infrastructure.baseline_cache import BaselineCache
+
         try:
             mapping = load_baseline_mapping(baseline)
         except ValueError as e:
             console.print(f"[red]Baseline inválido:[/red] {e}")
             raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
-        integrity_providers.append(OperatorBaselineIntegrity(mapping))
+        integrity_providers.append(OperatorBaselineIntegrity(mapping, BaselineCache(cache_dir)))
     result = run_scan(
         tgt,
         profile=profile,
