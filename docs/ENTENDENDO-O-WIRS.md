@@ -428,3 +428,232 @@ zerados *com* baseline verificado valem ouro; sem baseline, valem uma
 investigação.
 
 **Verificar:** sessão real (cru → 0 findings; adulterado → 2) · **Issue:** #45.
+
+---
+
+## #48 — Manifest: a origem confiável por escrito
+
+### O que o scan busca
+
+Comparar com "o original" exige ter o original descrito em algum lugar
+confiável: o manifest lista cada arquivo esperado com seu SHA-256, quem
+garante aquilo (upstream oficial, operador, release assinada — ou referência
+não-confiável, declarada como tal) e a provenance do pacote. Sem isso,
+"diverge do quê?" não tem resposta — e é por isso que premium sem manifest é
+`UNVERIFIED`, não "suspeito".
+
+### Por que foi desenhado assim
+
+- **Confiança em 4 níveis, não binária**: oficial, operador, assinada e
+  referência não-confiável (que serve para diff, nunca para acusar violação).
+  A linguagem do relatório muda com o nível — nem "limpo" falso, nem acusação
+  sem base.
+- **Manifest hostil não atravessa**: `../../`, absoluto, duplicata e hash
+  inválido morrem na construção — porque manifest vem de fora (operador,
+  download, ZIP) e tudo de fora é input até prova em contrário.
+- **Uma forma canônica por arquivo**: `a/../a.php` e `a.php` são o mesmo; o
+  manifest guarda uma forma só, para a comparação nunca divergir por sintaxe.
+
+**Verificar:** `src/wirs/domain/baseline.py`,
+`tests/unit/test_baseline_manifest.py` · **Issue:** #48.
+
+---
+
+## #49 — Comparar: quatro respostas, não duas (WIRS-041)
+
+### O que o scan busca
+
+Dado o manifest (#48) e os hashes reais da árvore, cada arquivo recebe um de
+quatro vereditos: `match` (idêntico), `mismatch` (mudou — com esperado e real
+lado a lado), `missing` (o manifest promete, o disco não entrega) e
+`unexpected` (o disco tem, o manifest não conhece). Todo extra em escopo
+protegido entra como `unexpected`, não como curiosidade.
+
+### Por que foi desenhado assim
+
+- **Quatro estados em vez de "igual/diferente"**: ausente e extra são perguntas
+  diferentes ("removeram?" vs "plantaram?") e merecem severidades e próximos
+  checks diferentes. Colapsar tudo em "diverge" joga fora a investigação.
+- **Mismatch carrega os dois hashes**: a evidência comparável é o que permite
+  ao analista (ou à correlação futura) decidir se foi 1 byte ou reescrita
+  total — sem reler o disco.
+- **Puro e reutilizável**: a função compara manifest contra mapa de hashes,
+  sem saber de filesystem, WP-CLI ou CLI — o mesmo código servirá ao ZIP (#51)
+  e ao mapping premium (#52).
+
+**Verificar:** `compare_baseline` em `src/wirs/domain/baseline.py`,
+`tests/unit/test_baseline_compare.py` · **Issue:** #49.
+
+---
+
+## #50 — Fotografar o limpo: `baseline create` (WIRS-042)
+
+### O que o scan busca
+
+Transformar "o plugin premium íntegro que você tem" num manifest verificável:
+`wirs baseline create ./componente-limpo --name X` percorre o diretório,
+calcula SHA-256 de cada arquivo regular e grava manifest com provenance
+(origem, data, hash do pacote). O manifest gerado verifica o próprio diretório
+— tudo `match` — provando que a fotografia é fiel antes de ser usada.
+
+### Por que foi desenhado assim
+
+- **Só lê, nunca executa**: o builder usa o mesmo inventory sem-follow e o
+  mesmo reader `rb` do scan — gerar baseline de um pacote nunca roda nada
+  dele. Symlinks (inclusive para fora) e arquivos especiais ficam de fora:
+  não são conteúdo verificável por hash.
+- **Provenance junto do hash**: `source` guarda o diretório de origem,
+  `created_at` a data, `package_hash` o resumo do pacote inteiro — porque um
+  manifest sem "quando e de onde" vira verdade sem dono.
+- **Trust de operador, declarado**: o manifest nasce `TRUSTED_OPERATOR` — vale
+  o quanto vale a sua certeza de que aquele diretório estava limpo. A
+  ferramenta não finge que sabe mais do que você disse a ela.
+
+**Verificar:** `wirs baseline create --help`,
+`src/wirs/infrastructure/baseline.py`,
+`tests/integration/test_baseline_create.py` · **Issue:** #50.
+
+---
+
+## #51 — ZIP confiável sem cair em armadilha (WIRS-043)
+
+### O que o scan busca
+
+Gerar o mesmo manifest a partir do ZIP que o fornecedor (ou você) guardou:
+extrai isolado, calcula SHA-256 por arquivo e identifica o pacote pelo hash do
+próprio ZIP. Manifest do ZIP ≡ manifest do diretório extraído — a embalagem
+não muda a fotografia.
+
+### Por que foi desenhado assim
+
+- **ZIP é input hostil clássico**: `../../evil.php` (zip-slip), symlink que
+  aponta para fora e bomba de expansão são os três ataques testados — travessia
+  vira erro de fronteira, symlink nunca é materializado, expansão tem teto.
+  Baseline que deixa o ZIP escrever fora do destino não é baseline, é
+  vulnerabilidade.
+- **Hash do ZIP como identidade do pacote**: o `package_hash` aqui é o SHA-256
+  do arquivo ZIP — amarra "este manifest fala *deste* pacote", permitindo
+  re-verificar a embalagem antes de confiar no conteúdo.
+- **Extração nunca executa**: copiar bytes não roda lifecycle script; não há
+  caminho de código entre "abrir o ZIP" e "rodar algo dele".
+
+**Verificar:** `src/wirs/infrastructure/archive.py`,
+`tests/unit/test_baseline_archive.py`,
+`tests/security/test_baseline_archive_attack.py` · **Issue:** #51.
+
+---
+
+## #52 — Premium com dono: mapping path→manifest (WIRS-066)
+
+### O que o scan busca
+
+Fechar a promessa "premium nunca é skip": `wirs scan --baseline mapping.json`
+associa cada diretório de plugin/theme ao seu manifest. Mapeado e íntegro vira
+`covers` (absolvido como baseline confiável, sem heurística redundante);
+mapeado e adulterado gera `WP.PLUGIN.HASH_MISMATCH` + `UNEXPECTED_FILE`;
+**não-mapeado continua `UNVERIFIED`** — com a lacuna nomeada no coverage
+(`baseline:plugin:premium`, parcial), nunca uma acusação.
+
+### Por que foi desenhado assim
+
+- **O mapping é explícito, não adivinhado**: o scanner não tenta descobrir
+  sozinho qual manifest vale para qual pasta — confiança delegada sem
+  declaração seria chute. O JSON `{dir: manifest}` é a sua assinatura dizendo
+  "este pacote eu garanto".
+- **Reuso total**: o provider monta `BaselineBuilder` (#50) + `compare_baseline`
+  (#49) sobre o seam `IntegrityProvider` — o orquestrador nem percebe que não
+  é WP-CLI: findings, covers e coverage saem no mesmo idioma.
+- **UNVERIFIED nomeado é acionável**: a entrada de coverage diz *qual*
+  componente está sem baseline — o próximo passo (gerar manifest, #50) é
+  óbvio. Lacuna anônima vira "algo não verificado em algum lugar", que ninguém
+  resolve.
+- **E2E prova os três destinos**: limpo (exit 0, zero findings), adulterado
+  (exit 1, mismatch + unexpected) e sem mapping (exit 0, parcial nomeado).
+
+**Verificar:** `wirs scan --help`,
+`src/wirs/providers/operator_baseline.py`,
+`tests/integration/test_premium_baseline.py` · **Issue:** #52.
+
+---
+
+## #56 — Violação ou diferença? O trust decide a frase (WIRS-044)
+
+### O que o scan busca
+
+Nem todo "diferente do manifest" é acusação: contra baseline confiável
+(`TRUSTED_OPERATOR`, `TRUSTED_UPSTREAM`), divergência é `HASH_MISMATCH`
+determinístico; contra referência não-confiável (`UNVERIFIED_REFERENCE`), o
+mesmo byte diferente é `REFERENCE_DIFF` com confiança `HIGH` — um diff para
+investigar, nunca uma "violação de integridade".
+
+### Por que foi desenhado assim
+
+- **A frase é parte da evidência**: "violação" autoriza ação (reinstalar,
+  bloquear); "diferença" pede investigação. Chamar diff de violação é como
+  testemunha que exagera — contamina a decisão do analista.
+- **Confiança rebaixada junto**: `DETERMINISTIC`→`HIGH` comunica que o fato
+  (bytes diferem) é certo, mas a conclusão (adulteração) não tem fiador. O
+  atributo `trust` no finding mostra o fiador — ou a ausência dele.
+- **Vale para os três estados**: mismatch, missing e unexpected ganham o
+  prefixo `REFERENCE_` — porque "arquivo sumiu da referência fraca" também
+  não é "arquivo removido por invasor".
+
+**Verificar:** `_REFERENCE_SUFFIX` em `src/wirs/application/orchestrator.py`,
+`tests/integration/test_reference_trust.py` · **Issue:** #56.
+
+---
+
+## #57 — Cache com dono e idade: baseline guardado, não esquecido (WIRS-045)
+
+### O que o scan busca
+
+Reutilizar manifests sem rebaixar a confiança: `baseline cache-store`
+guarda o manifest em `~/.wirs/cache` com origem e data, e o mapping aceita
+`cache:premium:1.0` no lugar do arquivo. Quando o scan usa o cache, cada
+divergência carrega a idade e a origem ("cache de 12d, origem
+zip-do-fornecedor") — e referência fraca continua `REFERENCE_DIFF`, nunca
+vira "violação" por estar guardada.
+
+### Por que foi desenhado assim
+
+- **Cache com provenance ou não é cache**: sem origem e data, um manifest
+  guardado vira "verdade sem dono" — daqui a um ano ninguém sabe se ainda
+  vale. O envelope registra os três; a idade viaja até o finding.
+- **Staleness é dado, não expiração**: o scanner não decide sozinho quando
+  um baseline "venceu" (isso seria chute com data) — ele declara a idade e
+  deixa a decisão com você. Expiração silenciosa seria outro falso negativo.
+- **Ausente/corrompido = erro acionável**: cache sem a entrada falha
+  explicitamente ("rode `baseline cache-store`") em vez de verificar contra
+  vazio ou, pior, contra outro componente.
+
+**Verificar:** `src/wirs/infrastructure/baseline_cache.py`,
+`tests/integration/test_baseline_cache.py` · **Issue:** #57.
+
+---
+
+## #58 — Assinado por quem? HMAC com chave em arquivo (WIRS-046)
+
+### O que o scan busca
+
+Amarrar "este manifest saiu do nosso CI": `baseline sign` grava um `.sig`
+destacado (HMAC-SHA256 sobre os bytes do manifest) e o scan confere quando
+há `--sign-key`. Manifest adulterado pós-assinatura não passa — nem no
+`verify-sig`, nem no scan. Sem chave, componente com `.sig` vira `UNVERIFIED`
+com o motivo nomeado — nunca erro silencioso.
+
+### Por que foi desenhado assim
+
+- **HMAC stdlib, sem dep nova**: para release interna/CI, segredo
+  compartilhado basta; assimétrico (chave pública distribuível) seria
+  gestão de chaves maior para um ganho que o caso de uso não pede.
+- **Chave em arquivo, nunca em arg**: `--key-file`, não `--key` — segredo
+  em linha de comando vaza para histórico e lista de processos (§19.8).
+- **Destacado, não embutido**: o `.sig` viaja ao lado do manifest sem
+  alterar o schema — manifests antigos continuam válidos e o cache (#57)
+  nem percebe a diferença.
+- **Sem chave = UNVERIFIED nomeado**: "assinatura presente mas sem chave"
+  no coverage — o operador sabe exatamente o que falta, em vez de receber
+  um "verificado" que ninguém verificou.
+
+**Verificar:** `src/wirs/infrastructure/baseline_sign.py`,
+`tests/integration/test_signed_manifest.py` · **Issue:** #58.

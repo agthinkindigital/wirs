@@ -26,7 +26,7 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   scheduler central, large-file policy, benchmark.
   Slices: #26 (WIRS-030), #27 (WIRS-031). (Fase A/B)
 
-- [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `todo`
+- [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `in_progress`
 
   Manifest schema, comparator, `baseline create`, ZIP baseline, trust explícito.
   Refresh automatizado de manifests upstream (ex.: checksums do WordPress.org
@@ -35,6 +35,9 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   Premium/custom nunca é skip: baseline do operador (ZIP/manifest) + código
   sempre submetido a heurísticas/IOC + UNVERIFIED com detalhes acionáveis para
   decisão humana.
+  Slices FT-4: #48 (WIRS-040, done), #49 (WIRS-041, done), #50 (WIRS-042, done),
+  #51 (WIRS-043, done), #52 (WIRS-066, done). Fase C: #56 (WIRS-044, done),
+  #57 (WIRS-045, done), #58 (WIRS-046, done). E04 completo.
   Issues: WIRS-040–WIRS-046. (Fase C)
 
 - [**[E05] IOC e Rule Engine Genérico**](https://github.com/agthinkindigital/wirs/issues/6) - `in_progress`
@@ -84,7 +87,9 @@ estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
   Progresso ao vivo no terminal (barra, contadores, arquivo atual, mensagens de
   etapa, erros somados na tela) em WIRS-113/115.
   Slices: #29 (WIRS-110, done). Orquestrador: #42 (WIRS-116, done), #43 (WIRS-117, done).
-  Flag --ioc: #44 (WIRS-118). Restante (WIRS-111–115): config e progresso. (Fase A/B)
+  Flag --ioc: #44 (WIRS-118). UX da sessão real: #53 (WIRS-119, --report/export, done),
+  #54 (WIRS-129, wizard, done), #55 (WIRS-139, --gui/--cli + progresso, done).
+  Restante (WIRS-111–115): config e progresso. (Fase A/B)
 
 - [**[E11] Hardening do Scanner**](https://github.com/agthinkindigital/wirs/issues/12) - `todo`
 

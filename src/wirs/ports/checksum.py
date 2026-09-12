@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from wirs.domain import FileIntegrity, Target
+from wirs.domain import BaselineTrust, FileIntegrity, Target
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,12 @@ class ComponentIntegrity:
     component: str
     files: tuple[FileIntegrity, ...] = ()
     unverified: bool = False
+    # Confiança do baseline usado (WIRS-044): referência não-confiável gera
+    # linguagem de diff, nunca de violação de baseline confiável.
+    trust: BaselineTrust | None = None
+    # Detalhe acionável do UNVERIFIED (ex.: "assinatura sem chave") — o
+    # orquestrador usa no lugar do "sem baseline oficial" genérico.
+    note: str = ""
     # Prefixos relativos que o provider VERIFICOU nesta run (baseline confiável
     # absolve). Inclui paths verificados mesmo quando outros divergiram: só os
     # divergentes (em `files`) continuam sujeitos a detecção (correlação DX001).

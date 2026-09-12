@@ -1,165 +1,241 @@
-# WIRS — WordPress Incident Response Scanner
+# WIRS - WordPress Incident Response Scanner
 
 [![CI](https://github.com/agthinkindigital/wirs/actions/workflows/ci.yml/badge.svg)](https://github.com/agthinkindigital/wirs/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/agthinkindigital/wirs)](https://github.com/agthinkindigital/wirs/releases/latest)
 [![Python](https://img.shields.io/badge/python-%3E%3D3.11-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)](#instalação)
+[![Status](https://img.shields.io/badge/status-pre--alpha-orange)](#em-desenvolvimento)
 
-Quando um WordPress é comprometido, a investigação vira uma colagem de comandos
-soltos: um checksum aqui, um `grep` ali, um print do banco acolá — e no fim
-ninguém consegue dizer com certeza o que foi verificado, o que ficou de fora,
-nem reproduzir a conclusão. O WIRS existe para acabar com isso: ele é um
-**motor de scanning para resposta a incidentes** que inventaria o alvo,
-verifica integridade contra baselines confiáveis, caça indicadores conhecidos,
-aplica heurísticas com honestidade sobre incerteza e entrega tudo com
-**evidências, cobertura explícita e conclusões reproduzíveis**.
+O WIRS é um scanner read-only para resposta a incidentes em WordPress. Ele
+combina integridade, indicadores e heurísticas em um relatório reproduzível,
+sempre acompanhado pelas evidências e pela cobertura real da análise.
 
-Se esse problema já te custou uma madrugada, dá uma estrela para acompanhar —
-e se manja de Python, PHP ou forense web, as [issues](https://github.com/agthinkindigital/wirs/issues)
-estão abertas para contribuir.
+O objetivo não é emitir um veredito opaco de "infectado" ou "limpo". O WIRS
+mostra o que observou, por que aquilo importa e quais verificações não puderam
+ser concluídas.
 
-> [![APRENDENDO SOBRE O WIRS](https://img.shields.io/badge/APRENDENDO_SOBRE_O_WIRS-conceitos_e_decisões-21759B?style=for-the-badge)](docs/ENTENDENDO-O-WIRS.md)
+> [![ENTENDA O WIRS](https://img.shields.io/badge/ENTENDA_O_WIRS-conceitos_e_decisões-21759B?style=for-the-badge)](docs/ENTENDENDO-O-WIRS.md)
 >
-> Começando agora? Esse documento explica cada peça do sistema na linguagem
-> das revisões — o que é, por que existe e que decisões a moldaram.
+> Aprenda como o scanner reconhece sinais de comprometimento e por que cada
+> verificação foi desenhada dessa forma.
 
-## O que ele faz
+## Por que ele existe
 
-- Aponta **quais arquivos diferem de uma origem confiável** (checksums oficiais do core e plugins via WP-CLI, baselines do operador para temas/plugins premium).
-- Encontra **arquivos onde não deveriam existir** (PHP em `uploads`, executáveis em zonas de conteúdo, extras em áreas protegidas do core).
-- Diz claramente **o que não pôde verificar** — sem baseline confiável, o componente é `UNVERIFIED`, nunca "malicioso" por definição.
-- Procura **IOCs literais**, aplica um **pacote heurístico PHP** e pluga **YARA / Wordfence CLI** como analyzers opcionais.
-- Mapeia **persistências** (MU-plugins, cron, config) e superfícies de **banco de dados** que merecem investigação.
-- Separa **fatos** (determinísticos) de **suspeitas** (heurísticas) e de **diagnósticos** (hipóteses correlacionadas) — nunca resume tudo num "INFECTED" sem explicar o porquê.
-- Gera relatório **JSON canônico** + terminal, Markdown e HTML.
+Uma investigação de WordPress costuma juntar checksums, buscas manuais e
+ferramentas desconectadas. No fim, é difícil provar o que foi verificado,
+reproduzir a conclusão ou perceber o que ficou sem cobertura.
 
-## O que ele não faz
+O WIRS organiza esse trabalho em três camadas que nunca se confundem:
 
-Não remove malware, não é EDR/WAF/daemon, não substitui Wordfence, WPScan,
-YARA ou WP-CLI — ele **orquestra e correlaciona** essas ferramentas. Também
-não declara "site limpo": a formulação honesta é *"nenhum finding acima do
-threshold nas verificações que concluíram"*, sempre acompanhada da cobertura.
+1. **Fatos:** observações determinísticas, como hash divergente ou IOC literal.
+2. **Suspeitas:** sinais heurísticos com possibilidade real de falso positivo.
+3. **Diagnósticos:** hipóteses futuras baseadas na correlação dos findings.
 
-## Como funciona (resumo)
+Cada resultado inclui **Coverage**. Portanto, zero findings significa apenas
+que nenhum finding atingiu o limite nas verificações que terminaram, não que o
+site esteja necessariamente limpo.
 
-```text
-inventory → metadata → hash/baseline → policies → IOCs → heurísticas
-→ analyzers externos → correlação → coverage → diagnósticos → relatórios
-```
+## Disponível agora
 
-O scan é **100% read-only**: nada é apagado, renomeado, quarentenado ou
-alterado no alvo. Funciona sobre diretório local, snapshot copiado, filesystem
-montado ou archive — sem precisar instalar nada no servidor investigado.
-Como o alvo é tratado como hostil, todo conteúdo dele é sanitizado antes de
-chegar ao relatório. O desenho completo está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+A release [`v0.1.0`](https://github.com/agthinkindigital/wirs/releases/tag/v0.1.0)
+entrega o primeiro fluxo operacional:
 
-Exemplo da visão de saída no terminal:
+- inventário seguro de diretórios locais e snapshots;
+- descoberta de WordPress e classificação de zonas;
+- integridade oficial de core e plugins via WP-CLI opcional;
+- detecção de arquivos inesperados no core e PHP em `uploads`;
+- busca de IOCs literais em streaming;
+- heurísticas PHP com severidade e confiança separadas;
+- relatórios no terminal e em JSON canônico;
+- redaction de secrets e Coverage explícito;
+- perfis de recursos `soft`, `balanced` e `fast`;
+- falha graciosa quando um provider não está disponível.
 
-```text
-WIRS 0.1.0 · Target: /srv/www/site · Platform: WordPress · Profile: soft · Mode: read-only
+O `scan` nunca altera o alvo, não segue symlinks para fora da raiz e não
+executa o código analisado. WP-CLI opera em modo seguro, anterior ao bootstrap,
+nos providers usados pelo fluxo atual.
 
-SUMMARY                          COVERAGE
-CRITICAL  0                      Filesystem           COMPLETE
-HIGH      1                      Core baseline        COMPLETE
-MEDIUM    3                      Plugin baseline      PARTIAL (2 unverified)
-LOW       2                      YARA                 COMPLETE
-INFO      14                     Database             NOT RUN
-```
+## Em desenvolvimento
 
-## Status do projeto
+A branch `develop` iniciou a linha `0.2.0`. O schema de manifests com trust
+explícito já está implementado; comparação e uso desses manifests pelo scan
+ainda estão em construção.
 
-**0.1.0** — scanner WordPress operacional: discovery, zonas, checksums oficiais
-via WP-CLI, IOC em streaming, heurísticas PHP, policy de uploads, redaction,
-JSON canônico e terminal — tudo com testes e cobertura honesta. Falta para as
-próximas fases: baselines custom (0.2), banco + diagnoses (0.3), analyzers
-externos (0.4). Acompanhe pelo [roadmap](ORCHESTRATOR-ROADMAP.md), pelo
-[changelog](CHANGELOG.md) e pela [especificação viva](WIRS_MASTER_SPEC_PT-BR.md)
-(em português).
+| Capacidade | Estado |
+|---|---|
+| Schema de baseline custom/premium | Em `develop` |
+| Comparator e `baseline create` | Em desenvolvimento |
+| Baseline seguro a partir de ZIP | Planejado para `0.2.0` |
+| YARA e relatório Markdown | Planejado para `0.2.0` |
+| Banco, cron e diagnósticos | Planejado para `0.3.0` |
+| Wordfence CLI e Semgrep | Planejado para `0.4.0` |
+| Snapshot remoto, SSH/SFTP | Planejado para `0.5.0` |
+
+Veja o [roadmap](ORCHESTRATOR-ROADMAP.md), o [changelog](CHANGELOG.md) e a
+[especificação viva](WIRS_MASTER_SPEC_PT-BR.md) para o escopo detalhado.
 
 ## Instalação
 
-Pré-requisitos: **Python 3.11+**, **Git** e o gerenciador [**uv**](https://docs.astral.sh/uv/).
-Providers como WP-CLI (precisa de PHP) e YARA são opcionais — o scan degrada a
-cobertura com elegância quando eles não existem.
+Pré-requisitos: [Git](https://git-scm.com/) e
+[uv](https://docs.astral.sh/uv/). O `uv` prepara o ambiente Python 3.11+ usado
+pelo projeto.
 
-**Windows (recomendado: scoop)**
-
-```powershell
-scoop install python uv git
-git clone https://github.com/agthinkindigital/wirs.git
-cd wirs
-uv venv
-uv pip install -e ".[dev]"
-wirs --help
-```
-
-**Linux (Debian/Ubuntu)**
+Instalação da release atual:
 
 ```bash
-sudo apt install python3 git curl
-curl -LsSf astral.sh/uv/install.sh | sh
-git clone https://github.com/agthinkindigital/wirs.git
+git clone --branch v0.1.0 --depth 1 https://github.com/agthinkindigital/wirs.git
 cd wirs
-uv venv
-uv pip install -e ".[dev]"
-wirs --help
+uv tool install .
+wirs version
 ```
 
-**macOS (Homebrew)**
+O fluxo funciona em Windows, Linux e macOS. WP-CLI e PHP são opcionais, mas
+necessários para verificar checksums oficiais de uma instalação WordPress.
+Quando ausentes, o scan continua e registra a lacuna no Coverage.
+
+Confira o ambiente antes do primeiro scan:
 
 ```bash
-brew install python@3.11 uv git
-git clone https://github.com/agthinkindigital/wirs.git
-cd wirs
-uv venv
-uv pip install -e ".[dev]"
-wirs --help
+wirs doctor
 ```
 
-Opcionais por plataforma: `wp` ([WP-CLI](https://wp-cli.org/) + PHP),
-`yara`, `wordfence`. O comando `wirs doctor` mostra o que foi detectado.
+Por padrão o scan mostra o andamento em texto (`--cli`); com `--gui` abre
+uma tela de acompanhamento. O progresso vai para o stderr, então o JSON
+do stdout continua parseável por automação.
 
-## Uso básico
+## Primeiro scan
+
+O comando é sempre `wirs scan <pasta> [opções]`, onde `<pasta>` é o
+diretório local ou snapshot a analisar. Exemplo mínimo:
 
 ```bash
-wirs doctor                                        # ambiente e providers
-wirs scan /srv/www/site --profile soft             # resumo no terminal
-wirs scan /srv/www/site --format json --report scan.json
-wirs scan ./snapshot --ioc iocs.txt --baseline baselines.yaml
+wirs scan /srv/www/site
 ```
 
-Exit codes documentados: `0` limpo no threshold · `1` findings acima do
-threshold · `2` target/config inválido · `3` scan incompleto · `4` erro
-interno · `5` rule pack inválido.
+### Todas as opções do `scan`
 
-## Estrutura do projeto
+| Opção | Preenchimento | Padrão | Efeito |
+|---|---|---|---|
+| `<pasta>` (argumento) | caminho do diretório | — | Alvo do scan (obrigatório) |
+| `--profile` | `soft`, `balanced`, `fast` | `soft` | Orçamento de recursos (1 worker, limites de leitura) |
+| `--format` | `terminal`, `json` | `terminal` | View de saída; JSON é o canônico |
+| `--fail-on` | `info`, `low`, `medium`, `high`, `critical` | `high` | Severidade mínima para exit 1 |
+| `--ioc` | caminho de arquivo `kind:value` | — | IOCs literais extras (ex.: `literal:eval(`) |
+| `--baseline` | caminho de mapping JSON | — | `{dir: manifest}` do operador (premium/custom) |
+| `--report` | caminho do arquivo | — | Grava o JSON canônico (fora do alvo, atômico) |
+| `--gui` | (flag) | — | Tela Rich de acompanhamento no stderr |
+| `--cli` | (flag) | ligado | Guia textual de progresso no stderr |
+| `--wizard` | (flag) | — | Assistente interativo: plataforma, formatos, target, confirmação |
+
+Use o perfil conservador e gere JSON para automação:
+
+```bash
+wirs scan /srv/www/site --profile soft --format json
+```
+
+Adicione uma lista de IOCs no formato `kind:value`:
+
+```bash
+wirs scan /srv/www/site --ioc iocs.txt --fail-on high
+```
+
+Grave o relatório canônico em arquivo (sempre JSON, fora do alvo):
+
+```bash
+wirs scan /srv/www/site --format json --report ./scan.json
+```
+
+Sem `--report`, o JSON vai para o stdout (dá para redirecionar com `>`).
+O arquivo existente é sobrescrito via escrita atômica: ou o report
+completo está lá, ou nada foi escrito.
+
+Um [relatório JSON de exemplo](docs/examples/scan-example.json) mostra o modelo
+canônico sem exigir uma instalação WordPress local.
+
+### Outros comandos
+
+| Comando | Para quê |
+|---|---|
+| `wirs doctor` | Ambiente e providers detectados (`wp`, `yara`, `wordfence`) |
+| `wirs version` | Versão do scanner |
+| `wirs baseline create <dir> --name X [--version V] [--output F]` | Manifest SHA-256 de um diretório limpo |
+
+### Exit codes
+
+| Código | Significado |
+|---:|---|
+| `0` | Nenhum finding atingiu o threshold nas verificações concluídas |
+| `1` | Um finding atingiu o threshold configurado |
+| `2` | Target ou argumento inválido |
+| `3` | Scan incompleto por falha crítica de coleta |
+| `4` | Erro interno do scanner |
+| `5` | Regra ou configuração inválida |
+
+## Como funciona
+
+```text
+target -> inventory -> WordPress discovery -> zones -> trusted integrity
+       -> policies -> IOCs -> heuristics -> Coverage -> terminal / JSON
+```
+
+O barato e determinístico roda primeiro. Um arquivo confirmado por baseline
+oficial não recebe heurísticas desnecessárias; um arquivo divergente continua
+pela detecção para que evidências independentes possam se reforçar.
+
+Falhas parciais degradam a cobertura em vez de esconder o problema ou abortar
+toda a execução. A arquitetura completa está em
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Desenvolvimento
+
+Prepare o checkout da branch `develop`:
+
+```bash
+git clone https://github.com/agthinkindigital/wirs.git
+cd wirs
+git switch develop
+uv sync --extra dev
+```
+
+Execute os quality gates locais:
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src/
+```
+
+### Estrutura
 
 | Caminho | Papel |
 |---|---|
-| `src/wirs/domain/` | Modelo genérico puro (só stdlib) — Target, Artifact, Evidence, Finding, Diagnosis, Coverage |
-| `src/wirs/application/` + `ports/` | Casos de uso e fronteiras (hexagonal sem burocracia) |
-| `src/wirs/infrastructure/` | Filesystem, scheduler, hashing, config |
-| `src/wirs/detectors/` | Regras internas (sem subprocess, sem I/O direto) |
-| `src/wirs/providers/` | WP-CLI, YARA, Wordfence via anti-corruption layer |
-| `src/wirs/adapters/wordpress/` | Todo o conhecimento WordPress mora aqui — e só aqui |
-| `src/wirs/reporting/` | JSON canônico + views (terminal, Markdown, HTML) |
-| `rules/` · `tests/` | Packs de regras e fixtures/TDD (inclui golden tests) |
+| `src/wirs/domain/` | Modelo genérico puro, sem WordPress ou dependências externas |
+| `src/wirs/application/` | Casos de uso e orquestração do scan |
+| `src/wirs/ports/` | Contratos para fronteiras que realmente variam |
+| `src/wirs/infrastructure/` | Filesystem, leitura, hashing e execução segura |
+| `src/wirs/detectors/` | Regras internas sem subprocess ou execução do alvo |
+| `src/wirs/providers/` | Integrações externas normalizadas por anti-corruption layer |
+| `src/wirs/adapters/wordpress/` | Conhecimento específico de WordPress |
+| `src/wirs/reporting/` | JSON canônico e views humanas read-only |
+| `tests/` | Fixtures, testes unitários, integração, segurança, E2E e golden |
 
 ## Contribuindo
 
-Toda contribuição começa por uma **Issue**: descreva o comportamento, o critério
-de aceite e como verificar. O fluxo é TDD em slices verticais pequenos
-(um teste → código mínimo → refator), com QA ao final de cada entrega.
-Leia [`AGENTS.md`](AGENTS.md) antes do primeiro PR — lá estão as invariantes
-que não negociamos (read-only, evidência antes de interpretação, coverage
-sempre visível). Documentação de decisões vive em [`docs/adr/`](docs/adr/).
+Toda contribuição começa por uma [Issue](https://github.com/agthinkindigital/wirs/issues)
+com comportamento, critério de aceite e verificação reproduzível. O fluxo usa
+TDD em slices verticais pequenos e QA ao final de cada DAG.
+
+Leia [`AGENTS.md`](AGENTS.md) antes do primeiro PR. As decisões arquiteturais
+estão em [`docs/adr/`](docs/adr/) e as invariantes de segurança não são
+negociáveis.
 
 ## Segurança
 
-Encontrou uma vulnerabilidade no próprio scanner? Abra uma issue com
-`type:security` ou fale em privado com o mantenedor — nunca anexe dumps,
-secrets ou dados de alvos reais. Detalhes em [`SECURITY.md`](SECURITY.md).
+Encontrou uma vulnerabilidade no scanner? Siga [`SECURITY.md`](SECURITY.md).
+Nunca publique dumps, secrets, paths identificáveis ou dados de alvos reais em
+uma Issue.
 
 ## Licença
 
-MIT — veja [`LICENSE`](LICENSE).
+MIT. Veja [`LICENSE`](LICENSE).

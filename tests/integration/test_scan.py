@@ -23,7 +23,7 @@ def test_scan_json_com_coverage(tmp_path) -> None:
     result = runner.invoke(app, ["scan", _fixture(tmp_path), "--format", "json"])
 
     assert result.exit_code == 0  # sem findings: abaixo do threshold
-    data = json.loads(result.output)
+    data = json.loads(result.stdout)
     assert data["schema_version"] == "1.0"
     assert data["findings"] == []
     (cov,) = [c for c in data["coverage"] if c["capability"] == "filesystem"]
@@ -50,7 +50,7 @@ def test_fail_on_threshold(tmp_path) -> None:
 
     padrao = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
     assert padrao.exit_code == 1  # WP.UPLOAD.EXECUTABLE é HIGH >= high
-    data = json.loads(padrao.output)
+    data = json.loads(padrao.stdout)
     assert any(f["rule_id"] == "WP.UPLOAD.EXECUTABLE" for f in data["findings"])
 
     so_critical = runner.invoke(app, ["scan", str(tmp_path), "--fail-on", "critical"])
@@ -78,7 +78,7 @@ def test_scan_com_gap_vira_partial(tmp_path, monkeypatch) -> None:
     result = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
     assert result.exit_code == 0  # PARTIAL não é finding: não falha
     (cov,) = [
-        c for c in jsonlib.loads(result.output)["coverage"] if c["capability"] == "filesystem"
+        c for c in jsonlib.loads(result.stdout)["coverage"] if c["capability"] == "filesystem"
     ]
     assert cov["state"] == "partial"
     assert cov["failed"] == 1
@@ -97,7 +97,7 @@ def test_ioc_flag_gera_match(tmp_path) -> None:
     )
 
     result = runner.invoke(app, ["scan", str(tmp_path), "--ioc", str(iocs), "--format", "json"])
-    data = json.loads(result.output)
+    data = json.loads(result.stdout)
     assert any(f["rule_id"] == "IOC.MATCH" for f in data["findings"])  # MEDIUM: exit 0 no default
     assert result.exit_code == 0
 
@@ -105,7 +105,7 @@ def test_ioc_flag_gera_match(tmp_path) -> None:
     assert medio.exit_code == 1  # MEDIUM >= medium: falha
 
     sem_ioc = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
-    assert not any(f["rule_id"] == "IOC.MATCH" for f in json.loads(sem_ioc.output)["findings"])
+    assert not any(f["rule_id"] == "IOC.MATCH" for f in json.loads(sem_ioc.stdout)["findings"])
 
 
 def test_ioc_invalido_vira_exit_2(tmp_path) -> None:
