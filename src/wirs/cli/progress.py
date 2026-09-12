@@ -47,10 +47,15 @@ class CliProgress:
         elif evento.phase == "detect":
             self._total = evento.total
             agora = time.monotonic()
-            if agora - self._ultimo >= self.intervalo_s:
+            limite = min(0.25, self.intervalo_s) if console.is_terminal else self.intervalo_s
+            if agora - self._ultimo >= limite:
                 self._ultimo = agora
                 atual = sanitize(evento.detail)
-                console.print(f"\\[4/4] detect … {evento.current}/{evento.total} · {atual}")
+                texto = f"\\[4/4] detect … {evento.current}/{evento.total} · {atual}"
+                if console.is_terminal:
+                    console.print(texto, end="\r")  # mesma linha, sem scroll
+                else:
+                    console.print(texto)
         elif evento.phase == "done":
             console.print(f"\\[done] {evento.current} findings em {self._total} arquivos")
 

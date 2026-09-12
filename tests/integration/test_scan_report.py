@@ -43,6 +43,20 @@ def test_report_dentro_do_target_e_recusado() -> None:
         assert not (alvo / "scan.json").exists()
 
 
+def test_report_em_diretorio_e_recusado() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        alvo = tmp_path / "alvo"
+        alvo.mkdir()
+        destino = tmp_path / "pasta"
+        destino.mkdir()
+
+        result = runner.invoke(app, ["scan", str(alvo), "--report", str(destino)])
+
+        assert result.exit_code == 2
+        assert list(destino.iterdir()) == []
+
+
 def test_report_sem_parcial_e_overwrite() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)

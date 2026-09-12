@@ -306,6 +306,9 @@ def scan(
     report_dest: Path | None = None
     if report_file is not None:
         candidate = Path(report_file).expanduser()
+        if candidate.exists() and candidate.is_dir():
+            console.print(f"[red]--report precisa de arquivo, não diretório:[/red] {candidate}")
+            raise typer.Exit(code=ExitCode.INVALID_TARGET)
         if _dentro_do_target(candidate, tgt.root):
             console.print(
                 f"[red]Report dentro do target (scan não escreve no alvo):[/red] {candidate}"
