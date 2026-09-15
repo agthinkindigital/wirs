@@ -308,6 +308,7 @@ class WpCliCoreIntegrity:
                 component="wordpress-core",
                 files=report.files,
                 covers=covers,
+                path_prefix="",
             )
         ]
 
@@ -340,6 +341,7 @@ class WpCliPluginIntegrity:
                 component=f"plugin:{result.slug}",
                 files=result.files,
                 covers=(f"wp-content/plugins/{result.slug}/",),
+                path_prefix=f"wp-content/plugins/{result.slug}",
             )
             for result in report.plugins
         ]

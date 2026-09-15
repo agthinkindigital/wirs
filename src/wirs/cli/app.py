@@ -347,12 +347,8 @@ def scan(
     )
     for artifact in result.artifacts:
         kinds[artifact.kind.value] += 1
-    report = CanonicalReport(
-        scan_id=result.scan_id,
-        target_root=result.target_root,
-        profile=profile,
-        findings=result.findings,
-        coverage=result.coverage,
+    report = CanonicalReport.from_scan_result(
+        result,
         note="Orquestrador v1: inventory + detection + checksum (degrade gracioso).",
     )
     payload = report.to_json()  # uma serialização: stdout e arquivo idênticos

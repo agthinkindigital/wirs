@@ -129,6 +129,7 @@ class OperatorBaselineIntegrity:
                         component=_slug(rel),
                         unverified=True,
                         note=str(e),
+                        path_prefix=rel,
                     )
                 )
                 continue
@@ -155,6 +156,7 @@ class OperatorBaselineIntegrity:
                     files=files,
                     covers=(f"{rel}/",),
                     trust=manifest.trust,
+                    path_prefix=rel,
                 )
             )
         for rel in sorted(_sem_mapping(target, self._mapping)):

@@ -21,8 +21,8 @@ class ArtifactKind(Enum):
     SPECIAL = "special"
 
 
-def _artifact_id(kind: ArtifactKind, path: SafePath) -> str:
-    digest = hashlib.sha256(f"{kind.value}|{path.root}|{path.relative}".encode()).hexdigest()[:16]
+def _artifact_id(source_ref: str, kind: ArtifactKind, path: SafePath) -> str:
+    digest = hashlib.sha256(f"{source_ref}|{kind.value}|{path.relative}".encode()).hexdigest()[:16]
     return f"art_{digest}"
 
 
@@ -46,10 +46,21 @@ class Artifact:
     metadata: ArtifactMetadata = field(default_factory=ArtifactMetadata)
     symlink_target: str | None = None
     id: str = ""
+    source_ref: str = "src_primary"
+    presence: str = "observed"
+    origin: str = "filesystem"
 
     def __post_init__(self) -> None:
+        if not self.source_ref:
+            raise ValueError("source_ref de Artifact não pode ser vazio")
+        if any(separator in self.source_ref for separator in ("/", "\\", ":")):
+            raise ValueError("source_ref de Artifact não pode ser filesystem path")
+        if self.presence not in {"observed", "missing"}:
+            raise ValueError(f"presence de Artifact inválida: {self.presence!r}")
+        if not self.origin:
+            raise ValueError("origin de Artifact não pode ser vazio")
         if not self.id:
-            object.__setattr__(self, "id", _artifact_id(self.kind, self.path))
+            object.__setattr__(self, "id", _artifact_id(self.source_ref, self.kind, self.path))
 
     @classmethod
     def from_stat(
@@ -58,6 +69,7 @@ class Artifact:
         path: SafePath,
         st: os.stat_result,
         symlink_target: str | None = None,
+        source_ref: str = "src_primary",
     ) -> Artifact:
         """Constrói a partir de um stat JÁ coletado — nenhum I/O aqui dentro."""
         return cls(
@@ -74,14 +86,35 @@ class Artifact:
                 ctime_ns=st.st_ctime_ns,
             ),
             symlink_target=symlink_target,
+            source_ref=source_ref,
+        )
+
+    @classmethod
+    def expected_missing(
+        cls,
+        path: SafePath,
+        *,
+        source_ref: str = "src_primary",
+        origin: str = "expected_baseline",
+    ) -> Artifact:
+        """Cria o Artifact lógico de uma entrada esperada mas ausente."""
+        return cls(
+            kind=ArtifactKind.FILE,
+            path=path,
+            source_ref=source_ref,
+            presence="missing",
+            origin=origin,
         )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "kind": self.kind.value,
+            "source_ref": self.source_ref,
             "root": str(self.path.root),
             "relative": self.path.relative,
+            "presence": self.presence,
+            "origin": self.origin,
             "symlink_target": self.symlink_target,
             "metadata": {
                 "size": self.metadata.size,
@@ -115,4 +148,7 @@ class Artifact:
             ),
             symlink_target=data.get("symlink_target"),
             id=str(data.get("id", "")),
+            source_ref=str(data.get("source_ref", "src_primary")),
+            presence=str(data.get("presence", "observed")),
+            origin=str(data.get("origin", "filesystem")),
         )

@@ -21,9 +21,9 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 
   Schemas, severidade/confiança, Coverage model, Scan Manifest, versionamento.
   Slices: #23 (WIRS-020, done), #24 (WIRS-021, done), #25 (WIRS-023, done).
-  #65 (WIRS-026, artifact canônico completo) permanece aberto e é o primeiro
-  slice de produto da próxima DAG. O JSON atual não é ainda o artifact completo.
-  (Fases A/C)
+  #65 (WIRS-026, artifact canônico completo) foi concluída em schema 2.0; a
+  próxima DAG começa em #66. A Epic pai permanece aberta para follow-ons do
+  próprio domínio. (Fases A/C)
 
 - [**[E03] Reader, Hashing e Resource Control**](https://github.com/agthinkindigital/wirs/issues/4) - `in_progress`
 
@@ -60,9 +60,9 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   premium baseline, MU-plugins, upload policy, config collector.
   Slices FT-2: #30 (WIRS-060), #31 (WIRS-061), #32 (WIRS-063), #33 (WIRS-064),
   #34 (WIRS-065), #35 (WIRS-068). WIRS-066 foi entregue como dependência
-  cross-Epic em #52/E04. Restante (WIRS-062, 067, 069–073): fatiar na Fase G.
-  Issues publicadas: WIRS-060–WIRS-069; WIRS-062, 067 e 069–073 permanecem
-  backlog para fatiamento na Fase G. (Fases B/G)
+  cross-Epic em #52/E04. Restante (WIRS-062, 067, 069–073): separar entre
+  file-centric no Horizonte A/B e runtime/state posterior. Nenhum item
+  file-centric depende de logs, cPanel, E16 ou E17. (Fases B/G)
 
 - [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `in_progress`
 
@@ -94,7 +94,7 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   arquivos/cache/banco como sugestão — remediação automática fora do scan).
   WIRS-100–103 eram placeholders horizontais não publicados e foram substituídos
   pelos slices verticais abaixo; WIRS-104 (graph export) fica pós-1.0.
-  Próximo slice: #77 (WIRS-106, Diagnosis file-centric de credencial/webshell),
+  Próximo slice: #77 (WIRS-106, Diagnosis file-centric por sinais convergentes),
   dependente de #65 e da content analysis bounded. Depois: #76 (WIRS-105,
   relações), #78 (WIRS-107, phishing/cloaking/backup) e #79 (WIRS-108,
   contexto offline de IP/CIDR/UA). (Fase A/B, depois F)
@@ -115,8 +115,8 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   output injection tests, archive sandbox, regex fuzz, SBOM, rule signing.
   Slice entregue: #46 (WIRS-120, resolução segura de commands/providers no
   Windows, done).
-  Próximo hardening: #82 (WIRS-123, rejeição de symlink no destino de
-  `--report`). Issues: WIRS-120–WIRS-128. (contínuo)
+  #82 (WIRS-123, rejeição de symlink no destino de `--report`) foi concluída;
+  os demais itens WIRS-120–WIRS-128 continuam no backlog. (contínuo)
 
 - [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `todo`
 
@@ -176,7 +176,7 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 4. FT-4 componentes customizados (E04).
 5. Validar em fixtures/snapshots conhecidos antes de adicionar complexidade.
 6. Fechar artifact canônico (#65).
-7. Fechar hardening do destino `--report` (#82), independente de #65.
+7. Hardening do destino `--report` (#82), independente de #65 (concluído).
 8. Integrar YARA no scan (#66), após #65.
 9. Content analysis bounded (#67 + WIRS-052/056/057/058).
 10. Diagnosis file-centric (#77) → HTML filesystem-only (#80).

@@ -10,10 +10,23 @@ def test_file_artifact_com_id_estavel(tmp_path) -> None:
     a = Artifact(kind=ArtifactKind.FILE, path=path)
     b = Artifact(kind=ArtifactKind.FILE, path=path)
 
-    assert a.id == b.id  # estável para mesmo kind + path
+    assert a.id == b.id  # estável para mesmo source_ref + kind + path relativo
     assert a.id.startswith("art_")
     assert a.path.relative == "wp-includes/version.php"
     assert Artifact(kind=ArtifactKind.DIR, path=path).id != a.id  # kind compõe o ID
+
+
+def test_id_nao_depende_do_root_mas_isola_source_ref(tmp_path) -> None:
+    a = Artifact(kind=ArtifactKind.FILE, path=SafePath(tmp_path, "x.php"))
+    b = Artifact(kind=ArtifactKind.FILE, path=SafePath(tmp_path / "outro", "x.php"))
+    c = Artifact(
+        kind=ArtifactKind.FILE,
+        path=SafePath(tmp_path / "outro", "x.php"),
+        source_ref="src_backup",
+    )
+
+    assert a.id == b.id
+    assert a.id != c.id
 
 
 def test_kinds_dir_symlink_special(tmp_path) -> None:
@@ -61,3 +74,12 @@ def test_round_trip_serializacao(tmp_path) -> None:
 
     assert restaurado == original
     assert restaurado.id == original.id
+
+
+def test_logical_artifact_missing_tem_presenca_e_origem(tmp_path) -> None:
+    missing = Artifact.expected_missing(SafePath(tmp_path, "wp-includes/example.php"))
+
+    assert missing.kind is ArtifactKind.FILE
+    assert missing.presence == "missing"
+    assert missing.origin == "expected_baseline"
+    assert Artifact.from_dict(missing.to_dict()) == missing

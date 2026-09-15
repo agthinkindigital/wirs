@@ -1,0 +1,159 @@
+{
+  "artifacts": [
+    {
+      "id": "art_core",
+      "kind": "file",
+      "metadata": {
+        "ctime_ns": null,
+        "dev": null,
+        "extra": {},
+        "gid": null,
+        "ino": null,
+        "mode": null,
+        "mtime_ns": null,
+        "size": null,
+        "uid": null
+      },
+      "origin": "filesystem",
+      "presence": "observed",
+      "relative": "wp-includes/version.php",
+      "source_ref": "src_primary",
+      "symlink_target": null
+    },
+    {
+      "id": "art_uploads",
+      "kind": "file",
+      "metadata": {
+        "ctime_ns": null,
+        "dev": null,
+        "extra": {},
+        "gid": null,
+        "ino": null,
+        "mode": null,
+        "mtime_ns": null,
+        "size": null,
+        "uid": null
+      },
+      "origin": "filesystem",
+      "presence": "observed",
+      "relative": "wp-content/uploads/evil.php",
+      "source_ref": "src_primary",
+      "symlink_target": null
+    }
+  ],
+  "coverage": [
+    {
+      "applicable_checks": 1600,
+      "capability": "core_baseline",
+      "failed": 0,
+      "note": "",
+      "skipped": 0,
+      "state": "complete",
+      "unavailable": 0,
+      "verified": 1600
+    },
+    {
+      "applicable_checks": 14,
+      "capability": "plugin_baseline",
+      "failed": 0,
+      "note": "2 plugins premium sem baseline",
+      "skipped": 0,
+      "state": "partial",
+      "unavailable": 2,
+      "verified": 12
+    }
+  ],
+  "diagnoses": [],
+  "evidence": [
+    {
+      "artifact_ref": "art_core",
+      "collected_at": "2026-09-09T12:00:00",
+      "content": {
+        "source": "golden"
+      },
+      "id": "ev_core",
+      "kind": "test",
+      "provenance": {
+        "collector": "test",
+        "version": "1"
+      },
+      "redaction_state": "none",
+      "scan_id": "scan_golden_01",
+      "source": "test"
+    },
+    {
+      "artifact_ref": "art_uploads",
+      "collected_at": "2026-09-09T12:00:00",
+      "content": {
+        "source": "golden"
+      },
+      "id": "ev_uploads",
+      "kind": "test",
+      "provenance": {
+        "collector": "test",
+        "version": "1"
+      },
+      "redaction_state": "none",
+      "scan_id": "scan_golden_01",
+      "source": "test"
+    }
+  ],
+  "findings": [
+    {
+      "artifact_ref": "art_core",
+      "attributes": {
+        "actual_hash": "bbb",
+        "expected_hash": "aaa"
+      },
+      "category": "integrity",
+      "confidence": {
+        "class": "deterministic",
+        "score": null
+      },
+      "evidence_refs": [
+        "ev_core"
+      ],
+      "id": "fnd_556bae7c4eabcc31",
+      "provenance": null,
+      "rule_id": "WP.CORE.HASH_MISMATCH",
+      "severity": "critical",
+      "status": "open",
+      "title": "Arquivo do core diverge do baseline confiável"
+    },
+    {
+      "artifact_ref": "art_uploads",
+      "attributes": {},
+      "category": "policy",
+      "confidence": {
+        "class": "high",
+        "score": null
+      },
+      "evidence_refs": [
+        "ev_uploads"
+      ],
+      "id": "fnd_bb0f602968f14033",
+      "provenance": null,
+      "rule_id": "WP.UPLOAD.EXECUTABLE",
+      "severity": "high",
+      "status": "open",
+      "title": "Conteúdo executável em zona de uploads"
+    }
+  ],
+  "manifest": {
+    "generated_at": "2026-09-09T12:00:00",
+    "profile": "soft",
+    "scan_id": "scan_golden_01",
+    "sources": [
+      {
+        "source_ref": "src_primary"
+      }
+    ],
+    "target": {
+      "root": "/srv/www/site"
+    }
+  },
+  "note": "golden v2",
+  "provider_runs": [],
+  "scanner_version": "0.1.0",
+  "schema_version": "2.0"
+}

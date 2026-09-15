@@ -1,6 +1,6 @@
 """Golden test do JSON canônico (WIRS-090).
 
-O fixture `canonical_report_v1.json` foi revisado manualmente. Qualquer mudança
+O fixture `canonical_report_v2.json` foi revisado manualmente. Qualquer mudança
 no output exige revisão explícita do diff e atualização consciente do golden —
 nunca `--overwrite` cego.
 """
@@ -11,16 +11,22 @@ from datetime import datetime
 from pathlib import Path
 
 from wirs.domain import (
+    Artifact,
+    ArtifactKind,
     Confidence,
     ConfidenceClass,
     CoverageEntry,
     CoverageState,
+    Evidence,
     Finding,
+    Provenance,
+    SafePath,
     Severity,
 )
 from wirs.reporting.canonical import CanonicalReport
 
-GOLDEN = Path(__file__).parent / "canonical_report_v1.json"
+GOLDEN = Path(__file__).parent / "canonical_report_v2.json"
+FIXED_AT = datetime(2026, 9, 9, 12, 0, 0)
 
 
 def build_golden_report() -> CanonicalReport:
@@ -28,6 +34,40 @@ def build_golden_report() -> CanonicalReport:
         scan_id="scan_golden_01",
         target_root="/srv/www/site",
         profile="soft",
+        artifacts=(
+            Artifact(
+                kind=ArtifactKind.FILE,
+                path=SafePath(Path.cwd(), "wp-content/uploads/evil.php"),
+                id="art_uploads",
+            ),
+            Artifact(
+                kind=ArtifactKind.FILE,
+                path=SafePath(Path.cwd(), "wp-includes/version.php"),
+                id="art_core",
+            ),
+        ),
+        evidence=(
+            Evidence(
+                scan_id="scan_golden_01",
+                kind="test",
+                source="test",
+                artifact_ref="art_uploads",
+                content={"source": "golden"},
+                provenance=Provenance("test", "1"),
+                collected_at=FIXED_AT,
+                id="ev_uploads",
+            ),
+            Evidence(
+                scan_id="scan_golden_01",
+                kind="test",
+                source="test",
+                artifact_ref="art_core",
+                content={"source": "golden"},
+                provenance=Provenance("test", "1"),
+                collected_at=FIXED_AT,
+                id="ev_core",
+            ),
+        ),
         findings=(
             Finding(
                 rule_id="WP.UPLOAD.EXECUTABLE",
@@ -66,7 +106,7 @@ def build_golden_report() -> CanonicalReport:
             ),
         ),
         generated_at=datetime(2026, 9, 9, 12, 0, 0),
-        note="golden v1",
+        note="golden v2",
     )
 
 

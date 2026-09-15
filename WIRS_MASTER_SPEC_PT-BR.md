@@ -311,6 +311,18 @@ Objeto lógico analisável.
 
 Não precisa ser arquivo.
 
+No artifact canônico, a identidade é derivada conceitualmente de:
+
+```text
+source_ref + kind + normalized_relative
+```
+
+`source_ref` é um namespace lógico, não um filesystem path. No scan local o
+valor padrão é `src_primary`; o root absoluto não participa da identidade.
+Um Artifact pode ser `observed` ou `missing`. O segundo representa uma entrada
+esperada por uma referência confiável, mas ausente na fonte observada, e é
+serializado como Artifact lógico, não como uma família `MissingArtifact`.
+
 Tipos previstos:
 
 - arquivo;
@@ -4163,7 +4175,7 @@ Separar:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "scanner_version": "0.3.2"
 }
 ```

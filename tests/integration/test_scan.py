@@ -24,7 +24,7 @@ def test_scan_json_com_coverage(tmp_path) -> None:
 
     assert result.exit_code == 0  # sem findings: abaixo do threshold
     data = json.loads(result.stdout)
-    assert data["schema_version"] == "1.0"
+    assert data["schema_version"] == "2.0"
     assert data["findings"] == []
     (cov,) = [c for c in data["coverage"] if c["capability"] == "filesystem"]
     assert cov["state"] == "complete"

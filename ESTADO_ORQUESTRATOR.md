@@ -14,7 +14,7 @@
 - [x] Toolchain: Python 3.14.7 (dev local), `uv` 0.12.5 via scoop, Node 24, PHP 8.3
 - [x] Decisões de definição via grill: Python `>=3.11`, Typer+Rich, scaffold do zero, MIT, HTML skeleton desde o início
 
-## Fase 1 — Provisionamento documental (EM ANDAMENTO)
+## Fase 1 — Provisionamento documental (CONCLUÍDA)
 
 - [x] `AGENTS.md` (protocolo WIRS + 14 invariantes)
 - [x] `CONTEXT.md` (glossário: core, confiança, baselines, zones WP)
@@ -142,16 +142,15 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - Nenhuma Epic pai foi fechada e nenhuma nova feature foi implementada nesta
   auditoria.
 
-## Próximos passos
+## Estado atual — Fechamento do realinhamento
 
-1. #65: completar artifact canônico com Artifacts, Evidence, refs resolvíveis e
-   provider status.
-2. #82: fechar o hardening do destino `--report` em ambiente com symlink.
-3. #66: integrar YARA ao `scan` com Coverage e provenance honestos.
-4. #67 + regras restantes: content analysis bounded por Artifact.
-5. #77: Diagnosis file-centric; depois #80 HTML filesystem-only.
-6. #70: PHP Generic local; #68–#69 ficam no Horizonte B.
-7. #71–#79 e #81 permanecem posteriores; QA (`/qa-analyst`) ao fechar cada DAG.
+- `PRODUCT REALIGNMENT: CLOSED`.
+- #82 (WIRS-123) está fechado após teste de symlink existente e quebrado; os
+  casos executam no CI Linux e são skipped neste Windows sem privilégio.
+- HITL #65-01 foi aprovado e a #65 foi concluída em schema 2.0; #66 não foi
+  iniciada.
+- Próxima DAG: #66 → #67 → #77 → #80 → #70; E12/E16/E17 permanecem
+  enriquecimentos posteriores conforme o roadmap.
 
 ## Revisão de incidente real (2026-09-14)
 
@@ -171,10 +170,9 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
   `--report` symlink dentro do target podia resolver para fora antes da rejeição.
 - Correção local aplicada em `src/wirs/cli/app.py`: destinos que são symlink são
   recusados antes de `resolve()`/writer atômico.
-- Regressão adicionada em `tests/integration/test_scan_report.py`; foi `skipped`
-  neste Windows por falta de privilégio para criar symlink. Deve executar no CI
-  Linux.
-- Rastreabilidade: #82 (WIRS-123), aberto e não concluído.
-- Divergência corrigida no roadmap: #65/WIRS-026 continua aberto; o JSON atual
-  contém findings e coverage, mas ainda não o artifact canônico completo com
-  artifacts, evidences e status dos providers.
+- Regressão adicionada em `tests/integration/test_scan_report.py` para symlink
+  existente e quebrado; os casos são `skipped` neste Windows por falta de
+  privilégio e devem executar no CI Linux.
+- Rastreabilidade: #82 (WIRS-123), fechado após verificação dos critérios.
+- Divergência corrigida no roadmap: #65/WIRS-026 está fechada após QA do schema
+  2.0; o contrato aprovado está registrado no GitHub e no ADR-004.

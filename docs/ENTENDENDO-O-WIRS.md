@@ -718,3 +718,42 @@ permanece pendente em #66.
 **Verificar:** `rules/yara/builtin/php_webshell.yar`,
 `rules/yara/experimental/php_obfuscation.yar`,
 `tests/integration/test_yara_rules.py` · **Issue:** #62.
+
+---
+
+## #65 — O relatório canônico conserva a trilha da investigação
+
+### O que o scan entrega
+
+O JSON canônico agora usa o schema `2.0` e conserva a execução inteira em uma
+única fonte: `manifest`, `artifacts`, `evidence`, `findings`, `coverage`,
+`provider_runs` e `diagnoses`. Terminal, Markdown e futuras views derivam dessa
+estrutura; nenhum renderer escolhe manualmente uma versão menor dos fatos.
+
+Todo `artifact_ref` aponta para um `Artifact.id`, inclusive Findings de
+integridade. Quando o baseline espera um arquivo que não existe no filesystem,
+o report cria um Artifact lógico com `presence: missing` e
+`origin: expected_baseline`. Isso não significa que o arquivo foi observado:
+significa que ele era esperado por uma fonte confiável e não foi encontrado.
+
+### Como ler
+
+`provider_runs` e `coverage` respondem perguntas diferentes. O primeiro mostra
+se um provider participou e como terminou; o segundo mostra qual capacidade foi
+efetivamente coberta. Um provider pode terminar com sucesso e zero Findings, e
+um provider indisponível continua visível sem transformar a Coverage em
+`COMPLETE`. `diagnoses: []` significa apenas que nenhuma correlação foi
+produzida naquela execução — não apaga Findings nem prova que o alvo está limpo.
+
+### Por que foi desenhado assim
+
+Referências resolvíveis permitem reabrir a cadeia `Finding → Evidence →
+Artifact` sem adivinhar paths. O namespace lógico `source_ref` separa fontes
+futuras do mesmo caminho relativo, enquanto o root absoluto permanece apenas
+como contexto do target. A redaction defensiva ocorre novamente na fronteira
+final, porque o relatório pode ser anexado a um ticket e todo dado do alvo é
+input hostil.
+
+**Verificar:** `tests/unit/test_canonical.py`, `tests/golden/canonical_report_v2.json`,
+`tests/integration/test_reference_trust.py` e
+`tests/integration/test_scan_report.py` · **Issue:** #65.

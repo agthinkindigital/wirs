@@ -29,6 +29,8 @@ class ComponentIntegrity:
     # absolve). Inclui paths verificados mesmo quando outros divergiram: só os
     # divergentes (em `files`) continuam sujeitos a detecção (correlação DX001).
     covers: tuple[str, ...] = ()
+    # Prefixo que transforma o path retornado pelo provider em path do target.
+    path_prefix: str = ""
 
 
 @runtime_checkable

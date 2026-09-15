@@ -26,6 +26,8 @@ from wirs.domain import (
     Finding,
     IntegrityState,
     Provenance,
+    ProviderRun,
+    ProviderRunStatus,
     Severity,
     Target,
     redact_text,
@@ -80,6 +82,7 @@ class ScanResult:
     coverage: tuple[CoverageEntry, ...]
     findings: tuple[Finding, ...] = ()
     evidence: tuple[Evidence, ...] = ()
+    provider_runs: tuple[ProviderRun, ...] = ()
 
 
 def _read_head(reader: ArtifactReader, artifact: Artifact, budget: ReadBudget, limit: int) -> bytes:
@@ -150,13 +153,28 @@ def _covered(relative: str, prefixes: tuple[str, ...]) -> bool:
 
 def _integrity_phase(
     target: Target, platform_id: str | None, providers: Sequence[IntegrityProvider]
-) -> tuple[list[Finding], list[CoverageEntry], tuple[str, ...], tuple[str, ...]]:
+) -> tuple[
+    list[Finding],
+    list[CoverageEntry],
+    tuple[str, ...],
+    tuple[str, ...],
+    list[ProviderRun],
+]:
     findings: list[Finding] = []
     coverage: list[CoverageEntry] = []
+    provider_runs: list[ProviderRun] = []
     covered: list[str] = []
     diverged: list[str] = []
     for provider in providers:
         if provider.platforms and platform_id not in provider.platforms:
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=provider.id,
+                    status=ProviderRunStatus.UNAVAILABLE,
+                    capabilities=("integrity",),
+                    reason="unsupported_platform",
+                )
+            )
             continue
         try:
             components = provider.verify(target)
@@ -167,7 +185,30 @@ def _integrity_phase(
                 else CoverageState.FAILED
             )
             coverage.append(CoverageEntry(capability=provider.id, state=state, note=str(e)[:200]))
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=provider.id,
+                    status=(
+                        ProviderRunStatus.UNAVAILABLE
+                        if isinstance(e, ProviderUnavailable)
+                        else ProviderRunStatus.FAILED
+                    ),
+                    capabilities=("integrity",),
+                    reason=str(e)[:200],
+                )
+            )
             continue
+        versions = sorted(
+            {component.provider_version for component in components if component.provider_version}
+        )
+        provider_runs.append(
+            ProviderRun(
+                provider_id=provider.id,
+                status=ProviderRunStatus.COMPLETED,
+                version=versions[0] if versions else None,
+                capabilities=("integrity",),
+            )
+        )
         for component in components:
             covered.extend(component.covers)
             if component.unverified:
@@ -184,6 +225,11 @@ def _integrity_phase(
             prefix = "WP.CORE" if component.component == "wordpress-core" else "WP.PLUGIN"
             reference = component.trust is BaselineTrust.UNVERIFIED_REFERENCE
             for item in component.files:
+                relative = (
+                    f"{component.path_prefix.rstrip('/')}/{item.path}"
+                    if component.path_prefix
+                    else item.path
+                )
                 severity, suffix = _SEVERITY_BY_STATE[item.state]
                 confidence = ConfidenceClass.DETERMINISTIC
                 state_label = item.state.value
@@ -199,21 +245,22 @@ def _integrity_phase(
                         category="integrity",
                         severity=severity,
                         confidence=Confidence(confidence),
-                        artifact_ref=item.path,
+                        artifact_ref=relative,
                         evidence_refs=(),
                         provenance=Provenance(
                             component.provider_id, component.provider_version or "unknown"
                         ),
                         attributes={
                             "component": component.component,
-                            "path": item.path,
+                            "path": relative,
+                            "source_ref": "src_primary",
                             "note": item.note,
                             "trust": (component.trust.value if component.trust else "unknown"),
                         },
                     )
                 )
     diverged = [f.attributes["path"] for f in findings if "path" in f.attributes]
-    return findings, coverage, tuple(covered), tuple(diverged)
+    return findings, coverage, tuple(covered), tuple(diverged), provider_runs
 
 
 def run_scan(
@@ -256,7 +303,7 @@ def run_scan(
 
     # Integridade ANTES da detecção: baseline confiável absolve (WIRS-053).
     # Divergentes continuam escaneados (correlação DX001 precisa dos dois lados).
-    ck_findings, ck_coverage, covered, diverged = _integrity_phase(
+    ck_findings, ck_coverage, covered, diverged, provider_runs = _integrity_phase(
         target, found.platform_id if found else None, integrity
     )
     emit(ProgressEvent(phase="integrity", current=len(ck_coverage), total=len(integrity)))
@@ -317,4 +364,5 @@ def run_scan(
         coverage=coverage,
         findings=tuple(all_findings),
         evidence=tuple(all_evidence),
+        provider_runs=tuple(provider_runs),
     )

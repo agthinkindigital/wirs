@@ -85,7 +85,8 @@ def test_missing_e_unexpected_contra_reference_com_confianca_rebaixada() -> None
         )
 
         assert result.exit_code == 1, result.output
-        por_regra = {f["rule_id"]: f for f in json.loads(result.stdout)["findings"]}
+        payload = json.loads(result.stdout)
+        por_regra = {f["rule_id"]: f for f in payload["findings"]}
         assert set(por_regra) >= {
             "WP.PLUGIN.REFERENCE_MISSING",
             "WP.PLUGIN.REFERENCE_UNEXPECTED",
@@ -95,3 +96,7 @@ def test_missing_e_unexpected_contra_reference_com_confianca_rebaixada() -> None
             assert finding["confidence"]["class"] == "high"
             assert finding["attributes"]["trust"] == "unverified_reference"
             assert "reference" in finding["title"]
+
+        missing = next(item for item in payload["artifacts"] if item["presence"] == "missing")
+        assert missing["origin"] == "expected_baseline"
+        assert por_regra["WP.PLUGIN.REFERENCE_MISSING"]["artifact_ref"] == missing["id"]

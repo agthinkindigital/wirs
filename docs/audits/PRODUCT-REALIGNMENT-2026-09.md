@@ -44,11 +44,11 @@ posteriores; não fundam nem bloqueiam o scanner local.
 | DRIFT-03 | `src/wirs/providers/yara_provider.py`, CLI e CI | IMPLEMENTATION_DRIFT | Provider isolado, sem integração no scan; falhas por arquivo são descartadas; CI não prova YARA real. | YARA não entrega valor operacional nem Coverage honesto. | Manter #66 após #65; registrar lacunas no provider doc. |
 | DRIFT-04 | `src/wirs/application/orchestrator.py` | IMPLEMENTATION_DRIFT | Heurísticas/content hints recebem somente `head` de 64 KiB. | Backdoor posterior pode escapar. | Promover content analysis bounded para a DAG após #66. |
 | DRIFT-05 | `src/wirs/application/orchestrator.py` | IMPLEMENTATION_DRIFT | Coverage registra filesystem, não a cobertura individual de content analysis. | Zero findings pode parecer mais abrangente do que é. | Exigir Coverage por capability na Issue futura. |
-| DRIFT-06 | `src/wirs/application/orchestrator.py` | IMPLEMENTATION_DRIFT | Não existe Diagnosis file-centric. | Falta a shortlist correlacionada prevista na North Star. | Reposicionar #77 para file-centric. |
-| DRIFT-07 | `src/wirs/adapters/wordpress/` | IMPLEMENTATION_DRIFT | MU-plugin, config, themes, cache e version/locale ainda são parciais. | WordPress-first ainda não é adapter forte completo. | Retirar dependência de logs; priorizar no roadmap. |
+| DRIFT-06 | `src/wirs/application/orchestrator.py` | IMPLEMENTATION_DRIFT | Não existe Diagnosis file-centric. | Falta a shortlist correlacionada prevista na North Star. | #77 reescrita como slice file-centric; implementação permanece futura. |
+| DRIFT-07 | `src/wirs/adapters/wordpress/` | IMPLEMENTATION_DRIFT | MU-plugin, config, themes, cache e version/locale ainda são parciais. | WordPress-first ainda não é adapter forte completo. | E06 separada em backlog file-centric e runtime/state, sem blocker de logs. |
 | DRIFT-08 | `src/wirs/adapters/` e CLI | IMPLEMENTATION_DRIFT | Não há PHP Generic real nem comando de adapter específico. | Expansão natural ainda não está implementada. | Promover #70 sem depender de Incident Bundle. |
 | DRIFT-09 | `src/wirs/reporting/` | IMPLEMENTATION_DRIFT | HTML/PDF não existem. | Laudo ainda é futuro, mas blockers não podem exigir logs. | Desbloquear #80 para filesystem-only; manter #81 posterior. |
-| DRIFT-10 | CI e testes | DEAD_REFERENCE | Vários caminhos de teste declarados nas Issues não existem; `tests/e2e` está vazio. | Aceites não são reproduzíveis no checkout. | Corrigir comandos nas Issues e não inventar evidência. |
+| DRIFT-10 | CI e testes | DEAD_REFERENCE | Vários caminhos de teste declarados nas Issues não existem; `tests/e2e` está vazio. | Aceites não são reproduzíveis no checkout. | #65/#66/#67/#71/#77/#80 agora apontam a caminhos reais ou declaram testes futuros a criar. |
 | DRIFT-11 | Roadmap e Epics E06/E09/E12/E13/E16/E17 | PRIORITY_DRIFT | Logs/cPanel estavam P1 e WordPress/file-centric estavam depois deles. | DAG promovia produto lateral e atrasava o scanner. | Reclassificar horizontes e dependências. |
 | DRIFT-12 | #70, #76, #77, #80 | DEPENDENCY_DRIFT | PHP dependia de bundle; Diagnosis dependia de logs; HTML dependia de logs/host. | Capacidades centrais eram bloqueadas por enriquecimentos. | Remover blockers laterais; preservar dependências reais. |
 | DRIFT-13 | Documentação | DOC_DRIFT | Charter e matriz inexistiam; material de melhoria ficava fora de `future/` e `case-studies/`. | Não havia fonte curta de direção nem ownership documental. | Criar/mover artefatos e matriz preenchida. |
@@ -68,8 +68,9 @@ posteriores; não fundam nem bloqueiam o scanner local.
   `docs/ARCHITECTURE.md`, `docs/ENTENDENDO-O-WIRS.md`, roadmap, estado e spec.
 - Realinhados bodies, labels, prioridades e dependências no GitHub sem fechar
   Epics pai.
-- Mantido o ajuste local já existente de rejeição de symlink em `--report`,
-  rastreado em #82; nenhuma nova feature de produto foi implementada.
+- Mantido e verificado o ajuste de rejeição de symlink em `--report`, com caso
+  existente e quebrado; #82 foi fechado. Nenhuma nova feature de produto foi
+  implementada.
 
 ## Issues repriorizadas
 
@@ -80,7 +81,7 @@ posteriores; não fundam nem bloqueiam o scanner local.
 | E12/#13, #68, #69 | P2/P1 | P2 | Bundle/archive local é útil, mas não funda o scanner. | Não bloqueia #70. |
 | E16/E17/#63–#75 | P1 | P2/Horizonte C | Logs e hospedagem são enriquecimento opcional. | Permanecem depois do core e sem rede. |
 | E09/#10, #76 | P1 | E09-A P1 / E09-B P2 | Diagnosis file-centric precisa vir antes da temporal/host. | #77 não depende de #76; #76 depende de logs. |
-| #77 | P1 host-centric | P1 file-centric | Mesmo Artifact + sinais do scan já entrega valor. | Removidos blockers de logs/relations host-centric. |
+| #77 | P1 semântica mista | P1 file-centric | Mesmo Artifact + sinais do scan já entrega valor. | Removidos credencial, sessão, password change, logs e #76 como pré-condições. |
 | #80 | P1 com blockers #72/#77/#78 | P1 após #65 | HTML deve renderizar filesystem-only e `diagnoses: []`. | Removidos blockers opcionais. |
 | #81 | P2 | P2 | PDF continua extensão opcional. | Depende apenas de #80. |
 
@@ -120,10 +121,8 @@ posteriores; não fundam nem bloqueiam o scanner local.
 - Content analysis além de `head` ainda não foi implementada.
 - Diagnosis file-centric ainda não foi implementada.
 - WordPress completo, PHP Generic e HTML ainda não existem no código atual.
-- Testes referenciados por várias Issues ainda precisam ser criados ou
-  substituídos por comandos reais.
-- Teste de symlink do #82 continua dependente de ambiente com privilégio; neste
-  Windows ele é pulado.
+- Testes dedicados de várias Issues futuras ainda precisam ser criados; as
+  Issues não os apresentam mais como existentes.
 - YARA real e WP-CLI real não são verificáveis neste host sem as dependências.
 
 ## Próxima DAG recomendada
@@ -131,8 +130,8 @@ posteriores; não fundam nem bloqueiam o scanner local.
 1. **#65 — Artifact canônico completo (P0, HITL).** Primeiro porque todas as
    views, YARA e correlação precisam de refs resolvíveis, Evidence e provider
    status no mesmo modelo.
-2. **#82 — Hardening do destino `--report` (P0, AFK).** Independente de #65 e
-   protege a invariante de não escrita no Target.
+2. **#82 — Hardening do destino `--report` (P0, AFK).** Concluído em
+   `develop`; protege a invariante de não escrita no Target.
 3. **#66 — YARA no `scan` (P0, AFK após #65).** Transforma o provider isolado em
    capacidade real com Evidence, status e Coverage honesto.
 4. **#67 — Content analysis bounded/profile soft (P1).** Remove a dependência
@@ -153,15 +152,20 @@ posteriores; não fundam nem bloqueiam o scanner local.
 
 ## Verification
 
-- Auditoria de checkout: branch `develop`, commit `5175b75`.
-- GitHub: Epics e slices abertas consultadas via `gh`; #65/#66/#82 confirmadas.
+- Auditoria de checkout: branch `develop`, base `cc7d6d2`, com mudanças
+  documentais, de código e de teste ainda não commitadas.
+- GitHub: Epics e slices consultadas via `gh`; #65 e #82 foram fechadas após a
+  verificação dos critérios; #66 permanece aberta.
 - Skills exigidas pelo prompt lidas antes da auditoria: `zoom-out`,
   `grill-with-docs`, `grill-feature-with-docs`, `requirements-clarity`,
   `improve-codebase-architecture`, `roadmap`, `triage`, `to-issues`,
   `agent-md-refactor`, `crafting-effective-readmes`, `edit-article`,
-  `writing-clearly-and-concisely`, `qa-analyst` e `orchestrator`.
-- Antes desta auditoria, a suíte registrada no checkout passou: `181 passed,
-  6 skipped`; ruff, format, mypy e `git diff --check` passaram. Os skips são
-  limitações conhecidas de symlink/FIFO/WP-CLI neste Windows.
-- A execução não implementou #65, #66, PHP Generic, HTML, Diagnosis, logs ou
-  SSH.
+  `writing-clearly-and-concisely`, `qa-analyst`, `qa-test-planner`, `tdd` e
+  `orchestrator`.
+- Após os ajustes da auditoria, a suíte passou: `181 passed, 7 skipped`; ruff,
+  format, mypy, `git diff --check` e build passaram. O pacote de tooling `build`
+  estava ausente e foi instalado no ambiente virtual.
+  Os skips são limitações conhecidas de symlink/FIFO/WP-CLI neste Windows.
+- A auditoria não implementou #66, PHP Generic, HTML, Diagnosis, logs ou SSH.
+  A implementação posterior da #65 foi autorizada pelo HITL #65-01 e está
+  registrada no ADR-004 e na Issue #65.

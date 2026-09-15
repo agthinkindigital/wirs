@@ -26,8 +26,8 @@ def test_wizard_wordpress_json_roda_scan() -> None:
 
         assert result.exit_code == 0, result.output
         dados = json.loads(relatorio.read_text(encoding="utf-8"))
-        assert dados["schema_version"] == "1.0"
-        assert dados["target_root"] == str(alvo.resolve())
+        assert dados["schema_version"] == "2.0"
+        assert dados["manifest"]["target"]["root"] == str(alvo.resolve())
 
 
 def test_wizard_recusa_plataforma_futura_e_cancela_sem_erro() -> None:

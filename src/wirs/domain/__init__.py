@@ -22,6 +22,7 @@ from wirs.domain.evidence import Evidence, Provenance, RedactionState
 from wirs.domain.finding import Confidence, ConfidenceClass, Finding, Severity
 from wirs.domain.integrity import FileIntegrity, IntegrityState
 from wirs.domain.ioc import IOC, IOCKind
+from wirs.domain.provider import ProviderRun, ProviderRunStatus
 from wirs.domain.redaction import REDACTED, STORE_RAW_CONTENT, redact_mapping, redact_text
 from wirs.domain.safepath import SafePath
 from wirs.domain.target import LocalDirectoryTarget, Target, TargetKind
@@ -45,6 +46,8 @@ __all__ = [
     "IOCKind",
     "LocalDirectoryTarget",
     "Provenance",
+    "ProviderRun",
+    "ProviderRunStatus",
     "ProviderError",
     "ProviderExecutionError",
     "ProviderInvalidOutput",
