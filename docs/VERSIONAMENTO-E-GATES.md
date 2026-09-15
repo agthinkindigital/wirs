@@ -130,9 +130,9 @@ conjunto M5/`0.3.0` junto das demais entradas necessárias.
 | Issues da versão | bloqueado | #77 e #80 continuam abertas; #67 está fechada, mas seu checklist de aceite no GitHub permanece desmarcado |
 | Epics da versão | bloqueado | E02, E03, E07, E08 e E09 continuam `OPEN`/`in_progress` no GitHub |
 | QA técnico local | aprovado | `216 passed, 10 skipped`; Ruff, formatação, mypy strict e build passaram |
-| CI de `develop` | aprovado no último commit remoto | Runs recentes em `develop` concluíram com sucesso |
+| CI de `develop` | aprovado | Execução [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607) verde para `074677c` |
 | Artefato versionado | bloqueado | O build atual produz `wirs-0.1.0`; ainda não existe build/tag/release `0.2.0` |
-| Reprodução a partir de `main` | bloqueado | `develop` contém trabalho posterior a `main`; há mudanças locais não commitadas |
+| Reprodução a partir de `main` | bloqueado | `develop` contém trabalho posterior a `main`; a promoção ainda não foi aprovada |
 | Release GitHub | bloqueado | A única release publicada é `v0.1.0` |
 
 Para liberar `0.2.0`, ainda é necessário concluir/validar as Issues que compõem

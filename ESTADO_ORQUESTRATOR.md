@@ -13,8 +13,8 @@ Auditoria de `0.2.0` em 2026-09-15: **NÃO ELEGÍVEL para `main`**. Gates técni
 locais passaram, mas #77/#80 estão abertas, Epics de M3/M4 não foram fechadas e
 o build atual ainda é `wirs-0.1.0`. A promoção, tag ou release ainda depende da
 sincronização e aprovação formal.
-O próximo passo é fechar o conjunto de `0.2.0`; a CI verde do último commit
-remoto de `develop` agora precisa ser confirmada para `db5e6a8`.
+O próximo passo é fechar o conjunto de `0.2.0`; a CI verde foi confirmada para
+`074677c` na execução [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607).
 
 Em 2026-09-15, as divergências do tracker foram registradas sem fechar Issues:
 [#67](https://github.com/agthinkindigital/wirs/issues/67#issuecomment-5682466278),
@@ -218,8 +218,8 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
   Finding e Evidence refs e rejeita mistura de Artifacts na basis.
 - Testes dedicados unitários e de integração adicionados; `pytest`, Ruff,
   formatação, mypy strict e guard arquitetural passaram.
-- Pendente: confirmar a CI de `db5e6a8`, sincronizar o checklist e fechar #77
-  após a aprovação formal do tracker.
+- Pendente: sincronizar o checklist e fechar #77 após a aprovação formal do
+  tracker.
 
 ## Implementação publicada em `develop` da DAG #80 (2026-09-15)
 
