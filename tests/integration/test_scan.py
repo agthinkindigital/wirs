@@ -120,6 +120,18 @@ def test_scan_rejeita_perfil_e_formato(tmp_path) -> None:
     assert runner.invoke(app, ["scan", str(tmp_path), "--format", "yaml"]).exit_code == 2
 
 
+def test_profiles_declaram_limites_de_leitura() -> None:
+    from wirs.cli.app import PROFILE_BUDGETS
+
+    assert set(PROFILE_BUDGETS) == {"soft", "balanced", "fast"}
+    assert PROFILE_BUDGETS["soft"].max_bytes < PROFILE_BUDGETS["balanced"].max_bytes
+    assert PROFILE_BUDGETS["balanced"].max_bytes < PROFILE_BUDGETS["fast"].max_bytes
+    assert all(
+        budget.max_lines is not None and budget.timeout_s is not None
+        for budget in PROFILE_BUDGETS.values()
+    )
+
+
 def test_ioc_flag_gera_match(tmp_path) -> None:
     (tmp_path / "t.php").write_bytes(b"<?php // SENTINELA_XYZ aqui")
     iocs = tmp_path / "iocs.txt"

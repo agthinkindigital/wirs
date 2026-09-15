@@ -78,3 +78,27 @@ def test_budget_invalido_rejeitado() -> None:
         ReadBudget(max_bytes=0)
     with pt.raises(ValueError):
         ReadBudget(max_bytes=100, chunk_size=0)
+
+
+def test_budget_de_linhas_preserva_prefixo_e_sinaliza_truncamento(tmp_path) -> None:
+    from wirs.domain import BudgetExceeded
+
+    artifact = _file_artifact(tmp_path, "linhas.txt", b"linha 1\nlinha 2\nlinha 3\n")
+    stream = ArtifactReader().iter_chunks(
+        artifact, ReadBudget(max_bytes=1024, max_lines=2, chunk_size=1024)
+    )
+
+    assert next(stream) == b"linha 1\nlinha 2\n"
+    with pytest.raises(BudgetExceeded):
+        next(stream)
+
+
+def test_timeout_de_leitura_e_reproduzivel(tmp_path) -> None:
+    from wirs.domain import BudgetExceeded
+
+    artifact = _file_artifact(tmp_path, "tempo.txt", b"conteudo")
+    tempos = iter((0.0, 1.1))
+    reader = ArtifactReader(clock=lambda: next(tempos))
+
+    with pytest.raises(BudgetExceeded, match="timeout"):
+        next(reader.iter_chunks(artifact, ReadBudget(max_bytes=1024, timeout_s=1.0)))

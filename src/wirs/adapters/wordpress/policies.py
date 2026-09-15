@@ -8,7 +8,7 @@ DETERMINISTIC): a zona é convenção, não baseline oficial.
 from __future__ import annotations
 
 import fnmatch
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 from wirs.adapters.wordpress.zones import WordPressZone
 from wirs.detectors.executable import looks_executable
@@ -55,7 +55,7 @@ class UploadsExecutablePolicy(Detector):
         self._allowlist = tuple(allowlist)
 
     def analyze(
-        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Sequence[bytes]
+        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Iterable[bytes]
     ) -> Sequence[ProposedFinding]:
         if zone != WordPressZone.UPLOADS.value:
             return ()

@@ -838,3 +838,41 @@ executa código do alvo.
 `src/wirs/application/orchestrator.py`, `tests/integration/test_scan_yara.py`,
 `tests/integration/test_yara_rules.py` e o job `yara` de
 `.github/workflows/ci.yml` · **Issue:** #66.
+
+---
+
+## #67 — Conteúdo grande: olhar além do primeiro bloco sem carregar o arquivo
+
+### O que o scan faz
+
+Detectores de análise de conteúdo que precisam do arquivo inteiro recebem um
+stream lazy de bytes, não uma cópia materializada em memória. O WIRS preserva
+as fronteiras entre chunks para encontrar sinais depois dos primeiros 64 KiB e
+também sinais que atravessam uma fronteira. Os limites do profile são
+reproduzíveis por Artifact: bytes, linhas e tempo.
+
+O profile `soft` é conservador, mas não encerra a análise no primeiro bloco.
+`balanced` e `fast` ampliam os budgets sem mudar a semântica dos Findings.
+O harness `benchmarks/scan_large_file.py` usa somente uma fixture sintética e
+mede `wall_time_s` e `peak_rss_bytes`, sem imprimir conteúdo do alvo.
+
+### Como interpretar a interrupção
+
+Quando o limite de bytes, linhas ou tempo é atingido, o prefixo já lido ainda é
+analisado e o motivo aparece como leitura parcial na Coverage de `filesystem`.
+Quando o operador cancela, o Artifact em andamento fica como falho, os
+seguintes ficam como pulados e o scan retorna `PARTIAL`. Assim, uma ausência de
+Finding em arquivo grande ou em scan cancelado não significa que o conteúdo
+inteiro foi considerado limpo.
+
+### O que esta capacidade prova
+
+Ela reduz o falso negativo causado por backdoor depois do início do arquivo sem
+transformar um scan limitado em inspeção completa. `PARTIAL` continua exigindo
+investigação adicional; profiles controlam custo de recurso, não aumentam a
+confiança de uma observação.
+
+**Verificar:** `src/wirs/ports/reader.py`, `src/wirs/infrastructure/reader.py`,
+`src/wirs/application/orchestrator.py`, `benchmarks/scan_large_file.py`,
+`tests/unit/test_reader.py` e `tests/integration/test_orchestrator.py` ·
+**Issue:** #67.

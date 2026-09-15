@@ -47,8 +47,12 @@ from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
 from wirs.providers.yara_provider import YaraAnalyzer
 from wirs.reporting import CanonicalReport, render_markdown, render_report, write_text_atomic
 
-# Budgets provisórios por perfil até WIRS-034 (large-file policy).
-PROFILE_BUDGETS = {"soft": 64 << 20, "balanced": 256 << 20, "fast": 1 << 30}
+# Limites por artifact: o stream nunca é materializado pelo orquestrador.
+PROFILE_BUDGETS = {
+    "soft": ReadBudget(max_bytes=64 << 20, max_lines=100_000, timeout_s=30.0),
+    "balanced": ReadBudget(max_bytes=256 << 20, max_lines=1_000_000, timeout_s=60.0),
+    "fast": ReadBudget(max_bytes=1 << 30, max_lines=10_000_000, timeout_s=120.0),
+}
 
 
 def _builtin_yara_pack() -> Path:
@@ -356,7 +360,7 @@ def scan(
         source=LocalArtifactSource(),
         adapters=[WordPressAdapter()],
         reader=ArtifactReader(),
-        budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
+        budget=PROFILE_BUDGETS[profile],
         detectors=build_detectors(ioc_list),
         analyzers=[yara_analyzer],
         integrity=integrity_providers,

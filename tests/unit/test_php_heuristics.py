@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wirs.detectors.php_heuristics import analyze_php
+from wirs.detectors.php_heuristics import analyze_php, signal_families_stream
 from wirs.domain import Artifact, ArtifactKind, SafePath, Severity
 
 
@@ -20,6 +20,10 @@ def test_cadeia_encoding_execucao_vira_high(tmp_path) -> None:
     assert finding.severity is Severity.HIGH
     assert finding.severity is not Severity.CRITICAL  # heurística nunca é critical
     assert set(finding.attributes["signals"]) >= {"dynamic_execution", "encoding"}
+
+
+def test_stream_preserva_sinal_entre_chunks() -> None:
+    assert "dynamic_execution" in signal_families_stream((b"<?php ev", b"al($x);"))
 
 
 def test_sinal_isolado_no_maximo_low(tmp_path) -> None:

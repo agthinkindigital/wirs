@@ -9,7 +9,7 @@ passam por redaction.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 
@@ -33,7 +33,7 @@ from wirs.domain import (
     redact_mapping,
     redact_text,
 )
-from wirs.domain.errors import BudgetExceeded, ProviderError, ProviderUnavailable
+from wirs.domain.errors import BudgetExceeded, ProviderError, ProviderUnavailable, ReadCancelled
 from wirs.ports import PlatformAdapter, PlatformDiscovery
 from wirs.ports.analysis import AnalyzerResult, ExternalAnalyzer
 from wirs.ports.checksum import IntegrityProvider
@@ -87,20 +87,31 @@ class ScanResult:
     provider_runs: tuple[ProviderRun, ...] = ()
 
 
-def _read_head(reader: ArtifactReader, artifact: Artifact, budget: ReadBudget, limit: int) -> bytes:
+def _read_head(
+    reader: ArtifactReader,
+    artifact: Artifact,
+    budget: ReadBudget,
+    limit: int,
+    should_stop: Callable[[], bool] | None = None,
+) -> tuple[bytes, bool]:
     parts: list[bytes] = []
     taken = 0
-    stream = reader.iter_chunks(artifact, budget)
+    partial = False
+    stream = reader.iter_chunks(artifact, budget, should_stop=should_stop)
     try:
-        for chunk in stream:
-            need = limit - taken
-            if need <= 0:
-                break
-            parts.append(chunk[:need])
-            taken += len(parts[-1])
+        try:
+            while taken < limit:
+                chunk = next(stream)
+                need = limit - taken
+                parts.append(chunk[:need])
+                taken += len(parts[-1])
+        except StopIteration:
+            pass
+        except BudgetExceeded:
+            partial = True
     finally:
         stream.close()
-    return b"".join(parts)
+    return b"".join(parts), partial
 
 
 def _detect_file(
@@ -108,13 +119,22 @@ def _detect_file(
     artifact: Artifact,
     zone_value: str | None,
     head: bytes,
-    chunks: Sequence[bytes],
+    chunks_factory: Callable[[], Iterable[bytes]] | None,
     detectors: Sequence[Detector],
 ) -> tuple[list[Evidence], list[Finding]]:
     evidences: list[Evidence] = []
     findings: list[Finding] = []
     for detector in detectors:
-        for proposed in detector.analyze(artifact, zone_value, head, chunks):
+        chunks: Iterable[bytes] = (
+            chunks_factory() if detector.wants_stream and chunks_factory else ()
+        )
+        try:
+            proposals = detector.analyze(artifact, zone_value, head, chunks)
+        finally:
+            close = getattr(chunks, "close", None)
+            if close is not None:
+                close()
+        for proposed in proposals:
             content = dict(proposed.evidence_content)
             if "contexts" in content:
                 content["contexts"] = [
@@ -520,6 +540,7 @@ def run_scan(
     analyzers: Sequence[ExternalAnalyzer] = (),
     integrity: Sequence[IntegrityProvider] = (),
     head_bytes: int = HEAD_BYTES,
+    should_stop: Callable[[], bool] | None = None,
     on_event: Callable[[ProgressEvent], None] | None = None,
 ) -> ScanResult:
     sid = scan_id or f"scan_{uuid.uuid4().hex[:12]}"
@@ -557,6 +578,13 @@ def run_scan(
     suppressed = 0
     want_stream = any(d.wants_stream for d in detectors)
     files = [a for a in artifacts if a.kind is ArtifactKind.FILE]
+    partial_files = 0
+    skipped_files = 0
+    cancelled = False
+    an_coverage: list[CoverageEntry] = []
+    an_evidence: list[Evidence] = []
+    an_findings: list[Finding] = []
+    an_provider_runs: list[ProviderRun] = []
     if reader is not None and budget is not None and detectors:
         for index, artifact in enumerate(files, 1):
             emit(
@@ -567,42 +595,79 @@ def run_scan(
             if _covered(artifact.path.relative, covered) and artifact.path.relative not in diverged:
                 suppressed += 1
                 continue
+            file_partial = (
+                artifact.metadata.size is not None and artifact.metadata.size > budget.max_bytes
+            )
+
+            def bounded_stream(
+                current_artifact: Artifact = artifact,
+                current_budget: ReadBudget = budget,
+            ) -> Iterable[bytes]:
+                nonlocal file_partial
+                try:
+                    yield from reader.iter_chunks(
+                        current_artifact, current_budget, should_stop=should_stop
+                    )
+                except BudgetExceeded:
+                    file_partial = True
+
             try:
-                head = _read_head(reader, artifact, budget, head_bytes)
-                chunks: list[bytes] = []
-                if want_stream:
-                    stream = reader.iter_chunks(artifact, budget)
-                    try:
-                        chunks = list(stream)
-                    finally:
-                        stream.close()
+                head, head_partial = _read_head(
+                    reader,
+                    artifact,
+                    budget,
+                    min(head_bytes, budget.max_bytes),
+                    should_stop,
+                )
+                file_partial = file_partial or head_partial
                 evs, fnds = _detect_file(
-                    sid, artifact, zones.get(artifact.id), head, chunks, detectors
+                    sid,
+                    artifact,
+                    zones.get(artifact.id),
+                    head,
+                    bounded_stream if want_stream else None,
+                    detectors,
                 )
                 all_evidence.extend(evs)
                 all_findings.extend(fnds)
+                if file_partial:
+                    partial_files += 1
+                    gaps += 1
+            except ReadCancelled:
+                cancelled = True
+                gaps += 1
+                skipped_files = len(files) - index
+                break
             except (OSError, BudgetExceeded):
                 gaps += 1
+                partial_files += int(file_partial)
 
-    if analyzers:
+    if analyzers and not cancelled:
         emit(ProgressEvent(phase="analyze", current=0, total=len(files)))
-    an_evidence, an_findings, an_coverage, an_provider_runs = _analysis_phase(
-        sid, artifacts, analyzers, found.platform_id if found else None
-    )
-    all_evidence.extend(an_evidence)
-    all_findings.extend(an_findings)
-    provider_runs.extend(an_provider_runs)
+        an_evidence, an_findings, an_coverage, an_provider_runs = _analysis_phase(
+            sid, artifacts, analyzers, found.platform_id if found else None
+        )
+        all_evidence.extend(an_evidence)
+        all_findings.extend(an_findings)
+        provider_runs.extend(an_provider_runs)
 
-    verified = len(artifacts)
-    fs_note = f"{suppressed} suprimido(s) por baseline confiável" if suppressed else ""
+    verified = len(artifacts) - partial_files
+    notes: list[str] = []
+    if suppressed:
+        notes.append(f"{suppressed} suprimido(s) por baseline confiável")
+    if partial_files:
+        notes.append(f"{partial_files} artifact(s) com leitura parcial")
+    if cancelled:
+        notes.append("scan cancelado pelo operador")
     coverage = (
         CoverageEntry(
             capability="filesystem",
-            state=CoverageState.PARTIAL if gaps else CoverageState.COMPLETE,
-            applicable_checks=verified + gaps,
+            state=CoverageState.PARTIAL if gaps or skipped_files else CoverageState.COMPLETE,
+            applicable_checks=verified + gaps + skipped_files,
             verified=verified,
             failed=gaps,
-            note=fs_note,
+            skipped=skipped_files,
+            note="; ".join(notes),
         ),
         *ck_coverage,
         *an_coverage,

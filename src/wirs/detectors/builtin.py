@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 from wirs.detectors.ioc_scanner import IocMatch, scan_stream
-from wirs.detectors.php_heuristics import analyze_php
+from wirs.detectors.php_heuristics import analyze_php_stream
 from wirs.domain import IOC, Artifact, Confidence, ConfidenceClass, Severity
 from wirs.ports.detection import Detector, ProposedFinding
 
@@ -21,7 +21,7 @@ class IocDetector(Detector):
         self._cap = occurrence_cap
 
     def analyze(
-        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Sequence[bytes]
+        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Iterable[bytes]
     ) -> Sequence[ProposedFinding]:
         if not self._iocs:
             return ()
@@ -54,12 +54,12 @@ class IocDetector(Detector):
 
 
 class PhpHeuristicsDetector(Detector):
-    """Heurísticas PHP sobre o head (bytes prontos, sem I/O)."""
+    """Heurísticas PHP sobre o conteúdo lido (bytes prontos, sem I/O)."""
 
     id = "php-heuristics"
-    wants_stream = False
+    wants_stream = True
 
     def analyze(
-        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Sequence[bytes]
+        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Iterable[bytes]
     ) -> Sequence[ProposedFinding]:
-        return analyze_php(artifact, head)
+        return analyze_php_stream(artifact, chunks)

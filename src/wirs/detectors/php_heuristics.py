@@ -14,7 +14,7 @@ a ref — invariante 2). Regras de combinação (a única inteligência aqui):
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 from wirs.domain import Artifact, Confidence, ConfidenceClass, Severity
 from wirs.ports.detection import ProposedFinding
@@ -65,11 +65,25 @@ _FAMILIES: tuple[tuple[str, tuple[bytes, ...]], ...] = (
 )
 
 _PATTERNS = [(fam, re.compile(b"|".join(pats), re.IGNORECASE)) for fam, pats in _FAMILIES]
+_STREAM_CARRY_BYTES = 512
 
 
 def signal_families(head: bytes) -> tuple[str, ...]:
     """Famílias de sinais presentes nos bytes (case-insensitive, sem decode)."""
     return tuple(fam for fam, rx in _PATTERNS if rx.search(head))
+
+
+def signal_families_stream(chunks: Iterable[bytes]) -> tuple[str, ...]:
+    """Encontra famílias em stream, preservando padrões entre chunks."""
+    found: set[str] = set()
+    carry = b""
+    for chunk in chunks:
+        if not chunk:
+            continue
+        window = carry + chunk
+        found.update(signal_families(window))
+        carry = window[-_STREAM_CARRY_BYTES:]
+    return tuple(fam for fam, _ in _FAMILIES if fam in found)
 
 
 def _tier(families: frozenset[str]) -> tuple[str, Severity, Confidence] | None:
@@ -102,6 +116,27 @@ def analyze_php(
     """
     _ = evidence_refs
     families = frozenset(signal_families(head))
+    decided = _tier(families)
+    if decided is None:
+        return ()
+    rule_id, severity, confidence = decided
+    return (
+        ProposedFinding(
+            rule_id=rule_id,
+            title="Padrões suspeitos de ofuscação/execução em PHP",
+            category="heuristic",
+            severity=severity,
+            confidence=confidence,
+            evidence_kind="php_heuristic",
+            evidence_content={"rule": rule_id, "signals": sorted(families)},
+            attributes={"signals": sorted(families)},
+        ),
+    )
+
+
+def analyze_php_stream(artifact: Artifact, chunks: Iterable[bytes]) -> tuple[ProposedFinding, ...]:
+    """Analisa o conteúdo inteiro disponibilizado pelo budget, sem materializá-lo."""
+    families = frozenset(signal_families_stream(chunks))
     decided = _tier(families)
     if decided is None:
         return ()

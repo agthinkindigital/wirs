@@ -7,7 +7,7 @@ a invariante 2 sem o detector conhecer scan_id ou provenance.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
@@ -33,5 +33,5 @@ class Detector(Protocol):
     wants_stream: bool
 
     def analyze(
-        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Sequence[bytes]
+        self, artifact: Artifact, zone: str | None, head: bytes, chunks: Iterable[bytes]
     ) -> Sequence[ProposedFinding]: ...

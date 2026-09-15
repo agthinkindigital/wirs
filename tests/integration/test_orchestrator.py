@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wirs.application.orchestrator import run_scan
+from wirs.application.orchestrator import HEAD_BYTES, run_scan
 from wirs.domain import Artifact, LocalDirectoryTarget
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource, ReadBudget
 
@@ -145,6 +145,108 @@ def test_ioc_e_heuristicas_agregados(tmp_path) -> None:
     assert all(set(f.evidence_refs) <= ev_ids for f in result.findings)
 
 
+def test_heuristica_encontra_sinal_depois_do_head(tmp_path) -> None:
+    from wirs.detectors.builtin import PhpHeuristicsDetector
+
+    (tmp_path / "late.php").write_bytes(b"x" * (HEAD_BYTES + 1024) + b"<?php eval($x);")
+
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=HEAD_BYTES + 2048, chunk_size=4096),
+        detectors=[PhpHeuristicsDetector()],
+    )
+
+    assert any(f.rule_id == "PHP.HEUR.SINGLE" for f in result.findings)
+
+
+def test_detector_recebe_stream_lazy_e_nao_materializa_arquivo(tmp_path) -> None:
+    (tmp_path / "grande.bin").write_bytes(b"x" * 4096)
+    leituras = 0
+
+    class SpyReader(ArtifactReader):
+        def iter_chunks(self, artifact, budget, *, should_stop=None):
+            nonlocal leituras
+            for chunk in super().iter_chunks(artifact, budget, should_stop=should_stop):
+                leituras += 1
+                yield chunk
+
+    class FirstChunkDetector:
+        id = "first-chunk"
+        wants_stream = True
+
+        def analyze(self, artifact, zone, head, chunks):
+            assert next(iter(chunks)) == b"x" * 1024
+            return ()
+
+    run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=SpyReader(),
+        budget=ReadBudget(max_bytes=8192, chunk_size=1024),
+        detectors=[FirstChunkDetector()],
+        head_bytes=1,
+    )
+
+    assert leituras == 2  # um chunk do head e um chunk consumido pelo detector
+
+
+def test_leitura_truncada_marca_coverage_partial(tmp_path) -> None:
+    from wirs.detectors.builtin import IocDetector
+    from wirs.domain import IOC, IOCKind
+
+    (tmp_path / "grande.txt").write_bytes(b"x" * 32)
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=8, chunk_size=4),
+        detectors=[IocDetector([IOC(kind=IOCKind.LITERAL, value="ausente")])],
+    )
+
+    filesystem = next(c for c in result.coverage if c.capability == "filesystem")
+    assert filesystem.state.value == "partial"
+    assert filesystem.failed == 1
+    assert "leitura parcial" in filesystem.note
+
+
+def test_cancelamento_deixa_scan_incompleto_e_contabilizado(tmp_path) -> None:
+    from wirs.detectors.builtin import PhpHeuristicsDetector
+
+    (tmp_path / "a.txt").write_bytes(b"a")
+    (tmp_path / "b.txt").write_bytes(b"b")
+    chamadas = 0
+
+    def cancelar_depois_do_primeiro_chunk() -> bool:
+        nonlocal chamadas
+        chamadas += 1
+        return chamadas >= 2
+
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1024, chunk_size=1),
+        detectors=[PhpHeuristicsDetector()],
+        should_stop=cancelar_depois_do_primeiro_chunk,
+    )
+
+    filesystem = next(c for c in result.coverage if c.capability == "filesystem")
+    assert filesystem.state.value == "partial"
+    assert filesystem.failed == 1
+    assert filesystem.skipped == 1
+    assert "cancelado" in filesystem.note
+
+
 def test_checksum_ausente_degrada_e_scan_continua(tmp_path) -> None:
     from wirs.domain import ProviderUnavailable
     from wirs.ports.checksum import IntegrityProvider
@@ -198,7 +300,7 @@ def test_sem_stream_sem_segunda_leitura(tmp_path) -> None:
         budget=ReadBudget(max_bytes=1 << 20),
         detectors=[PhpHeuristicsDetector()],
     )
-    assert leituras == 1  # só o head; stream completo só com IOC
+    assert leituras == 2  # head + conteúdo completo para a heurística
 
     leituras = 0
     run_scan(

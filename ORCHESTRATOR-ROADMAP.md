@@ -29,8 +29,8 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 
   ArtifactReader read-only, HashService, profiles (soft/balanced/fast),
   scheduler central, large-file policy, benchmark.
-  Slices: #26 (WIRS-030, done), #27 (WIRS-031, done). #67 (WIRS-034,
-  fontes locais grandes) fica depois do artifact canônico. (Fases A/B)
+  Slices: #26 (WIRS-030, done), #27 (WIRS-031, done), #67 (WIRS-034, fontes
+  locais grandes, done). (Fases A/B)
 
 - [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `done`
 
@@ -94,8 +94,8 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   WIRS-100–103 eram placeholders horizontais não publicados e foram substituídos
   pelos slices verticais abaixo; WIRS-104 (graph export) fica pós-1.0.
   Próximo slice: #77 (WIRS-106, Diagnosis file-centric por sinais convergentes),
-  dependente de #65 e da content analysis bounded. Depois: #76 (WIRS-105,
-  relações), #78 (WIRS-107, phishing/cloaking/backup) e #79 (WIRS-108,
+  dependente de #65 e da content analysis bounded já entregue. Depois: #76
+  (WIRS-105, relações), #78 (WIRS-107, phishing/cloaking/backup) e #79 (WIRS-108,
   contexto offline de IP/CIDR/UA). (Fase A/B, depois F)
 
 - [**[E10] CLI e Configuração**](https://github.com/agthinkindigital/wirs/issues/11) - `in_progress`
@@ -177,8 +177,8 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 6. Fechar artifact canônico (#65).
 7. Hardening do destino `--report` (#82), independente de #65 (concluído).
 8. Integrar YARA no scan (#66), após #65 (done).
-9. Content analysis bounded (#67 + WIRS-052/056/057/058), próxima DAG.
-10. Diagnosis file-centric (#77) → HTML filesystem-only (#80).
+9. Content analysis bounded (#67), concluída.
+10. Diagnosis file-centric (#77) → HTML filesystem-only (#80), próxima DAG.
 11. PHP genérico local (#70), sem depender de Incident Bundle ou logs.
 12. Incident Bundle (#68) → archive (#69).
 13. Evidence temporal (#71) → Coverage de logs (#72) → adapters locais (#73–75).

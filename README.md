@@ -62,15 +62,16 @@ nos providers usados pelo fluxo atual.
 
 A branch `develop` prepara a linha `0.2.0` (Horizonte A). Baselines
 custom/premium, ZIP, trust/cache/assinatura, relatório Markdown, o artifact
-canônico e YARA integrado ao `scan` já existem. A próxima DAG é content analysis
-bounded, antes de promover logs ou outras expansões.
+canônico, YARA integrado ao `scan` e content analysis bounded já existem. A
+próxima DAG é Diagnosis file-centric, antes de promover logs ou outras expansões.
 
 | Capacidade | Estado |
 |---|---|
 | Baseline custom/premium + ZIP | Implementado em `develop` |
 | Relatório Markdown | Implementado em `develop` |
 | YARA provider + pack | Integrado ao `scan`; ausência e falhas aparecem em Coverage |
-| Content analysis bounded + Diagnosis file-centric | Próximo Horizonte A |
+| Content analysis bounded | Implementado em `develop` |
+| Diagnosis file-centric | Próximo Horizonte A |
 | PHP genérico, Incident Bundle e archive local | Horizonte B |
 | Logs locais, Evidence temporal e adapters de hospedagem | Horizonte C |
 | Correlação temporal, IP/ASN e laudo enriquecido | Horizonte C |

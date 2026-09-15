@@ -13,10 +13,16 @@ from wirs.domain import Artifact
 class ReadBudget:
     max_bytes: int
     chunk_size: int = 65536
+    max_lines: int | None = None
+    timeout_s: float | None = None
 
     def __post_init__(self) -> None:
         if self.max_bytes <= 0 or self.chunk_size <= 0:
             raise ValueError("budget precisa de max_bytes e chunk_size positivos")
+        if self.max_lines is not None and self.max_lines <= 0:
+            raise ValueError("max_lines precisa ser positivo")
+        if self.timeout_s is not None and self.timeout_s <= 0:
+            raise ValueError("timeout_s precisa ser positivo")
 
 
 @runtime_checkable
