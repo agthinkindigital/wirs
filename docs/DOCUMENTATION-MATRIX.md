@@ -1,6 +1,6 @@
 # WIRS — Matriz Documental
 
-Última revisão: 2026-09-15 · branch `develop` · commit `c08b284`
+Última revisão: 2026-09-15 · branch `develop` · commit `9cee8d2`
 
 Esta matriz define qual documento responde a cada pergunta. Ela não substitui
 os documentos originais nem transforma uma visão futura em escopo.

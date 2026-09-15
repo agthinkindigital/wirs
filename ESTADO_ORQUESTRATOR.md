@@ -2,7 +2,7 @@
 
 **Data:** 2026-09-15
 **Branch:** `develop` (repo `agthinkindigital/wirs`, público)
-**Commit:** `c08b284` (`feat(reporting): complete canonical scan report`)
+**Commit:** `9cee8d2` (`docs(governance): record published develop state`)
 **Framework:** skills locais; clone remoto do framework não foi encontrado neste checkout.
 
 ---
