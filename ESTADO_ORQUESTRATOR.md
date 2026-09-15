@@ -11,10 +11,10 @@ promovido.
 
 Auditoria de `0.2.0` em 2026-09-15: **NÃO ELEGÍVEL para `main`**. Gates técnicos
 locais passaram, mas #77/#80 estão abertas, Epics de M3/M4 não foram fechadas e
-o build atual ainda é `wirs-0.1.0`. Há mudanças locais não commitadas; nenhuma
-promoção, tag ou release deve ocorrer antes da sincronização e aprovação formal.
+o build atual ainda é `wirs-0.1.0`. A promoção, tag ou release ainda depende da
+ sincronização e aprovação formal.
 O próximo passo é fechar o conjunto de `0.2.0`; a CI verde do último commit
-remoto de `develop` não valida o worktree local atual.
+remoto de `develop` agora precisa ser confirmada para `db5e6a8`.
 
 Em 2026-09-15, as divergências do tracker foram registradas sem fechar Issues:
 [#67](https://github.com/agthinkindigital/wirs/issues/67#issuecomment-5682466278),
@@ -28,7 +28,7 @@ o impacto interpretativo em [`docs/ENTENDENDO-O-WIRS.md`](docs/ENTENDENDO-O-WIRS
 Todos os gates locais passaram novamente: `pytest` (suite completa), Ruff,
 formatação, mypy e `git diff --check`. A evidência foi registrada no
 [#80](https://github.com/agthinkindigital/wirs/issues/80#issuecomment-5684145541),
-sem fechar a Issue antes da publicação no `develop`.
+sem fechar a Issue antes da confirmação da CI e da revisão final do tracker.
 
 ---
 
@@ -207,7 +207,7 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - Divergência corrigida no roadmap: #65/WIRS-026 está fechada após QA do schema
   2.0; o contrato aprovado está registrado no GitHub e no ADR-004.
 
-## Implementação local da DAG #77 (2026-09-15)
+## Implementação publicada em `develop` da DAG #77 (2026-09-15)
 
 - Diagnosis file-centric foi implementada localmente com a receita determinística
   DX001: mismatch de baseline confiável + assinatura/heurística HIGH no mesmo
@@ -218,10 +218,10 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
   Finding e Evidence refs e rejeita mistura de Artifacts na basis.
 - Testes dedicados unitários e de integração adicionados; `pytest`, Ruff,
   formatação, mypy strict e guard arquitetural passaram.
-- Pendente: publicar a alteração, comentar/fechar #77 e revisar/fechar #80 após
-  QA visual HITL.
+- Pendente: confirmar a CI de `db5e6a8`, sincronizar o checklist e fechar #77
+  após a aprovação formal do tracker.
 
-## Implementação local da DAG #80 (2026-09-15)
+## Implementação publicada em `develop` da DAG #80 (2026-09-15)
 
 - `render_forensic_html` deriva exclusivamente do `CanonicalReport` já redigido;
   não consulta o Target e não contém regra de negócio.
@@ -231,9 +231,10 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - Ausência de Diagnosis e Timeline é declarada explicitamente. `--report` mantém
   o JSON canônico mesmo quando `--format html` é escolhido.
 - Testes de integração cobrem CLI, escaping de path/título hostil, redaction e
-  preservação do JSON; QA visual HITL ainda é pendência antes de fechar #80.
+  preservação do JSON; QA visual HITL passou no checkout e aguarda confirmação
+  da CI/commit publicado antes de fechar #80.
 
-## Implementação local da DAG #70 (2026-09-15)
+## Implementação publicada em `develop` da DAG #70 (2026-09-15)
 
 - `PHPGenericAdapter` descobre extensões PHP (`.php`, `.phtml`, `.php3–.php5`,
   `.phar`) sem abrir ou executar conteúdo e sem seguir symlinks.
@@ -246,7 +247,7 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - Fixture e integração dedicadas adicionadas em
   `tests/fixtures/generic/php_legacy` e `tests/integration/test_php_generic_scan.py`.
 
-## Implementação local da DAG #68 (2026-09-15)
+## Implementação publicada em `develop` da DAG #68 (2026-09-15)
 
 - `wirs-bundle.json` define schema `1.0` e fontes locais com `source_ref`, papel,
   origem, SHA-256 e trust state; o report canônico preserva o source manifest.
