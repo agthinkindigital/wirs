@@ -12,7 +12,7 @@ promovido.
 Auditoria de `0.2.0` em 2026-09-15: **NÃO ELEGÍVEL para `main`**. Gates técnicos
 locais passaram, mas #77/#80 estão abertas, Epics de M3/M4 não foram fechadas e
 o build atual ainda é `wirs-0.1.0`. A promoção, tag ou release ainda depende da
- sincronização e aprovação formal.
+sincronização e aprovação formal.
 O próximo passo é fechar o conjunto de `0.2.0`; a CI verde do último commit
 remoto de `develop` agora precisa ser confirmada para `db5e6a8`.
 
