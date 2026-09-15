@@ -109,6 +109,7 @@ class YaraAnalyzer:
             raise ProviderUnavailable("yara-python ausente: pip install wirs[yara]")
         rules = self._compiled()
         limite = self._timeout_s if timeout_s is None else timeout_s
+        timeout = max(1, int(limite))
         achados: list[ProviderFinding] = []
         falhas: list[AnalyzerFailure] = []
         for artifact in artifacts:
@@ -127,7 +128,7 @@ class YaraAnalyzer:
                 )
                 continue
             try:
-                matches = rules.match(data=content, timeout=limite)
+                matches = rules.match(data=content, timeout=timeout)
             except _yara.TimeoutError as error:
                 falhas.append(
                     AnalyzerFailure(
