@@ -30,10 +30,12 @@ from wirs.domain import (
     ProviderRunStatus,
     Severity,
     Target,
+    redact_mapping,
     redact_text,
 )
 from wirs.domain.errors import BudgetExceeded, ProviderError, ProviderUnavailable
 from wirs.ports import PlatformAdapter, PlatformDiscovery
+from wirs.ports.analysis import AnalyzerResult, ExternalAnalyzer
 from wirs.ports.checksum import IntegrityProvider
 from wirs.ports.detection import Detector
 from wirs.ports.reader import ArtifactReader, ReadBudget
@@ -149,6 +151,248 @@ def _detect_file(
 
 def _covered(relative: str, prefixes: tuple[str, ...]) -> bool:
     return any(relative == p.rstrip("/") or relative.startswith(p) for p in prefixes)
+
+
+def _analysis_phase(
+    scan_id: str,
+    artifacts: Sequence[Artifact],
+    analyzers: Sequence[ExternalAnalyzer],
+    platform_id: str | None,
+) -> tuple[list[Evidence], list[Finding], list[CoverageEntry], list[ProviderRun]]:
+    evidences: list[Evidence] = []
+    findings: list[Finding] = []
+    coverage: list[CoverageEntry] = []
+    provider_runs: list[ProviderRun] = []
+    files = [artifact for artifact in artifacts if artifact.kind is ArtifactKind.FILE]
+    by_ref = {(artifact.source_ref, artifact.path.relative): artifact for artifact in files}
+
+    for analyzer in analyzers:
+        capabilities = tuple(sorted(analyzer.capabilities))
+        if analyzer.platforms and platform_id not in analyzer.platforms:
+            coverage.append(
+                CoverageEntry(
+                    capability=analyzer.id,
+                    state=CoverageState.UNAVAILABLE,
+                    applicable_checks=len(files),
+                    unavailable=len(files),
+                    note="unsupported_platform",
+                )
+            )
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=analyzer.id,
+                    status=ProviderRunStatus.UNAVAILABLE,
+                    capabilities=capabilities,
+                    reason="unsupported_platform",
+                )
+            )
+            continue
+
+        try:
+            availability = analyzer.available()
+        except ProviderError as error:
+            reason = redact_text(str(error)[:200]) or "falha ao verificar disponibilidade"
+            coverage.append(
+                CoverageEntry(
+                    capability=analyzer.id,
+                    state=CoverageState.FAILED,
+                    applicable_checks=len(files),
+                    failed=len(files),
+                    note=reason,
+                )
+            )
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=analyzer.id,
+                    status=ProviderRunStatus.FAILED,
+                    capabilities=capabilities,
+                    reason=reason,
+                )
+            )
+            continue
+
+        if not availability.available:
+            reason = redact_text(availability.reason[:200]) or "provider indisponível"
+            coverage.append(
+                CoverageEntry(
+                    capability=analyzer.id,
+                    state=CoverageState.UNAVAILABLE,
+                    applicable_checks=len(files),
+                    unavailable=len(files),
+                    note=reason,
+                )
+            )
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=analyzer.id,
+                    status=ProviderRunStatus.UNAVAILABLE,
+                    version=availability.version,
+                    capabilities=capabilities,
+                    reason=reason,
+                )
+            )
+            continue
+
+        try:
+            result: AnalyzerResult = analyzer.scan(files)
+            if result.provider_id != analyzer.id:
+                raise ValueError(
+                    f"provider_id divergente: esperado {analyzer.id!r}, "
+                    f"recebido {result.provider_id!r}"
+                )
+        except ProviderUnavailable as error:
+            reason = redact_text(str(error)[:200]) or "provider indisponível"
+            coverage.append(
+                CoverageEntry(
+                    capability=analyzer.id,
+                    state=CoverageState.UNAVAILABLE,
+                    applicable_checks=len(files),
+                    unavailable=len(files),
+                    note=reason,
+                )
+            )
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=analyzer.id,
+                    status=ProviderRunStatus.UNAVAILABLE,
+                    version=availability.version,
+                    capabilities=capabilities,
+                    reason=reason,
+                )
+            )
+            continue
+        except ProviderError as error:
+            reason = redact_text(str(error)[:200]) or "falha no provider"
+            coverage.append(
+                CoverageEntry(
+                    capability=analyzer.id,
+                    state=CoverageState.FAILED,
+                    applicable_checks=len(files),
+                    failed=len(files),
+                    note=reason,
+                )
+            )
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=analyzer.id,
+                    status=ProviderRunStatus.FAILED,
+                    version=availability.version,
+                    capabilities=capabilities,
+                    reason=reason,
+                )
+            )
+            continue
+        except ValueError as error:
+            reason = redact_text(str(error)[:200]) or "output inválido do provider"
+            coverage.append(
+                CoverageEntry(
+                    capability=analyzer.id,
+                    state=CoverageState.FAILED,
+                    applicable_checks=len(files),
+                    failed=len(files),
+                    note=reason,
+                )
+            )
+            provider_runs.append(
+                ProviderRun(
+                    provider_id=analyzer.id,
+                    status=ProviderRunStatus.FAILED,
+                    version=availability.version,
+                    capabilities=capabilities,
+                    reason=reason,
+                )
+            )
+            continue
+
+        version = result.provider_version or availability.version or "unknown"
+        failed_refs: set[str] = set()
+        failure_notes: list[str] = []
+        unknown_failure = False
+        for failure in result.failures:
+            reason = redact_text(failure.reason[:200]) or "falha sem motivo"
+            failure_notes.append(f"{failure.stage}: {reason}")
+            if failure.artifact_ref is None:
+                unknown_failure = True
+                continue
+            artifact = by_ref.get((failure.source_ref, failure.artifact_ref))
+            if artifact is None:
+                unknown_failure = True
+                continue
+            failed_refs.add(artifact.id)
+
+        provenance = Provenance(analyzer.id, version)
+        for proposed in result.findings:
+            artifact = by_ref.get((proposed.source_ref, proposed.artifact_ref))
+            if artifact is None:
+                unknown_failure = True
+                failure_notes.append(
+                    f"normalize: Artifact inexistente para {proposed.artifact_ref!r}"
+                )
+                continue
+            attributes = redact_mapping(dict(proposed.attributes))
+            attributes.setdefault("path", artifact.path.relative)
+            attributes.setdefault("source_ref", artifact.source_ref)
+            evidence_content = redact_mapping(dict(proposed.evidence_content))
+            evidence_content.setdefault("rule", proposed.external_rule_id)
+            evidence_content.setdefault("tags", attributes.get("tags", []))
+            evidence_content.setdefault("namespace", attributes.get("namespace", ""))
+            evidence = Evidence(
+                scan_id=scan_id,
+                kind=proposed.evidence_kind,
+                source=analyzer.id,
+                artifact_ref=artifact.id,
+                content=evidence_content,
+                provenance=provenance,
+            )
+            evidences.append(evidence)
+            try:
+                severity = Severity(proposed.severity.lower())
+            except ValueError:
+                severity = Severity.MEDIUM
+            findings.append(
+                Finding(
+                    rule_id=f"{analyzer.id.upper()}.{proposed.external_rule_id}",
+                    title=f"{analyzer.id}: {proposed.external_rule_id}",
+                    category="signature",
+                    severity=severity,
+                    confidence=Confidence(ConfidenceClass.HIGH),
+                    artifact_ref=artifact.id,
+                    evidence_refs=(evidence.id,),
+                    attributes=attributes,
+                    provenance=provenance,
+                )
+            )
+
+        failed_count = len(files) if unknown_failure else len(failed_refs)
+        verified_count = max(0, len(files) - failed_count)
+        if not files:
+            state = CoverageState.NOT_APPLICABLE
+        elif failed_count:
+            state = CoverageState.PARTIAL
+        else:
+            state = CoverageState.COMPLETE
+        coverage.append(
+            CoverageEntry(
+                capability=analyzer.id,
+                state=state,
+                applicable_checks=len(files),
+                verified=verified_count,
+                failed=failed_count,
+                note="; ".join(failure_notes)[:200],
+            )
+        )
+        status = ProviderRunStatus.PARTIAL if failed_count else ProviderRunStatus.COMPLETED
+        provider_runs.append(
+            ProviderRun(
+                provider_id=analyzer.id,
+                status=status,
+                version=version,
+                capabilities=capabilities,
+                reason=("; ".join(failure_notes)[:200] or None),
+            )
+        )
+
+    return evidences, findings, coverage, provider_runs
 
 
 def _integrity_phase(
@@ -273,6 +517,7 @@ def run_scan(
     reader: ArtifactReader | None = None,
     budget: ReadBudget | None = None,
     detectors: Sequence[Detector] = (),
+    analyzers: Sequence[ExternalAnalyzer] = (),
     integrity: Sequence[IntegrityProvider] = (),
     head_bytes: int = HEAD_BYTES,
     on_event: Callable[[ProgressEvent], None] | None = None,
@@ -339,6 +584,15 @@ def run_scan(
             except (OSError, BudgetExceeded):
                 gaps += 1
 
+    if analyzers:
+        emit(ProgressEvent(phase="analyze", current=0, total=len(files)))
+    an_evidence, an_findings, an_coverage, an_provider_runs = _analysis_phase(
+        sid, artifacts, analyzers, found.platform_id if found else None
+    )
+    all_evidence.extend(an_evidence)
+    all_findings.extend(an_findings)
+    provider_runs.extend(an_provider_runs)
+
     verified = len(artifacts)
     fs_note = f"{suppressed} suprimido(s) por baseline confiável" if suppressed else ""
     coverage = (
@@ -351,6 +605,7 @@ def run_scan(
             note=fs_note,
         ),
         *ck_coverage,
+        *an_coverage,
     )
     emit(ProgressEvent(phase="done", current=len(all_findings), total=len(files)))
     return ScanResult(

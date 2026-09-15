@@ -46,12 +46,12 @@ validar config → resolver target → manifest do scan → descobrir plataforma
 → fechar coverage → diagnósticos → validar redaction → relatórios → exit code
 ```
 
-Na versão atual, o pipeline termina após detecção, Coverage e views de
-terminal/JSON/Markdown. O artifact canônico ainda é parcial: a CLI não publica
-todos os Artifacts/Evidence e YARA não participa do `scan`. Incident Bundle,
-collectors temporais, correlação, Diagnoses e HTML/PDF são capacidades futuras,
-não entregas atuais. A próxima DAG deve fechar primeiro o modelo canônico e a
-content analysis file-centric.
+Na versão atual, o pipeline termina após detecção, analyzers externos,
+Coverage e views de terminal/JSON/Markdown. O report canônico publica
+Artifacts/Evidence e o YARA builtin participa do `scan` quando o extra opcional
+está disponível; ausência e falhas ficam explícitas no Coverage. Incident
+Bundle, collectors temporais, correlação, Diagnoses e HTML/PDF são capacidades
+futuras, não entregas atuais. A próxima DAG é content analysis file-centric.
 
 A ordem importa: o barato e confiável roda primeiro; o caro e incerto, depois.
 Falha parcial é o comportamento padrão — um provider ausente vira

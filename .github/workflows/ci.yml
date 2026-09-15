@@ -22,3 +22,16 @@ jobs:
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run mypy src/
       - run: uv run python -m build 2>/dev/null || uv pip install build && uv run python -m build
+
+  yara:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv venv && uv pip install -e ".[dev,yara]"
+      - run: uv run pytest tests/integration/test_yara_rules.py tests/integration/test_scan_yara.py
+      - run: uv run python -m build
+      - run: uv run python -c "import glob, zipfile; wheel = glob.glob('dist/*.whl')[0]; names = zipfile.ZipFile(wheel).namelist(); assert 'wirs/rules/yara/builtin/php_webshell.yar' in names"

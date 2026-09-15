@@ -33,6 +33,7 @@ from wirs.domain import (
     BaselineManifest,
     IOCKind,
     LocalDirectoryTarget,
+    ProviderInvalidOutput,
     Severity,
     TargetError,
 )
@@ -43,10 +44,20 @@ from wirs.ports.checksum import IntegrityProvider
 from wirs.ports.detection import Detector
 from wirs.providers.operator_baseline import OperatorBaselineIntegrity, load_baseline_mapping
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
+from wirs.providers.yara_provider import YaraAnalyzer
 from wirs.reporting import CanonicalReport, render_markdown, render_report, write_text_atomic
 
 # Budgets provisórios por perfil até WIRS-034 (large-file policy).
 PROFILE_BUDGETS = {"soft": 64 << 20, "balanced": 256 << 20, "fast": 1 << 30}
+
+
+def _builtin_yara_pack() -> Path:
+    """Resolve o pack no checkout e no caminho instalado do wheel."""
+    packaged = Path(__file__).resolve().parents[1] / "rules" / "yara"
+    if packaged.is_dir():
+        return packaged
+    return Path(__file__).resolve().parents[3] / "rules" / "yara"
+
 
 app = typer.Typer(
     name="wirs",
@@ -315,6 +326,11 @@ def scan(
             )
             raise typer.Exit(code=ExitCode.INVALID_TARGET)
         report_dest = candidate
+    try:
+        yara_analyzer = YaraAnalyzer.from_pack(_builtin_yara_pack())
+    except (OSError, ProviderInvalidOutput) as e:
+        console.print(f"[red]Pack YARA inválido:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_RULEPACK) from e
     integrity_providers: list[IntegrityProvider] = [WpCliCoreIntegrity(), WpCliPluginIntegrity()]
     if baseline is not None:
         from wirs.infrastructure.baseline_cache import BaselineCache
@@ -342,6 +358,7 @@ def scan(
         reader=ArtifactReader(),
         budget=ReadBudget(max_bytes=PROFILE_BUDGETS[profile]),
         detectors=build_detectors(ioc_list),
+        analyzers=[yara_analyzer],
         integrity=integrity_providers,
         on_event=monitor,
     )

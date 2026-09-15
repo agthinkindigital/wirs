@@ -61,16 +61,15 @@ nos providers usados pelo fluxo atual.
 ## Em desenvolvimento
 
 A branch `develop` prepara a linha `0.2.0` (Horizonte A). Baselines
-custom/premium, ZIP, trust/cache/assinatura, relatório Markdown e o provider/pack
-YARA já existem. A próxima DAG deve primeiro completar o artifact canônico,
-integrar YARA ao `scan` e aprofundar content analysis antes de promover logs ou
-outras expansões.
+custom/premium, ZIP, trust/cache/assinatura, relatório Markdown, o artifact
+canônico e YARA integrado ao `scan` já existem. A próxima DAG é content analysis
+bounded, antes de promover logs ou outras expansões.
 
 | Capacidade | Estado |
 |---|---|
 | Baseline custom/premium + ZIP | Implementado em `develop` |
 | Relatório Markdown | Implementado em `develop` |
-| YARA provider + pack | Implementado isoladamente; integração no `scan` pendente |
+| YARA provider + pack | Integrado ao `scan`; ausência e falhas aparecem em Coverage |
 | Content analysis bounded + Diagnosis file-centric | Próximo Horizonte A |
 | PHP genérico, Incident Bundle e archive local | Horizonte B |
 | Logs locais, Evidence temporal e adapters de hospedagem | Horizonte C |
@@ -106,9 +105,9 @@ wirs doctor
 
 Se o terminal disser que `wirs` não existe, ele abriu antes do registro
 no PATH — feche tudo e abra de novo. O `wirs doctor` mostra os providers
-opcionais (`wp`, `yara`, `wordfence`). No fluxo atual, somente providers WP-CLI
-integrados ao `scan` registram ausência no Coverage; YARA entra nesse contrato
-ao fechar a linha `0.2.0`, e Wordfence permanece planejado.
+opcionais (`wp`, `yara`, `wordfence`). Os providers integrados ao `scan` registram
+presença ou ausência no Coverage; YARA é executado quando `yara-python` está
+disponível, e Wordfence permanece planejado.
 
 ### Desenvolver
 
@@ -118,6 +117,13 @@ cd wirs
 git switch develop
 uv sync --extra dev
 uv run pytest
+```
+
+Para validar o caminho real do YARA, instale também o extra opcional:
+
+```bash
+uv sync --extra dev --extra yara
+uv run pytest tests/integration/test_yara_rules.py tests/integration/test_scan_yara.py
 ```
 
 Detalhes do ambiente de dev em [Desenvolvimento](#desenvolvimento).

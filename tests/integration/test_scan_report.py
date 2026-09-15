@@ -43,6 +43,7 @@ def test_report_preserva_provider_run_sem_findings() -> None:
         payload = json.loads(result.stdout)
         assert payload["findings"] == []
         assert {run["status"] for run in payload["provider_runs"]} == {"unavailable"}
+        assert any(run["provider_id"] == "yara" for run in payload["provider_runs"])
 
 
 def test_report_dentro_do_target_e_recusado() -> None:

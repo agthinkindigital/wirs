@@ -21,11 +21,11 @@ Contrato validado via `query-docs` (fontes oficiais) em 2026-09-12.
 
 ## Decisões WIRS (ADR-006 + E07)
 
-- `yara-python` é **dependência opcional** (`pip install wirs[yara]` futuro); ausente → provider `UNAVAILABLE`, scan continua.
+- `yara-python` é **dependência opcional** (`pip install wirs[yara]`); ausente → provider `UNAVAILABLE`, scan continua.
 - Match só sobre **bytes lidos pelo ArtifactReader** (`data=`), nunca `filepath=` direto do alvo (o reader impõe budget; detector não abre arquivo).
-- `timeout` sempre configurado (default a definir no provider, ex.: 60s por batch).
+- `timeout` sempre configurado (default de 60s por Artifact).
 - Regras builtin em `rules/yara/` (WIRS-082); `include` desabilitado nos packs builtin (`includes=False`) — pack é dado versionado, não programa.
-- Saída cruza anti-corruption layer: só `ProviderFinding(provider_id, external_rule_id, severity, evidence)` vaza para o application.
+- Saída cruza anti-corruption layer: `ProviderFinding` vaza para o application e é convertido em `Evidence` + `Finding` com provenance do provider.
 
 ## Checklist /query-docs do provider
 
@@ -43,4 +43,11 @@ Contrato validado via `query-docs` (fontes oficiais) em 2026-09-12.
 12. Offline? Sim.
 13. Egresso? Não.
 14. Compatibilidade? 4.x API estável (compile/match/Match).
-15. Fallback? Ausência graciosa (UNAVAILABLE).
+15. Fallback? Ausência graciosa (UNAVAILABLE); falhas de leitura/match são PARTIAL.
+
+## Integração atual
+
+`wirs scan` monta o pack builtin a partir do checkout ou do wheel, executa o
+analyzer sobre os Artifacts `FILE` e publica refs canônicas. O pack é compilado
+com `includes=False`; nenhum include externo pode abrir arquivos durante a
+compilação. O YARA recebe bytes via `ArtifactReader`, nunca o path do target.

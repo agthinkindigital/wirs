@@ -757,3 +757,41 @@ input hostil.
 **Verificar:** `tests/unit/test_canonical.py`, `tests/golden/canonical_report_v2.json`,
 `tests/integration/test_reference_trust.py` e
 `tests/integration/test_scan_report.py` · **Issue:** #65.
+
+---
+
+## #66 — YARA entra no scan sem virar uma caixa-preta
+
+### O que o scan faz
+
+Quando `yara-python` está instalado, `wirs scan` carrega o pack builtin e
+analisa os Artifacts do tipo `FILE`. Um match gera um Finding de categoria
+`signature`, com regra `YARA.<rule>`, severidade, tags e namespace. A cadeia
+continua resolvível: `Finding.artifact_ref` aponta para o Artifact canônico e a
+Evidence registra a provenance `yara`.
+
+O pack builtin acompanha o wheel em `wirs/rules/yara`; regras são compiladas
+com `includes=False`. Assim, um `include` não pode fazer a compilação ler um
+arquivo externo. O analyzer recebe bytes pelo `ArtifactReader`, não abre paths
+do target diretamente e não segue diretórios, symlinks ou arquivos especiais.
+
+### Como interpretar a ausência
+
+YARA é opcional. Se o binding não existir, o scan continua e o report mostra a
+capacidade `yara` como `unavailable`, junto do `provider_run` correspondente.
+Uma falha de compilação é `failed`; uma falha de leitura ou timeout em arquivos
+específicos é `partial`, com o motivo preservado. Portanto, ausência de Finding
+YARA nunca significa que o pack rodou e encontrou zero matches.
+
+### O que esta assinatura prova
+
+Um match é uma assinatura determinística para os bytes observados. Ele não
+prova autoria, exploração bem-sucedida ou que o arquivo inteiro seja malware.
+Leia a regra, a Evidence e os outros Findings do mesmo Artifact antes de
+priorizar a investigação. A regra builtin descreve técnicas sintéticas e não
+executa código do alvo.
+
+**Verificar:** `src/wirs/providers/yara_provider.py`,
+`src/wirs/application/orchestrator.py`, `tests/integration/test_scan_yara.py`,
+`tests/integration/test_yara_rules.py` e o job `yara` de
+`.github/workflows/ci.yml` · **Issue:** #66.

@@ -69,9 +69,8 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   Contrato ExternalAnalyzer, YARA, Wordfence CLI, Semgrep (fase 2), sandbox.
   Inteligência de versões/higiene (componente desatualizado ou recurso
   essencial a remover) como *contexto*, nunca como prova de comprometimento.
-  Slices 0.2.0: #60 (WIRS-080, done), #61 (WIRS-081, done), #62 (WIRS-082, done).
-  Fechamento operacional: #66 (WIRS-086, YARA no `scan` + Coverage real),
-  dependente de #65.
+  Slices 0.2.0: #60 (WIRS-080, done), #61 (WIRS-081, done), #62 (WIRS-082, done),
+  #66 (WIRS-086, done). YARA no `scan` publica Coverage real e dependeu de #65.
   Wordfence/Semgrep adiados até o fluxo forense local estar completo.
   Issues: WIRS-080–WIRS-086. (Fases C/H)
 
@@ -177,8 +176,8 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 5. Validar em fixtures/snapshots conhecidos antes de adicionar complexidade.
 6. Fechar artifact canônico (#65).
 7. Hardening do destino `--report` (#82), independente de #65 (concluído).
-8. Integrar YARA no scan (#66), após #65.
-9. Content analysis bounded (#67 + WIRS-052/056/057/058).
+8. Integrar YARA no scan (#66), após #65 (done).
+9. Content analysis bounded (#67 + WIRS-052/056/057/058), próxima DAG.
 10. Diagnosis file-centric (#77) → HTML filesystem-only (#80).
 11. PHP genérico local (#70), sem depender de Incident Bundle ou logs.
 12. Incident Bundle (#68) → archive (#69).

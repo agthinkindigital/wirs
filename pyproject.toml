@@ -48,6 +48,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wirs"]
+[tool.hatch.build.targets.wheel.force-include]
+"rules/yara" = "wirs/rules/yara"
 
 [tool.ruff]
 target-version = "py311"

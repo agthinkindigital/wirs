@@ -8,6 +8,7 @@ from pathlib import Path
 from wirs.domain import Artifact, ArtifactKind, LocalDirectoryTarget, SafePath
 from wirs.ports.analysis import (
     AnalysisAvailability,
+    AnalyzerFailure,
     AnalyzerResult,
     ExternalAnalyzer,
     ProviderFinding,
@@ -78,3 +79,20 @@ def test_indisponivel_traz_motivo_e_normalizacao_sem_vendor() -> None:
     )
     assert normalizado.attributes["namespace"] == "builtin"
     assert "yara" not in normalizado.attributes  # vendor só no provider_id
+
+
+def test_resultado_preserva_falha_por_artifact() -> None:
+    resultado = AnalyzerResult(
+        provider_id="yara",
+        provider_version="4.5.4",
+        failures=(
+            AnalyzerFailure(
+                stage="match",
+                reason="timeout YARA",
+                artifact_ref="a.php",
+            ),
+        ),
+    )
+
+    assert resultado.failures[0].artifact_ref == "a.php"
+    assert resultado.failures[0].stage == "match"

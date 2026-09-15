@@ -73,11 +73,14 @@ def _artifact(tmp_path: Path, nome: str = "evil.php", conteudo: bytes = b"<?php 
 
 
 def _analyzer(tmp_path: Path, **kwargs):
+    params = {
+        "reader": ArtifactReader(),
+        "budget": ReadBudget(max_bytes=1 << 20),
+    }
+    params.update(kwargs)
     return YaraAnalyzer(
         rules_source='rule ok { strings: $a = "x" condition: $a }',
-        reader=ArtifactReader(),
-        budget=ReadBudget(max_bytes=1 << 20),
-        **kwargs,
+        **params,
     )
 
 
@@ -93,6 +96,21 @@ def test_match_sintetico_normalizado(com_yara, tmp_path: Path) -> None:
     assert achado.artifact_ref == "evil.php"
     assert achado.attributes["tags"] == ["webshell", "php"]
     assert achado.attributes["namespace"] == "builtin"
+
+
+def test_compile_desabilita_includes_externos(tmp_path: Path, monkeypatch) -> None:
+    chamadas: list[dict] = []
+
+    class _Yara(_FakeYara):
+        def compile(self, source=None, **kwargs):
+            chamadas.append(kwargs)
+            return _FakeRules([])
+
+    monkeypatch.setattr(yara_provider, "_yara", _Yara())
+
+    _analyzer(tmp_path).scan([])
+
+    assert chamadas == [{"includes": False, "error_on_warning": True}]
 
 
 def test_sem_lib_e_unavailable(tmp_path: Path) -> None:
@@ -131,3 +149,16 @@ def test_timeout_pula_arquivo_e_continua(tmp_path: Path, monkeypatch) -> None:
     resultado = analyzer.scan([_artifact(tmp_path), _artifact(tmp_path)])
 
     assert resultado.findings == ()
+    assert len(resultado.failures) == 2
+    assert all(f.stage == "match" for f in resultado.failures)
+
+
+def test_budget_excedido_registra_falha_do_arquivo(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(yara_provider, "_yara", _FakeYara())
+    analyzer = _analyzer(tmp_path, budget=ReadBudget(max_bytes=1))
+
+    resultado = analyzer.scan([_artifact(tmp_path, conteudo=b"xx")])
+
+    assert resultado.findings == ()
+    assert len(resultado.failures) == 1
+    assert resultado.failures[0].stage == "read"

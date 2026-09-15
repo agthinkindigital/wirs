@@ -31,6 +31,17 @@ class ProviderFinding:
     evidence_kind: str = "external_match"
     evidence_content: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     attributes: Mapping[str, Any] = field(default_factory=lambda: MappingProxyType({}))
+    source_ref: str = "src_primary"
+
+
+@dataclass(frozen=True)
+class AnalyzerFailure:
+    """Falha observável de um analyzer, opcionalmente ligada a um Artifact."""
+
+    stage: str
+    reason: str
+    artifact_ref: str | None = None
+    source_ref: str = "src_primary"
 
 
 @dataclass(frozen=True)
@@ -38,6 +49,7 @@ class AnalyzerResult:
     provider_id: str
     provider_version: str | None
     findings: tuple[ProviderFinding, ...] = ()
+    failures: tuple[AnalyzerFailure, ...] = ()
 
 
 @runtime_checkable

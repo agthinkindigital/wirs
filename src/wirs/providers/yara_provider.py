@@ -16,6 +16,7 @@ from wirs.domain.errors import BudgetExceeded, ProviderInvalidOutput, ProviderUn
 from wirs.infrastructure.reader import ArtifactReader, ReadBudget
 from wirs.ports.analysis import (
     AnalysisAvailability,
+    AnalyzerFailure,
     AnalyzerResult,
     ProviderFinding,
 )
@@ -92,7 +93,9 @@ class YaraAnalyzer:
             raise ProviderUnavailable("yara-python ausente: pip install wirs[yara]")
         if self._rules is None:
             try:
-                self._rules = _yara.compile(source=self._source, error_on_warning=True)
+                self._rules = _yara.compile(
+                    source=self._source, includes=False, error_on_warning=True
+                )
             except _yara.SyntaxError as e:
                 raise ProviderInvalidOutput(f"rule pack não compila: {e}") from e
             except _yara.Error as e:
@@ -107,18 +110,43 @@ class YaraAnalyzer:
         rules = self._compiled()
         limite = self._timeout_s if timeout_s is None else timeout_s
         achados: list[ProviderFinding] = []
+        falhas: list[AnalyzerFailure] = []
         for artifact in artifacts:
             if artifact.kind is not ArtifactKind.FILE:
                 continue
             try:
                 content = b"".join(self._reader.iter_chunks(artifact, self._budget))
-            except (OSError, BudgetExceeded):
+            except (OSError, BudgetExceeded) as error:
+                falhas.append(
+                    AnalyzerFailure(
+                        stage="read",
+                        reason=str(error) or "falha ao ler Artifact",
+                        artifact_ref=artifact.path.relative,
+                        source_ref=artifact.source_ref,
+                    )
+                )
                 continue
             try:
                 matches = rules.match(data=content, timeout=limite)
-            except _yara.TimeoutError:
+            except _yara.TimeoutError as error:
+                falhas.append(
+                    AnalyzerFailure(
+                        stage="match",
+                        reason=str(error) or "timeout YARA",
+                        artifact_ref=artifact.path.relative,
+                        source_ref=artifact.source_ref,
+                    )
+                )
                 continue
-            except _yara.Error:
+            except _yara.Error as error:
+                falhas.append(
+                    AnalyzerFailure(
+                        stage="match",
+                        reason=str(error) or "erro YARA ao analisar Artifact",
+                        artifact_ref=artifact.path.relative,
+                        source_ref=artifact.source_ref,
+                    )
+                )
                 continue
             for match in matches:
                 meta = getattr(match, "meta", {}) or {}
@@ -129,6 +157,7 @@ class YaraAnalyzer:
                         external_rule_id=str(match.rule),
                         severity=severity if severity in _SEVERIDADES else "medium",
                         artifact_ref=artifact.path.relative,
+                        source_ref=artifact.source_ref,
                         attributes={
                             "tags": list(getattr(match, "tags", [])),
                             "namespace": str(getattr(match, "namespace", "")),
@@ -139,4 +168,5 @@ class YaraAnalyzer:
             provider_id=PROVIDER_ID,
             provider_version=getattr(_yara, "__version__", None),
             findings=tuple(achados),
+            failures=tuple(falhas),
         )
