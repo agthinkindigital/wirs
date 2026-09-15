@@ -34,16 +34,24 @@ E junto das três, o **coverage**: o que foi analisado, pulado, ilegível, sem
 baseline, com provider falho. "Zero findings" sem coverage completo não
 significa "limpo" — o relatório diz isso com todas as letras.
 
-## O pipeline
+## O pipeline alvo
 
 ```text
 validar config → resolver target → manifest do scan → descobrir plataforma
 → inventariar artifacts → metadata → resolver baselines
+→ coletar/ler com redaction de secrets na fronteira
 → checks determinísticos → políticas de zona → IOCs exatos
 → heurísticas leves → analyzers externos (opcionais)
-→ collectors da plataforma → normalizar → correlacionar
-→ fechar coverage → diagnósticos → redigir secrets → relatórios → exit code
+→ collectors de fontes locais → Evidence temporal → normalizar → correlacionar
+→ fechar coverage → diagnósticos → validar redaction → relatórios → exit code
 ```
+
+Na versão atual, o pipeline termina após detecção, Coverage e views de
+terminal/JSON/Markdown. O artifact canônico ainda é parcial: a CLI não publica
+todos os Artifacts/Evidence e YARA não participa do `scan`. Incident Bundle,
+collectors temporais, correlação, Diagnoses e HTML/PDF são capacidades futuras,
+não entregas atuais. A próxima DAG deve fechar primeiro o modelo canônico e a
+content analysis file-centric.
 
 A ordem importa: o barato e confiável roda primeiro; o caro e incerto, depois.
 Falha parcial é o comportamento padrão — um provider ausente vira
@@ -86,13 +94,21 @@ cli ──▶ application ──▶ domain ◀── ports ◀── infrastruct
 - **`cli/`** — composition root: monta as implementações, lê config/flags e
   traduz o resultado em exit code.
 
-Um exemplo do fluxo num arquivo: o inventory cria o `Artifact`; o reader faz
-streaming único que alimenta hash, hints e IOC; o comparator de baseline gera
-`Evidence` + `Finding` determinístico; a policy de zona e a heurística somam
-suspeitas; o YARA opcional anexa a sua; a correlação junta mismatch +
-assinatura no mesmo artifact num `Diagnosis`; o coverage registra que o banco
-não rodou; o reporter serializa tudo em JSON, redige secrets na fronteira e
-o terminal resume em tabela.
+Um exemplo do fluxo de detecção atual: o inventory cria o `Artifact`; o reader
+faz streaming único que alimenta hash, hints e IOC; o comparator de baseline
+gera `Evidence` + `Finding` determinístico; a policy de zona e a heurística
+somam suspeitas. Nas etapas incrementais, YARA anexa a própria provenance e a
+correlação pode juntar mismatch + assinatura no mesmo Artifact em um
+`Diagnosis`; o Coverage registra o que não rodou. Conteúdo persistido como
+Evidence já cruza redaction na coleta; o reporter valida novamente e serializa
+o modelo, e o terminal resume em tabela.
+
+Uma investigação heterogênea usa um **Incident Bundle**: uma pasta local com
+manifesto versionado que declara webroots, logs, snapshots e archives. Arquivo
+de log continua sendo Artifact; cada registro aceito vira Evidence temporal
+ligada ao Artifact e à posição de origem. `occurred_at` registra o horário da
+fonte e `collected_at`, o horário da coleta. O WIRS não transforma coincidência
+de IP/CIDR/User-Agent em identidade ou autoria.
 
 ## Fronteiras que não se atravessam
 
@@ -108,13 +124,17 @@ o terminal resume em tabela.
 
 O **JSON é canônico** (versão de schema separada da versão do scanner, ordem
 estável, sem conteúdo bruto por padrão). Terminal serve à operação, Markdown
-vai para ticket, HTML self-contained com CSP forte vem com esqueleto de design
-tokens desde cedo. Nenhuma regra de negócio mora no frontend.
+vai para ticket, e HTML/PDF forense são views self-contained. O artifact
+canônico deve preservar Scan Manifest, source manifest do Incident Bundle,
+Artifacts, Evidence metadata, Findings, Coverage, provider status e Diagnoses.
+Nenhuma regra de negócio mora no frontend.
 
 ## Para onde vai
 
 WordPress é o adapter #1 porque o ecossistema dá primitives fortes
-(checksums oficiais, WP-CLI, layout previsível). A mesma engine recebe depois
-PHP genérico, Laravel, host Linux, snapshot/remoto via SSH, runtime HTTP e
-análise por LLM opcional — sem tocar no domínio. O passo a passo está no
+(checksums oficiais, WP-CLI, layout previsível). Antes de 1.0, a mesma engine
+recebe PHP genérico, bundles/archives locais, correlação file-centric e laudo
+forense. Logs locais enriquecem o modelo depois do núcleo. SSH/SFTP, runtime
+HTTP ativo, agentes residentes e control plane ficam em horizontes posteriores,
+em seams separados. O passo a passo está no
 [roadmap](../ORCHESTRATOR-ROADMAP.md).

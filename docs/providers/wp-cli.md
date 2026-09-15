@@ -30,8 +30,9 @@
   plugins/themes) — compatível com `safe_only` (ADR-009). Atenção: `plugin
   verify-checksums` exige `wp-config.php` (+ DB para enumerar) — documentado
   como requisito, não como escrita nossa.
-- **Rede:** baixa md5 do WordPress.org por versão+locale (dado egresso
-  documentado; modo offline usa cache futuro — WIRS-045).
+- **Rede:** baixa md5 do WordPress.org por versão+locale quando necessário
+  (dado egresso documentado); modo offline consulta o cache de baseline
+  disponível (WIRS-045).
 - **Mutação do target:** nenhuma (somente leitura + download de checksums).
 - **Timeout/concorrência:** `timeout_s` configurável (60s core, 120s plugins);
   processo encerrado no estouro; uma execução por vez por enquanto.

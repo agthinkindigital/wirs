@@ -1,5 +1,12 @@
 # Operação com agentes
 
+Fontes normativas curtas:
+
+- [`PRODUCT-CHARTER.md`](../PRODUCT-CHARTER.md): identidade e limites do produto.
+- [`DOCUMENTATION-MATRIX.md`](../DOCUMENTATION-MATRIX.md): autoridade por assunto.
+- [`architecture.md`](architecture.md): seams e invariantes técnicas.
+- [`workflow.md`](workflow.md): tracker, TDD, QA e documentação.
+
 ## Domínio
 
 O glossário canônico é [`CONTEXT.md`](../../CONTEXT.md). Use os termos de lá

@@ -7,8 +7,8 @@
 **Status do documento:** baseline de engenharia / especificação viva  
 **Linguagem principal do MVP:** Python 3.11+  
 **Modelo de execução principal:** read-only, evidence-first, deterministic-first  
-**Alvos iniciais:** hosts Linux, hospedagem compartilhada com SSH quando possível, VPS/KVM, snapshots locais e filesystems montados  
-**Direção de longo prazo:** aplicações PHP, CMSs, frameworks, web roots Linux, containers e outros runtimes sem acoplamento do engine ao WordPress.
+**Alvos iniciais:** diretórios, archives, snapshots e Incident Bundles já acessíveis na máquina que executa o WIRS
+**Direção de longo prazo:** aplicações PHP, CMSs, frameworks, web roots Linux, containers e outros runtimes sem acoplamento do engine ao WordPress; aquisição remota somente pós-1.0 e em seam separado.
 
 ---
 
@@ -44,6 +44,7 @@ Core genérico do scanner
     + analyzers externos opcionais
     + correlação / diagnóstico
     + reporting
+    + ingestão temporal de logs locais
         └── platform adapters
               ├── WordPress
               ├── PHP Generic
@@ -294,8 +295,9 @@ Tipos iniciais:
 - `LOCAL_DIRECTORY`
 - `SNAPSHOT_DIRECTORY`
 - `ARCHIVE`
+- `INCIDENT_BUNDLE`
 
-Futuros:
+Futuros pós-1.0:
 
 - `SSH_REMOTE`
 - `SFTP_REMOTE`
@@ -316,6 +318,7 @@ Tipos previstos:
 - symlink;
 - registro de banco;
 - entrada de configuração;
+- fonte de log;
 - evento de cron;
 - usuário/conta;
 - resposta HTTP;
@@ -336,6 +339,7 @@ kind: file_hash
 source: filesystem
 artifact_ref: art_01J...
 collected_at: 2026-09-08T...
+occurred_at: 2026-09-07T...  # opcional; horário observado na fonte
 content:
   algorithm: sha256
   hash: ...
@@ -494,6 +498,23 @@ arquivo sem permissão
 ```
 
 Abortar scan somente quando a própria validade do alvo ou uma invariável interna não puder ser mantida.
+
+## 5.2 Incident Bundle e Evidence temporal
+
+Uma investigação pode reunir árvore web, archives e logs locais em um
+`INCIDENT_BUNDLE`. O manifesto do bundle declara cada fonte por path relativo,
+papel, origem lógica, hash e estado de confiança. O scanner não autodescobre a
+máquina e não acessa rede para completar o bundle.
+
+Arquivo de log é Artifact. Registro parseado é Evidence ligada ao Artifact e à
+posição de origem. `occurred_at` preserva o horário registrado pela fonte;
+`collected_at`, o horário da coleta pelo WIRS. Uma ação registrada é fato sobre
+o log, não prova automática de intenção, comprometimento ou autoria.
+
+Coverage temporal registra intervalo solicitado/observado, rotações presentes,
+linhas aceitas/rejeitadas e gaps conhecidos. Retenção insuficiente não vira
+Finding por padrão; evidência independente de remoção deliberada pode sustentar
+um Finding separado.
 
 ---
 
@@ -697,7 +718,13 @@ Conhecimento específico futuro:
 
 ## 7.3 Host Adapter
 
-Post-MVP:
+Fase forense local:
+
+- logs já acessíveis de painel de hospedagem, web server e runtime;
+- Evidence temporal com origem/offset e Coverage de retenção/parsing;
+- correlação de ações observadas com Artifacts locais.
+
+Pós-1.0:
 
 - crontab do usuário;
 - vhosts;
@@ -756,11 +783,12 @@ Coverage: ...
 Modos desejados:
 
 1. diretório local;
-2. snapshot copiado;
-3. filesystem montado;
-4. archive controlado;
-5. coleta SSH/SFTP futura;
-6. container/pod futuro.
+2. Incident Bundle local com manifesto;
+3. snapshot copiado;
+4. filesystem montado;
+5. archive controlado;
+6. container/pod futuro;
+7. aquisição remota apenas pós-1.0.
 
 ### Q6. Deve exigir root?
 
@@ -786,7 +814,9 @@ Características:
 
 ### Q8. SSH remoto deve instalar Python no host?
 
-**Decisão:** não inicialmente.
+**Decisão:** SSH/SFTP não faz parte do caminho crítico até 1.0. O WIRS analisa
+arquivos já acessíveis localmente, no servidor ou no PC do analista. Se a
+aquisição remota existir depois, não deve instalar Python no host.
 
 Preferência futura:
 
@@ -968,8 +998,9 @@ JSON é canônico. Terminal/Markdown/HTML são views.
 **Decisão:** bundle lógico contendo:
 
 - Scan Manifest;
+- source manifest do Incident Bundle, quando aplicável;
+- Artifacts e Evidence metadata;
 - Findings;
-- Evidence metadata;
 - Coverage;
 - Diagnoses;
 - Provider statuses.
@@ -1318,9 +1349,11 @@ Shutdown seguro + scan marcado incomplete.
 12. Reports.
 13. YARA.
 14. Premium baseline.
-15. DB.
-16. Diagnoses.
-17. Remote.
+15. Incident Bundle/archive + PHP genérico.
+16. Evidence temporal + adapters de logs locais.
+17. Diagnoses.
+18. DB/application state.
+19. Remote, somente pós-1.0.
 
 ## 9.5 Property-based tests
 
@@ -1749,7 +1782,7 @@ Vulnerabilidade conhecida é contexto, não prova de comprometimento.
 
 ### Decisão
 
-Fase 2.
+Pós-1.0, fora do caminho crítico forense local.
 
 Collector bounded deve conseguir:
 
@@ -1762,7 +1795,8 @@ Collector bounded deve conseguir:
 - cookie jar;
 - user-agent/referer profiles.
 
-Não virar browser automation completo no MVP.
+Não virar browser automation completo nem ser confundido com parsing de access
+logs já coletados.
 
 ## 11.14 LLM analysis
 
@@ -1927,7 +1961,9 @@ MVP completo quando:
 17. Exit codes documentados.
 18. Nenhuma escrita no target.
 
-DB pode entrar no `0.2/0.3`, porém deve existir antes de considerar a solução madura para incident response WordPress.
+DB entra na linha `0.6.0`, depois do fluxo local de arquivos, logs e correlação,
+e deve existir antes de considerar a solução madura para incident response
+WordPress.
 
 ## 13.3 Estrutura de repositório
 
@@ -1940,12 +1976,12 @@ wirs/
 ├── CONTRIBUTING.md
 ├── CHANGELOG.md
 ├── docs/
-│   ├── architecture.md
-│   ├── threat-model.md
-│   ├── rule-authoring.md
-│   ├── providers.md
-│   ├── reports.md
-│   ├── wordpress-adapter.md
+│   ├── ARCHITECTURE.md
+│   ├── ENTENDENDO-O-WIRS.md
+│   ├── providers/
+│   ├── future/
+│   ├── case-studies/
+│   ├── audits/
 │   └── adr/
 ├── src/wirs/
 │   ├── cli/
@@ -2345,6 +2381,7 @@ ADR-007 LLM fora do pipeline determinístico
 ADR-008 Symlink não seguido por padrão
 ADR-009 Safe WP-CLI mode sem bootstrap por padrão
 ADR-010 Provider failure degrada coverage
+ADR-011 Bundle forense local antes de remoto
 ```
 
 ---
@@ -3011,6 +3048,14 @@ Guardar:
 
 Canonical JSON deve separar `schema_version` de `scanner_version`.
 
+### WIRS-026 — Artifact canônico de scan completo
+
+**P0**
+
+Preservar Scan Manifest, Artifacts, Evidence metadata, Findings, Coverage,
+provider statuses e Diagnoses com referências resolvíveis. Secrets são
+redigidos na coleta; o serializer executa uma validação defensiva final.
+
 ---
 
 ## EPIC 3 — Artifact Reader, Hashing e Resource Control
@@ -3344,6 +3389,13 @@ Config associa path/component ao manifest/package confiável.
 
 **P2**
 
+### WIRS-086 — Integrar YARA ao scan local
+
+**P0**
+
+Provider/pack isolados só concluem a capacidade quando o `wirs scan` produz
+Findings, provider status e Coverage em sucesso, ausência, timeout e falha.
+
 ---
 
 ## EPIC 8 — Reporting e Redaction
@@ -3382,6 +3434,13 @@ Security:
 
 **P3**
 
+### WIRS-097 — PDF forense opcional
+
+**P2**
+
+Deriva do HTML/modelo canônico em renderer isolado, sem rede ou acesso arbitrário
+ao filesystem.
+
 ---
 
 ## EPIC 9 — Diagnosis e Correlation
@@ -3390,21 +3449,55 @@ Security:
 
 **P1**
 
+Placeholder horizontal não publicado; substituído pelo slice vertical
+WIRS-105 antes da implementação.
+
 ### WIRS-101 — Correlation engine v0
 
 **P1**
+
+Placeholder horizontal não publicado; a engine mínima entra em WIRS-105 e nas
+receitas WIRS-106/107.
 
 ### WIRS-102 — DX001–DX004
 
 **P1**
 
+Placeholder horizontal não publicado; substituído por WIRS-106/107, com nomes
+e critérios ligados às investigações que sustentam cada Diagnosis.
+
 ### WIRS-103 — Diagnosis renderer
 
 **P1**
 
+Placeholder horizontal não publicado; a view entra no HTML forense WIRS-095.
+
 ### WIRS-104 — Evidence graph export
 
 **P3**
+
+Mantido no backlog pós-1.0; não bloqueia correlação nem laudo.
+
+### WIRS-105 — Relações temporais e por entidade
+
+**P1**
+
+Mesma conta/path/Artifact e janela temporal são relações fortes. CIDR e família
+de User-Agent são pistas; nunca equivalem a identidade humana.
+
+### WIRS-106 — Diagnoses de credencial e webshell
+
+**P1**
+
+### WIRS-107 — Diagnoses de phishing, cloaking e backup exposto
+
+**P1**
+
+### WIRS-108 — Contexto offline de IP/CIDR/User-Agent
+
+**P2**
+
+GeoIP/ASN opcional usa base local com provenance; ausência degrada Coverage.
 
 ---
 
@@ -3494,37 +3587,35 @@ Debug não vaza secret.
 
 ---
 
-## EPIC 12 — Snapshot e Remote
+## EPIC 12 — Incident Bundle, Snapshot e Archive Local
 
-### WIRS-130 — Snapshot directory workflow
+### WIRS-130 — Incident Bundle local com manifesto
 
 **P1**
 
+- múltiplas fontes sob uma raiz local;
+- papéis, origem lógica, hash e trust state;
+- paths relativos seguros;
+- nenhuma autodescoberta da máquina.
+
 ### WIRS-131 — Archive target adapter
 
-**P2**
+**P1**
 
-### WIRS-132 — SSH abstraction
+- inventário/leitura sem extração no target;
+- limites de entries/bytes/depth;
+- traversal, drive/UNC e symlink entries rejeitados.
 
-**P2**
-
-### WIRS-133 — SFTP ArtifactSource
-
-**P2**
-
-### WIRS-134 — Remote stat/hash optimization
+### WIRS-135 — Snapshot/bundle integrity manifest
 
 **P2**
 
-### WIRS-135 — Snapshot integrity manifest
+Escopo incorporado ao slice vertical WIRS-130 antes da publicação de Issue;
+hash e trust state fazem parte do source manifest do Incident Bundle.
 
-**P2**
-
-### WIRS-136 — Remote WP-CLI provider
-
-**P2**
-
-Somente depois de remote command policy segura.
+Aquisição SSH/SFTP, otimização remota e remote WP-CLI foram removidos do caminho
+pré-1.0. Se voltarem, recebem IDs novos ou preservam WIRS-132/133/134/136 como
+trabalho pós-1.0, depois de policy remota própria.
 
 ---
 
@@ -3532,7 +3623,7 @@ Somente depois de remote command policy segura.
 
 ### WIRS-140 — PHP discovery
 
-**P3**
+**P1**
 
 ### WIRS-141 — Composer inventory
 
@@ -3558,25 +3649,28 @@ Somente depois de remote command policy segura.
 
 ## EPIC 14 — Runtime HTTP
 
+Backlog pós-1.0. As prioridades abaixo são relativas a essa expansão e não ao
+MVP forense local.
+
 ### WIRS-150 — HTTP collector
 
-**P2**
+**P3**
 
 ### WIRS-151 — Redirect chain
 
-**P2**
+**P3**
 
 ### WIRS-152 — External origin extraction
 
-**P2**
+**P3**
 
 ### WIRS-153 — Request profiles
 
-**P2**
+**P3**
 
 ### WIRS-154 — Runtime/filesystem correlation
 
-**P2**
+**P3**
 
 ### WIRS-155 — Browser/network provider
 
@@ -3607,6 +3701,45 @@ Somente depois de remote command policy segura.
 **P3**
 
 Invariante: IA não modifica fatos determinísticos.
+
+---
+
+## EPIC 16 — Evidência Temporal e Ingestão de Logs
+
+### WIRS-170 — Tracer de Evidence temporal em log local
+
+**P1**
+
+### WIRS-171 — Coverage temporal e gaps de retenção
+
+**P1**
+
+Regras:
+
+- arquivo de log é Artifact; registro parseado é Evidence;
+- `occurred_at` e `collected_at` permanecem distintos;
+- parser loss/rotação/gap degradam Coverage;
+- processamento streaming/bounded;
+- nenhum conceito de vendor no core.
+
+---
+
+## EPIC 17 — Adapter de Hospedagem Local
+
+### WIRS-180 — cPanel File Manager em Evidence temporal
+
+**P1**
+
+### WIRS-181 — cPanel auth e sessões em Evidence temporal
+
+**P1**
+
+### WIRS-182 — Web server e PHP logs locais
+
+**P1**
+
+Somente logs já acessíveis no Incident Bundle. Collectors não acessam rede,
+executam código do alvo nem classificam ação observada como intenção maliciosa.
 
 ---
 
@@ -3661,52 +3794,51 @@ Esta é a primeira versão operacionalmente útil.
 - operator baselines;
 - ZIP/package baseline;
 - premium themes/plugins;
-- YARA;
+- YARA integrado ao `scan` com Coverage;
+- artifact canônico completo (Evidence/provider status/referências);
 - Markdown report;
 - benchmark;
 - stronger redaction.
 
-## Fase D — Application State / 0.3.0
+## Fase D — Entradas Forenses Locais / 0.3.0
+
+- Incident Bundle local com manifesto;
+- archive/snapshot local sem extração insegura;
+- primeiro adapter PHP genérico e zonas estáticas;
+- profile `soft` validado em fontes grandes;
+- nenhuma dependência de SSH/SFTP ou API online.
+
+## Fase E — Evidência Temporal de Hospedagem / 0.4.0
+
+- Evidence temporal e Collector seam genérico;
+- Coverage de parsing, rotação e retenção;
+- adapters locais de cPanel access/login/session;
+- access logs de web server e PHP error logs;
+- relação entre paths observados e Artifacts locais.
+
+## Fase F — Correlação e Laudo Forense / 0.5.0
+
+- relações por Artifact/path/conta/tempo;
+- Diagnoses de credencial, webshell, phishing, cloaking e backup exposto;
+- contexto IP/CIDR/User-Agent offline e opcional;
+- HTML forense self-contained;
+- PDF opcional em renderer isolado.
+
+## Fase G — Application State WordPress / 0.6.0
 
 - DB IOC search;
 - selected config;
 - MU-plugin enhancements;
 - cron;
 - privileged users quando seguro;
-- diagnoses iniciais.
+- correlação com Evidence temporal.
 
-## Fase E — External Ecosystem / 0.4.0
+## Fase H — External Ecosystem / 0.7.0
 
 - Wordfence CLI;
 - Semgrep opcional;
 - vulnerability provider interface;
 - analyzer sandbox.
-
-## Fase F — Snapshot/Remote / 0.5.0
-
-- archive/snapshot;
-- SFTP/SSH read-only;
-- snapshot manifest;
-- remote policy.
-
-Objetivo: não depender de instalação do WIRS no host alvo.
-
-## Fase G — Runtime / 0.6.0
-
-- HTTP collector;
-- redirect/headers/hash;
-- origins;
-- request variants;
-- runtime correlation.
-
-## Fase H — PHP Generic / 0.7.0
-
-- generic PHP adapter;
-- Composer;
-- PHP config;
-- generic policies.
-
-Aqui o branding pode começar a migrar de “WordPress Incident Response Scanner” para plataforma genérica, mantendo WordPress como adapter maduro.
 
 ## Fase I — Product Hardening / 0.8–0.9
 
@@ -3733,7 +3865,8 @@ Critérios:
 - custom baseline;
 - YARA/external provider;
 - DB/application evidence;
-- snapshot/remote workflow;
+- Incident Bundle + archive/snapshot local;
+- Evidence temporal de logs locais + Diagnoses;
 - security model documentado;
 - robust tests;
 - reproducible reports;
@@ -3741,16 +3874,19 @@ Critérios:
 
 ## Pós-1.0
 
+- aquisição SSH/SFTP e remote WP-CLI;
+- runtime HTTP ativo;
 - Laravel;
 - Joomla/Drupal conforme demanda;
 - Linux host collectors;
 - containers/Kubernetes;
 - evidence graph;
-- web control plane;
+- web control plane e agentes residentes;
 - fleet scanning;
 - signed org policies;
 - LLM analyst;
-- remediation como boundary separado.
+- remediation como boundary separado;
+- streaming/SIEM e resposta automática, se demanda real justificar.
 
 ---
 
@@ -4645,7 +4781,7 @@ scan_mode: read-only
 raw_evidence_storage: false
 llm: disabled by default
 remediation: out-of-scope
-remote: post-first-MVP
+remote: post-1.0
 ```
 
 Biblioteca específica pode mudar. Os boundaries de segurança/domínio não devem mudar sem ADR.

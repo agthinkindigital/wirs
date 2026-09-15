@@ -1,92 +1,94 @@
 # Protocolo de agentes do WIRS
 
+O WIRS é um scanner read-only WordPress-first para reduzir milhares de arquivos
+a uma shortlist reproduzível e explicável. Leia [`docs/PRODUCT-CHARTER.md`](docs/PRODUCT-CHARTER.md)
+antes de planejar; ele é a fonte de identidade do produto.
+
 ## Leitura obrigatória
 
-Antes de analisar ou alterar o projeto, leia nesta ordem:
-
 1. `AGENTS.md`
-2. `CONTEXT.md`
-3. `WIRS_MASTER_SPEC_PT-BR.md` (especificação viva — autoridade de produto e arquitetura)
-4. `docs/ARCHITECTURE.md` (como as peças se encaixam)
-5. `docs/adr/` aplicáveis
-5. GitHub Issues aplicáveis
-6. somente então, código, configuração e testes
+2. `docs/PRODUCT-CHARTER.md`
+3. `CONTEXT.md`
+4. `WIRS_MASTER_SPEC_PT-BR.md`
+5. `docs/ARCHITECTURE.md`
+6. ADRs aplicáveis
+7. GitHub Issues aplicáveis
+8. código, configuração e testes
 
-Se um arquivo estiver ausente ou contradisser o código, registre a divergência.
-Ordem de autoridade: código testado < docs do módulo < ADRs < `WIRS_MASTER_SPEC_PT-BR.md`.
+## Autoridade por assunto
 
-## Regras obrigatórias (invariantes arquiteturais)
+| Pergunta | Fonte |
+|---|---|
+| Identidade, limites e ordem de expansão | `docs/PRODUCT-CHARTER.md` |
+| Vocabulário | `CONTEXT.md` |
+| Requisitos e contratos | `WIRS_MASTER_SPEC_PT-BR.md` |
+| Seams e fluxo | `docs/ARCHITECTURE.md` |
+| Motivo de decisão | ADR aceito aplicável |
+| O que funciona | código + testes reproduzíveis |
+| O que vem depois | `ORCHESTRATOR-ROADMAP.md` |
+| Escopo e aceite | Epic/Issue |
+| Estado momentâneo | `ESTADO_ORQUESTRATOR.md` |
+| Detecção para analistas | `docs/ENTENDENDO-O-WIRS.md` |
+| Provider externo | `docs/providers/` |
+| Visão não comprometida | `docs/future/` |
+| Lições de incidente | `docs/case-studies/` |
 
-1. `scan` nunca escreve no target.
-2. Finding não existe sem Evidence ou provenance explícita de provider.
-3. Provider ausente nunca vira Coverage completo.
-4. Conceito de plataforma (`wp-content`, `artisan`, etc.) não vaza para o domain genérico.
-5. Detector não executa código do alvo (`include`/`require`/import dinâmico proibidos).
-6. Dado controlado pelo target nunca é interpolado em shell command (`shell=False`, argv).
-7. Componente sem baseline é `UNVERIFIED`, nunca "malicioso" por definição.
-8. Output de IA não é Evidence determinística.
+Se fontes do mesmo assunto divergirem, registre o conflito e resolva-o
+explicitamente. O código testado prova implementação; não autoriza alterar a
+North Star sem decisão documental.
+
+## Invariantes
+
+1. `scan` nunca escreve no Target.
+2. Finding exige Evidence ou provenance explícita de provider.
+3. Provider ausente nunca vira Coverage `COMPLETE`.
+4. Semântica de plataforma não vaza para `domain/`.
+5. Detector não executa código do Target.
+6. Dados do Target não são interpolados em shell; use `shell=False` e argv.
+7. Componente sem baseline é `UNVERIFIED`, não malicioso por definição.
+8. IA não produz Evidence determinística.
 9. Symlink não é seguido fora do root por padrão.
 10. Report não expõe secrets conhecidos.
 11. Remediation externa não participa de `scan`.
-12. Detector não controla concorrência ilimitada (scheduler central decide).
-13. Coverage gap é sempre visível.
+12. Detector não cria concorrência ilimitada.
+13. Gaps de Coverage são visíveis.
 14. Dado canônico é independente da UI.
 
-## Domínio
-
-- `domain/` usa apenas stdlib e value objects. Proibido importar `wordpress`,
-  `yara`, `wordfence`, `rich`, `mysql`, `typer` a partir de `domain/`.
-- `application/` depende de `domain/` + `ports/` apenas.
-- `infrastructure/` e `providers/` implementam ports.
-- `adapters/wordpress/` adiciona semântica de plataforma sem contaminar o core.
-- `reporting/` consome o modelo em modo read-only.
-- CLI é composition root.
+Detalhes técnicos e de fluxo: [`docs/agents/architecture.md`](docs/agents/architecture.md)
+e [`docs/agents/workflow.md`](docs/agents/workflow.md).
 
 ## Segurança de output
 
-Todo conteúdo do alvo é input hostil: escapar HTML, neutralizar ANSI,
-tratar paths como dados inseguros, redigir secrets na fronteira de coleta
-(não só na UI).
-
-## GitHub e planejamento
-
-- GitHub Issues são a fonte persistente de escopo, dependências e aceite.
-- `ORCHESTRATOR-ROADMAP.md` resume Epics com IDs estáveis (`E##`) e links diretos.
-- `ESTADO_ORQUESTRATOR.md` é apenas a visão operacional da DAG.
-- Uma Epic só é `done` quando código, testes, documentação e evidência concordam.
-- Ao final de uma DAG, execute a revisão de QA prevista pelo Orchestrator.
+Todo conteúdo do Target é input hostil: escape HTML, neutralize ANSI, trate
+paths como dados inseguros e redija secrets na fronteira de coleta, não apenas
+na UI.
 
 ## Skills
 
-Mapa de todas as skills e finalidade no projeto: `SKILL_MAP.md`.
+Mapa de skills e desambiguação: [`SKILL_MAP.md`](SKILL_MAP.md). Use a skill
+especializada quando a tarefa corresponder ao contrato dela.
 
-Use a skill especializada quando a tarefa corresponder ao seu contrato.
-Norma anti-equívoco: se duas skills parecem servir, leia a seção
-"Desambiguação" do `SKILL_MAP.md` e os gatilhos da tabela do núcleo
-ANTES de invocar — nome sugere, contrato decide.
+## Gate anti-deriva
 
-- `orchestrator`: governança, roadmap, Issues, execução e QA.
-- `setup-skills`: artefatos de governança.
-- `roadmap`: Epics e links GitHub.
-- `grill-with-docs` ou `grill-feature-with-docs`: linguagem e decisões antes de implementar.
-- `grill-me`: interrogatório de plano/design até entendimento compartilhado.
-- `to-issues`: decomposição em Issues rastreáveis.
-- `tdd`: implementação test-first (vertical slices, nunca horizontal slices).
-- `diagnose`: bugs duros e regressões.
-- `secure-e2e`: validação E2E e de segurança (negative testing).
-- `qa-analyst`: verificação final obrigatória da DAG.
-- `query-docs`: contrato atual de bibliotecas externas e providers.
-- `improve-codebase-architecture`: melhoria arquitetural orientada ao domínio.
-- `ui-ux-pro-max` + `design-system`: CLI, terminal, reports (referência OWASP ZAP).
-- `scaffold-mvp`: bootstrap de projeto novo.
-- `prototype`: protótipo descartável para validar decisão.
+Antes de criar Epic/Issue, responda:
 
-## Critério de conclusão
+1. Isso encontra ou prioriza arquivo/código suspeito?
+2. Melhora Integrity, Evidence, Finding, Coverage, Diagnosis ou report?
+3. É requisito do scanner local?
+4. Pode ser provider/adapter opcional?
+5. Está bloqueando capacidade central sem necessidade?
+6. Foi generalizado além de um caso real?
+7. Funciona sem rede, daemon ou infra adicional?
+8. Qual Horizonte do Charter?
+9. O que ocorre quando não está disponível?
+10. Coverage representa essa ausência honestamente?
 
-Uma tarefa relevante deve registrar objetivo, arquivos afetados, riscos,
-verificações executadas, pendências e atualizações de documentação. Não declare
-testes, comandos ou comportamentos que não possam ser reproduzidos no checkout atual.
-Toda entrega ligada a detecção ganha uma seção em `docs/ENTENDENDO-O-WIRS.md`
-(o quê o scan busca, como busca e por quê foi desenhado assim) na linguagem
-das revisões. Mecânica interna (tooling, plumbing, implementação) mora no
-código e nos ADRs, não nesse documento.
+Se a proposta for produto lateral, mova-a para `docs/future/` ou para horizonte
+posterior. Toda Epic nova deve declarar Horizonte, Capacidade principal,
+upstream documental, não-objetivos e exit condition.
+
+## Conclusão de tarefa
+
+Registre objetivo, arquivos afetados, riscos, verificações, pendências e docs
+atualizadas. Não declare testes ou comportamentos que não possam ser repetidos
+no checkout. Use TDD em slices verticais e QA ao fechar cada DAG.

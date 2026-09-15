@@ -310,7 +310,7 @@ Porque IOC é memória institucional: o que um incidente te ensinou vira
 tipo validado evita a armadilha clássica — procurar hash com 63 caracteres e
 concluir "limpo".
 
-**Verificar:** `sessao-iocs.txt` da sessão real · **Issue:** #36.
+**Verificar:** `wirs scan <target> --ioc <arquivo-kind:value>` com fixture sintética · **Issue:** #36.
 
 ---
 
@@ -411,8 +411,8 @@ conveniência".
 ### O que o scan busca (e deixa de buscar de propósito)
 
 Num WordPress íntegro, milhares de arquivos oficiais contêm `copy(`, `$var(`
-e outros padrões que as heurísticas acusariam — ~200 findings falsos num core
-limpo, como a sessão real provou. A resposta: **arquivo verificado contra
+e outros padrões que as heurísticas acusariam em volume alto. A resposta:
+**arquivo verificado contra
 baseline confiável não recebe heurística**. O provider declara o escopo
 verificado, e o orquestrador suprime detecção ali — menos nos arquivos que o
 próprio provider apontou como divergentes (a correlação "mismatch + sinal no
@@ -422,12 +422,12 @@ mesmo arquivo" é justamente a hipótese mais forte que existe).
 
 Porque acusar código oficial é provar que a ferramenta não entende confiança:
 se o upstream absolveu, heurística não recorre. E porque a supressão é
-contada e visível (`3338 suprimidos por baseline confiável`) — absolvição
+contada e visível — absolvição
 silenciosa seria outro falso negativo em potencial. Para você: findings
 zerados *com* baseline verificado valem ouro; sem baseline, valem uma
 investigação.
 
-**Verificar:** sessão real (cru → 0 findings; adulterado → 2) · **Issue:** #45.
+**Verificar:** fixtures pristine/adulterado, com supressões visíveis · **Issue:** #45.
 
 ---
 
@@ -662,7 +662,7 @@ com o motivo nomeado — nunca erro silencioso.
 
 ## #61 — Assinaturas alugadas: YARA como provider opcional (WIRS-081)
 
-### O que o scan busca
+### O que o provider busca
 
 O que as heurísticas não sabem nomear: assinaturas YARA descrevem malware
 conhecido por padrão de bytes ("webshell que decodifica e executa"), e o
@@ -671,9 +671,9 @@ da comunidade, em vez de reinventar um corpus concorrente.
 
 ### Por que foi desenhado assim
 
-- **Opcional de verdade**: sem `yara-python`, o scan continua e o coverage
-  marca `UNAVAILABLE` — assinatura é reforço, nunca pré-requisito. Ferramenta
-  que aborta sem o plugin opcional está blefando sobre "opcional".
+- **Opcional de verdade**: o provider distingue ausência de `yara-python`,
+  timeout e falha. A integração com `scan` e Coverage é o próximo slice (#66);
+  até lá, essas garantias são verificadas no boundary do analyzer.
 - **Bytes do reader, nunca path direto**: o YARA recebe o conteúdo já lido
   sob budget — o analyzer não abre arquivo por conta própria, então limite
   de tamanho e recusa de especiais continuam valendo.
@@ -692,12 +692,15 @@ da comunidade, em vez de reinventar um corpus concorrente.
 
 ## #62 — Assinaturas da casa: pack YARA builtin (WIRS-082)
 
-### O que o scan busca
+### O que o pack descreve
 
 Padrões de técnicas conhecidas em PHP: `eval` combinado com cadeia de
 decoding (webshell-like) e `include` com variável de input. Regras com
 nome, descrição, severidade e condição de tamanho — para o match dizer
 *o quê* casou, não só "casou algo".
+
+O pack e o provider estão implementados; a execução automática pelo `scan`
+permanece pendente em #66.
 
 ### Por que foi desenhado assim
 

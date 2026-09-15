@@ -1,8 +1,8 @@
 # Estado do Orquestrador — WIRS
 
-**Data:** 2026-09-08
-**Branch:** `main` (repo `agthinkindigital/wirs`, público, criado via `gh`)
-**Framework:** skills locais (orchestrator, setup-skills, tdd, qa-analyst, ui-ux-pro-max, ...)
+**Data:** 2026-09-15
+**Branch:** `develop` (repo `agthinkindigital/wirs`, público)
+**Framework:** skills locais; clone remoto do framework não foi encontrado neste checkout.
 
 ---
 
@@ -19,10 +19,13 @@
 - [x] `AGENTS.md` (protocolo WIRS + 14 invariantes)
 - [x] `CONTEXT.md` (glossário: core, confiança, baselines, zones WP)
 - [x] `docs/agents/README.md` (domínio, tracker, triage)
-- [x] `docs/adr/` (ADR-001..010 conforme Seção 14.13 do spec)
-- [x] `ORCHESTRATOR-ROADMAP.md` (E00–E15)
-- [ ] Issues GitHub via `/to-issues` (após scaffold)
-- [ ] Links Epic→Issue no roadmap (após `/to-issues`)
+- [x] `docs/adr/` (ADR-001..011 conforme Seção 14.13 do spec)
+- [x] `ORCHESTRATOR-ROADMAP.md` (E00–E17)
+- [x] Issues GitHub via `/to-issues`
+- [x] Links Epic→Issue no roadmap
+- [x] `docs/PRODUCT-CHARTER.md` e `docs/DOCUMENTATION-MATRIX.md`
+- [x] Auditoria de realinhamento em `docs/audits/PRODUCT-REALIGNMENT-2026-09.md`
+- [x] `docs/agents/architecture.md` e `docs/agents/workflow.md`
 
 ## Fase 2 — To-issues FT-1 (CONCLUÍDA)
 
@@ -37,41 +40,42 @@ DAG atual: **v0.1.0 publicada** (tag + Release com artefatos).
 FT-4 completo: #48–#52 (done) → **QA da DAG APROVADA** (13/13 checks E2E +
 suite 150 passed + gates; 2 defeitos achados e corrigidos com regressão).
 Fase C E04: #56–58 (done) → **E04 completo** (8/8 slices + QA FT-4 aprovada).
-UX sessão real: #53 (done), #54 (done, wizard), #55 (done) — trilogia UX completa.
+UX da sessão de validação: #53 (done), #54 (done, wizard), #55 (done) — trilogia UX completa.
 
-## Release 0.1.0 (2026-09-10, em andamento)
+## Release 0.1.0 (2026-09-10, publicada)
 
 - Docs sincronizados (README/ROADMAP/ESTADO/CHANGELOG), acceptance marcado nas
   30 slices + 8 Epics, QA completo verde (137 passed), E2E Windows local +
   Linux via CI, golden regenerado (só versão), exemplo reproduzível em
   docs/examples/scan-example.json.
 
-## Sessão site real (2026-09-09, somente leitura, dados anonimizados)
+## Lições da validação operacional (2026-09-09, somente leitura)
 
-- Full-tree (~5 GB / ~70 mil arquivos) **não concluiu em 30 min**: sem progresso
-  ao vivo, sem política de arquivo grande e com dupla leitura por arquivo, o
+- A varredura de uma árvore grande **não concluiu sob o limite operacional**:
+  sem progresso ao vivo, política de arquivo grande e leitura compartilhada, o
   scan não escala — evidência para WIRS-034 (large-file) e WIRS-113/115
   (progresso), já no roadmap.
-- Escopos funcionaram: uploads (~700 MB) → 0 findings, exit 0; arquivos custom
-  em `wp-content/` → zonas corretas, sem policy/heurística.
-- **Core via WP-CLI direto: 1 warning** — `readme.html` ausente (hardening
-  comum, benigno). Resto íntegro.
-- **Policy em cache legítimo**: templates compilados em `uploads/cache`
+- Zonas de conteúdo e componentes customizados foram classificadas corretamente,
+  sem aplicar policy/heurística fora do escopo.
+- **Core via WP-CLI direto:** arquivo oficial ausente gerou warning de
+  hardening, sem indicar comprometimento.
+- **Policy em cache legítimo**: templates compilados em uma zona regenerável
   disparam em massa — caso textbook para allowlist de cache, não para
   silenciar a regra (e origem da política de scan de cache em etapa separada).
 - **MU-plugins desconhecidos**: auto-executam; origem sempre a confirmar
   manualmente (caso para WIRS-067).
-- **Plugins majoritariamente premium** → UNVERIFIED por desenho, mas sempre
+- **Componentes premium** → UNVERIFIED por desenho, mas sempre
   escaneados por heurísticas/IOC — nunca pulados (origem da regra E04
   "premium nunca é skip").
 - Nada foi escrito no alvo em nenhum momento.
 
-## Sessão WP real (2026-09-09)
+## Validação WordPress local (2026-09-09)
 
-- WP oficial pristino + WP-CLI 2.12.0: **0 findings**, 3338 suprimidos,
-  exit 0. Plugin sem wp-config: FAILED honesto (nada a verificar sem config).
-- Adulterado (version.php + evil.php): **2 findings** (MISMATCH critical +
-  UNEXPECTED medium), exit 1. Heurísticas só nos divergentes.
+- Instalação oficial pristina: **0 findings**, com supressões de baseline
+  visíveis, exit 0. Plugin sem configuração necessária: FAILED honesto (nada a
+  verificar sem config).
+- Fixture adulterada: divergência de integridade e arquivo inesperado geram
+  Findings, exit 1. Heurísticas só nos divergentes.
 - Correções que a sessão forçou: contratos reais do WP-CLI (#33/#34),
   supressão por arquivo (não tudo-ou-nada), `.cmd` no Windows (#46).
 
@@ -124,8 +128,53 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - Aceites das 13 slices conferidos um a um contra as Issues (evidências nos comentários de fechamento).
 - Ressalvas: (1) testes symlink/fifo não executados neste host — CI Linux cobre; (2) QA formal de Epic (`/qa-analyst` completo com plano) fica para o fechamento da Fase B.
 
+## Auditoria de realinhamento (2026-09-15)
+
+- North Star consolidada: scanner read-only de segurança, integridade e código
+  suspeito para aplicações web, WordPress-first, com shortlist auditável.
+- Charter, matriz documental, relatório de auditoria e instruções progressivas
+  de arquitetura/fluxo foram adicionados.
+- Material de visão foi movido para `docs/future/`; material ANFAMOTO foi movido
+  para `docs/case-studies/`.
+- Issues/Epics foram sincronizadas: YARA (#66) P0 após #65; PHP Generic (#70)
+  sem dependência de Bundle; Diagnosis (#77) file-centric; HTML (#80)
+  filesystem-only; logs/hospedagem (#63–#75) P2/Horizonte C.
+- Nenhuma Epic pai foi fechada e nenhuma nova feature foi implementada nesta
+  auditoria.
+
 ## Próximos passos
 
-1. TDD #18 (WIRS-002 boundaries + architecture test) na `develop`.
-2. Seguir a DAG em slices verticais (RED→GREEN→refactor), uma issue por vez.
-3. QA (`/qa-analyst`) ao fechar cada Epic.
+1. #65: completar artifact canônico com Artifacts, Evidence, refs resolvíveis e
+   provider status.
+2. #82: fechar o hardening do destino `--report` em ambiente com symlink.
+3. #66: integrar YARA ao `scan` com Coverage e provenance honestos.
+4. #67 + regras restantes: content analysis bounded por Artifact.
+5. #77: Diagnosis file-centric; depois #80 HTML filesystem-only.
+6. #70: PHP Generic local; #68–#69 ficam no Horizonte B.
+7. #71–#79 e #81 permanecem posteriores; QA (`/qa-analyst`) ao fechar cada DAG.
+
+## Revisão de incidente real (2026-09-14)
+
+- Decisão: WIRS permanece scanner forense local/offline até 1.0. Analisa
+  somente pastas, logs, snapshots e archives já acessíveis na máquina.
+- Entrada escolhida: Incident Bundle local com manifesto versionado.
+- Removidos do caminho pré-1.0: SSH/SFTP, APIs online, agents residentes,
+  streaming/SIEM, active HTTP e resposta automática.
+- Novos Epics: E16/#63 (Evidence temporal/logs) e E17/#64 (hospedagem local).
+- Slices #65–81 publicadas sem dados do cliente; ADR-011 registra a decisão.
+- Governança documental: `docs/agents/README.md` aponta para os guias separados
+  de arquitetura e workflow, mantendo tracker/triage/domínio no índice.
+
+## Auditoria de hardening (2026-09-15)
+
+- Encontrado bypass P0 da garantia "scan nunca escreve no target": um destino
+  `--report` symlink dentro do target podia resolver para fora antes da rejeição.
+- Correção local aplicada em `src/wirs/cli/app.py`: destinos que são symlink são
+  recusados antes de `resolve()`/writer atômico.
+- Regressão adicionada em `tests/integration/test_scan_report.py`; foi `skipped`
+  neste Windows por falta de privilégio para criar symlink. Deve executar no CI
+  Linux.
+- Rastreabilidade: #82 (WIRS-123), aberto e não concluído.
+- Divergência corrigida no roadmap: #65/WIRS-026 continua aberto; o JSON atual
+  contém findings e coverage, mas ainda não o artifact canônico completo com
+  artifacts, evidences e status dos providers.

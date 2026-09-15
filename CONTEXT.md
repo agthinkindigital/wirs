@@ -8,12 +8,21 @@ documentos do módulo.
 
 **Scan**: uma execução do scanner sobre um Target.
 
-**Target**: o que está sendo analisado (diretório local, snapshot, archive; futuro: SSH/SFTP, container).
+**Target**: o que está sendo analisado (diretório local, Incident Bundle,
+snapshot ou archive; SSH/SFTP somente pós-1.0).
+
+**Incident Bundle**: coleção local e somente leitura que reúne uma ou mais
+fontes de uma investigação (webroots, logs, snapshots e archives) sob um
+manifesto versionado. O manifesto preserva papel, origem e integridade de cada
+fonte; o WIRS não precisa autodescobrir a máquina nem acessar rede.
 
 **Artifact**: objeto lógico analisável (arquivo, diretório, symlink, registro de banco,
 entrada de configuração, evento de cron, conta, resposta HTTP, componente, saída de analyzer).
 
-**Evidence**: observação imutável criada por collector ou detector, com provenance e estado de redaction.
+**Evidence**: observação imutável criada por collector ou detector, com
+provenance e estado de redaction. Quando representa um evento de log,
+`occurred_at` é o horário registrado pela fonte e `collected_at` é o horário em
+que o WIRS o coletou; um não substitui o outro.
 
 **Finding**: afirmação normalizada de segurança/integridade sustentada por Evidence
 (rule ID, severidade, confiança, categoria, atributos).
@@ -31,6 +40,10 @@ package confiável do operador, manifest assinado, golden snapshot).
 
 **Coverage**: abrangência real da análise. Estados: `COMPLETE`, `PARTIAL`,
 `SKIPPED`, `UNAVAILABLE`, `FAILED`, `NOT_APPLICABLE`.
+
+**Actor**: entidade ou conjunto de identificadores que uma fonte associa a uma
+ação (conta, IP, sessão, User-Agent). Compartilhar IP, CIDR ou User-Agent é pista
+de relação, não prova de que eventos vieram da mesma pessoa.
 
 **Unverified**: sem baseline suficiente para verificação de integridade.
 
