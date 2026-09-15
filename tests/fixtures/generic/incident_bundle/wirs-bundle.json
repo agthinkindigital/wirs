@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "source_ref": "webroot",
+      "path": "sources/webroot",
+      "role": "webroot",
+      "origin": "operator-export",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "trust": "TRUSTED_OPERATOR"
+    },
+    {
+      "source_ref": "logs",
+      "path": "sources/logs",
+      "role": "log",
+      "origin": "panel-export",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "trust": "UNVERIFIED_REFERENCE"
+    }
+  ]
+}

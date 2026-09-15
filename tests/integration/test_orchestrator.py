@@ -401,3 +401,74 @@ def test_divergente_continua_escrutinado(tmp_path) -> None:
         if f.artifact_ref == a.id and f.rule_id.startswith("PHP.")
     }
     assert refs == {"wp-includes/bad.php"}  # ok.php absolvido, sem heurística
+
+
+def test_diagnosis_file_centric_chega_ao_scan_result(tmp_path) -> None:
+    from wirs.detectors.builtin import PhpHeuristicsDetector
+    from wirs.domain import FileIntegrity, IntegrityState
+    from wirs.ports.checksum import ComponentIntegrity
+
+    (tmp_path / "wp-includes").mkdir()
+    (tmp_path / "wp-includes" / "bad.php").write_bytes(b"<?php eval($x);")
+
+    class CoreParcial:
+        id = "fake-baseline"
+        platforms = ()
+
+        def verify(self, target):
+            return [
+                ComponentIntegrity(
+                    provider_id="fake-baseline",
+                    provider_version="1",
+                    component="wordpress-core",
+                    files=(
+                        FileIntegrity(path="wp-includes/bad.php", state=IntegrityState.MISMATCH),
+                    ),
+                    covers=("wp-includes/",),
+                )
+            ]
+
+    class SignatureDetector:
+        id = "signature"
+        wants_stream = False
+
+        def analyze(self, artifact, zone, head, chunks):
+            if artifact.path.relative == "wp-includes/bad.php":
+                from wirs.domain import Confidence, ConfidenceClass, Severity
+                from wirs.ports.detection import ProposedFinding
+
+                return (
+                    ProposedFinding(
+                        rule_id="MALWARE.SIGNATURE",
+                        title="assinatura de malware",
+                        category="signature",
+                        severity=Severity.HIGH,
+                        confidence=Confidence(ConfidenceClass.HIGH),
+                        evidence_kind="signature_match",
+                        evidence_content={"rule": "MALWARE"},
+                    ),
+                )
+            return ()
+
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[SignatureDetector(), PhpHeuristicsDetector()],
+        integrity=[CoreParcial()],
+    )
+
+    assert len(result.diagnoses) == 1
+    assert result.diagnoses[0].rule_id == "DX001"
+    assert result.diagnoses[0].artifact_ref in {a.id for a in result.artifacts}
+
+    from wirs.reporting.canonical import CanonicalReport
+
+    report = CanonicalReport.from_scan_result(result)
+    diagnosis = report.to_dict()["diagnoses"][0]
+    assert diagnosis["basis"] == sorted(diagnosis["basis"])
+    assert set(diagnosis["basis"]) <= {finding.id for finding in result.findings}
+    assert diagnosis["artifact_ref"] == result.diagnoses[0].artifact_ref

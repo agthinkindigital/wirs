@@ -6,6 +6,7 @@ Proibido importar wordpress, yara, wordfence, rich, mysql, typer a partir daqui.
 from wirs.domain.artifact import Artifact, ArtifactKind, ArtifactMetadata
 from wirs.domain.baseline import BaselineManifest, BaselineTrust, compare_baseline
 from wirs.domain.coverage import CoverageEntry, CoverageState
+from wirs.domain.diagnosis import Diagnosis
 from wirs.domain.errors import (
     BudgetExceeded,
     ProviderError,
@@ -38,6 +39,7 @@ __all__ = [
     "ConfidenceClass",
     "CoverageEntry",
     "CoverageState",
+    "Diagnosis",
     "Evidence",
     "FileIntegrity",
     "Finding",

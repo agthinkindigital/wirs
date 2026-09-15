@@ -276,6 +276,30 @@ def test_referencia_quebrada_falha_antes_da_serializacao() -> None:
         report.to_json()
 
 
+def test_diagnosis_orfa_falha_antes_da_serializacao() -> None:
+    from wirs.domain import Diagnosis
+
+    report = CanonicalReport(
+        scan_id="s",
+        target_root="/target",
+        profile="soft",
+        diagnoses=(
+            Diagnosis(
+                rule_id="DX001",
+                title="diagnosis",
+                summary="summary",
+                artifact_ref="art_missing",
+                confidence=ConfidenceClass.HIGH,
+                basis=("fnd_missing",),
+                hypothesis="hypothesis",
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="Diagnosis referencia Artifact inexistente"):
+        report.to_json()
+
+
 def test_serializacao_aplica_redaction_final_em_registros() -> None:
     artifact = Artifact(
         kind=ArtifactKind.FILE,

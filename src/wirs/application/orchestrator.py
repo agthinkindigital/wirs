@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 
 from wirs import __version__ as scanner_version
@@ -22,6 +22,7 @@ from wirs.domain import (
     ConfidenceClass,
     CoverageEntry,
     CoverageState,
+    Diagnosis,
     Evidence,
     Finding,
     IntegrityState,
@@ -33,6 +34,7 @@ from wirs.domain import (
     redact_mapping,
     redact_text,
 )
+from wirs.domain.diagnosis import correlate_diagnoses
 from wirs.domain.errors import BudgetExceeded, ProviderError, ProviderUnavailable, ReadCancelled
 from wirs.ports import PlatformAdapter, PlatformDiscovery
 from wirs.ports.analysis import AnalyzerResult, ExternalAnalyzer
@@ -85,6 +87,9 @@ class ScanResult:
     findings: tuple[Finding, ...] = ()
     evidence: tuple[Evidence, ...] = ()
     provider_runs: tuple[ProviderRun, ...] = ()
+    diagnoses: tuple[Diagnosis, ...] = ()
+    target_kind: str = "local_directory"
+    source_manifest: Mapping[str, object] | None = None
 
 
 def _read_head(
@@ -673,6 +678,23 @@ def run_scan(
         *an_coverage,
     )
     emit(ProgressEvent(phase="done", current=len(all_findings), total=len(files)))
+    normalized_findings: list[Finding] = []
+    artifact_by_path = {
+        (artifact.source_ref, artifact.path.relative): artifact for artifact in artifacts
+    }
+    for finding in all_findings:
+        finding_artifact = artifact_by_path.get(
+            (
+                str(finding.attributes.get("source_ref", "src_primary")),
+                str(finding.attributes.get("path", finding.artifact_ref)),
+            )
+        )
+        if finding_artifact is not None and finding.artifact_ref != finding_artifact.id:
+            finding = replace(finding, artifact_ref=finding_artifact.id, id="")
+        normalized_findings.append(finding)
+    diagnoses = correlate_diagnoses(
+        artifacts=artifacts, findings=normalized_findings, evidence=all_evidence
+    )
     return ScanResult(
         scan_id=sid,
         target_root=str(target.root),
@@ -682,7 +704,14 @@ def run_scan(
         discovery=found,
         zones=MappingProxyType(zones),
         coverage=coverage,
-        findings=tuple(all_findings),
+        findings=tuple(normalized_findings),
         evidence=tuple(all_evidence),
         provider_runs=tuple(provider_runs),
+        diagnoses=diagnoses,
+        target_kind=target.kind.value,
+        source_manifest=(
+            target.metadata.get("source_manifest")
+            if isinstance(target.metadata.get("source_manifest"), Mapping)
+            else None
+        ),
     )

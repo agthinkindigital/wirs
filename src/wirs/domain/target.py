@@ -17,6 +17,7 @@ class TargetKind(Enum):
     LOCAL_DIRECTORY = "local_directory"
     SNAPSHOT_DIRECTORY = "snapshot_directory"
     ARCHIVE = "archive"
+    INCIDENT_BUNDLE = "incident_bundle"
 
 
 def _target_id(kind: TargetKind, root: Path) -> str:

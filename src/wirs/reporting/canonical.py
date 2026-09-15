@@ -13,6 +13,7 @@ from wirs import __version__ as scanner_version
 from wirs.domain import (
     Artifact,
     CoverageEntry,
+    Diagnosis,
     Evidence,
     Finding,
     ProviderRun,
@@ -26,9 +27,8 @@ if TYPE_CHECKING:
 SCHEMA_VERSION = "2.0"
 
 
-def _diagnosis_key(item: Mapping[str, Any]) -> str:
-    identity = item.get("id", item.get("diagnosis_id"))
-    return str(identity) if identity is not None else json.dumps(dict(item), sort_keys=True)
+def _diagnosis_key(item: Diagnosis) -> str:
+    return item.diagnosis_id
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,9 @@ class CanonicalReport:
     artifacts: tuple[Artifact, ...] = ()
     evidence: tuple[Evidence, ...] = ()
     provider_runs: tuple[ProviderRun, ...] = ()
-    diagnoses: tuple[Mapping[str, Any], ...] = ()
+    diagnoses: tuple[Diagnosis, ...] = ()
+    target_kind: str = "local_directory"
+    source_manifest: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "findings", tuple(self.findings))
@@ -51,7 +53,7 @@ class CanonicalReport:
         object.__setattr__(self, "artifacts", tuple(self.artifacts))
         object.__setattr__(self, "evidence", tuple(self.evidence))
         object.__setattr__(self, "provider_runs", tuple(self.provider_runs))
-        object.__setattr__(self, "diagnoses", tuple(dict(item) for item in self.diagnoses))
+        object.__setattr__(self, "diagnoses", tuple(self.diagnoses))
         if self.generated_at is None:
             object.__setattr__(self, "generated_at", datetime.now())
 
@@ -92,6 +94,9 @@ class CanonicalReport:
             findings=tuple(findings),
             coverage=result.coverage,
             provider_runs=result.provider_runs,
+            diagnoses=result.diagnoses,
+            target_kind=result.target_kind,
+            source_manifest=result.source_manifest,
             note=note,
         )
 
@@ -105,6 +110,11 @@ class CanonicalReport:
         provider_run_ids = {run.id for run in self.provider_runs}
         if len(provider_run_ids) != len(self.provider_runs):
             raise ValueError("provider run IDs duplicados no report canônico")
+        finding_ids = {finding.id for finding in self.findings}
+        finding_by_id = {finding.id: finding for finding in self.findings}
+        diagnosis_ids = {diagnosis.diagnosis_id for diagnosis in self.diagnoses}
+        if len(diagnosis_ids) != len(self.diagnoses):
+            raise ValueError("diagnosis IDs duplicados no report canônico")
         for item in self.evidence:
             if item.artifact_ref not in artifact_ids:
                 raise ValueError(f"Evidence referencia Artifact inexistente: {item.artifact_ref}")
@@ -114,6 +124,29 @@ class CanonicalReport:
             missing = [ref for ref in finding.evidence_refs if ref not in evidence_ids]
             if missing:
                 raise ValueError(f"Finding referencia Evidence inexistente: {missing[0]}")
+        for diagnosis in self.diagnoses:
+            if diagnosis.artifact_ref not in artifact_ids:
+                raise ValueError(
+                    f"Diagnosis referencia Artifact inexistente: {diagnosis.artifact_ref}"
+                )
+            missing_findings = [ref for ref in diagnosis.basis if ref not in finding_ids]
+            if missing_findings:
+                raise ValueError(f"Diagnosis referencia Finding inexistente: {missing_findings[0]}")
+            wrong_artifact = next(
+                (
+                    ref
+                    for ref in diagnosis.basis
+                    if finding_by_id[ref].artifact_ref != diagnosis.artifact_ref
+                ),
+                None,
+            )
+            if wrong_artifact is not None:
+                raise ValueError(f"Diagnosis mistura Artifacts na basis: {wrong_artifact}")
+            missing_evidence = [ref for ref in diagnosis.evidence_refs if ref not in evidence_ids]
+            if missing_evidence:
+                raise ValueError(
+                    f"Diagnosis referencia Evidence inexistente: {missing_evidence[0]}"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         self._validate_references()
@@ -129,14 +162,17 @@ class CanonicalReport:
             serialized = artifact.to_dict()
             serialized.pop("root", None)
             artifact_payloads.append(serialized)
-        payload = {
+        target_payload: dict[str, Any] = {"root": self.target_root}
+        if getattr(self, "target_kind", "local_directory") != "local_directory":
+            target_payload["kind"] = self.target_kind
+        payload: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
             "scanner_version": scanner_version,
             "manifest": {
                 "scan_id": self.scan_id,
                 "profile": self.profile,
                 "generated_at": generated_at,
-                "target": {"root": self.target_root},
+                "target": target_payload,
                 "sources": [{"source_ref": source_ref} for source_ref in source_refs],
             },
             "artifacts": artifact_payloads,
@@ -147,7 +183,7 @@ class CanonicalReport:
                 run.to_dict() for run in sorted(self.provider_runs, key=lambda r: r.id)
             ],
             "diagnoses": [
-                dict(item)
+                item.to_dict()
                 for item in sorted(
                     self.diagnoses,
                     key=_diagnosis_key,
@@ -155,6 +191,9 @@ class CanonicalReport:
             ],
             "note": self.note,
         }
+        source_manifest = self.source_manifest
+        if source_manifest is not None:
+            payload["manifest"]["source_manifest"] = source_manifest
         return redact_mapping(payload)
 
     def to_json(self) -> str:
@@ -187,5 +226,11 @@ class CanonicalReport:
             provider_runs=tuple(
                 ProviderRun.from_dict(item) for item in data.get("provider_runs", [])
             ),
-            diagnoses=tuple(dict(item) for item in data.get("diagnoses", [])),
+            diagnoses=tuple(Diagnosis.from_dict(item) for item in data.get("diagnoses", [])),
+            target_kind=str(target.get("kind", "local_directory")),
+            source_manifest=(
+                manifest.get("source_manifest")
+                if isinstance(manifest.get("source_manifest"), Mapping)
+                else None
+            ),
         )
