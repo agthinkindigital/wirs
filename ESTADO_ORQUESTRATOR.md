@@ -150,7 +150,10 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - HITL #65-01 foi aprovado e a #65 foi concluída em schema 2.0.
 - #66 (WIRS-086) foi implementada em `develop`: YARA builtin no `scan`, refs
   canônicas, provenance, Coverage de ausência/falha parcial e pack no wheel.
-- Próxima DAG: #67 → #77 → #80 → #70; E12/E16/E17 permanecem
+- #67 (WIRS-034) foi implementada em `develop`: content analysis lazy além do
+  `head`, budgets de bytes/linhas/tempo, Coverage parcial e cancelamento
+  contabilizado.
+- Próxima DAG: #77 → #80 → #70; E12/E16/E17 permanecem
   enriquecimentos posteriores conforme o roadmap.
 
 ## Revisão de incidente real (2026-09-14)
