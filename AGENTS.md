@@ -28,7 +28,7 @@ antes de planejar; ele é a fonte de identidade do produto.
 | O que vem depois | `ORCHESTRATOR-ROADMAP.md` |
 | Escopo e aceite | Epic/Issue |
 | Estado momentâneo | `ESTADO_ORQUESTRATOR.md` |
-| Detecção para analistas | `docs/ENTENDENDO-O-WIRS.md` |
+| Segurança e interpretação para analistas | `docs/ENTENDENDO-O-WIRS.md` |
 | Provider externo | `docs/providers/` |
 | Visão não comprometida | `docs/future/` |
 | Lições de incidente | `docs/case-studies/` |

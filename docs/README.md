@@ -3,7 +3,7 @@
 - [`PRODUCT-CHARTER.md`](PRODUCT-CHARTER.md): identidade, limites e ordem de expansão.
 - [`DOCUMENTATION-MATRIX.md`](DOCUMENTATION-MATRIX.md): autoridade e sincronização por assunto.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): como o sistema foi pensado e como as peças se encaixam.
-- [`ENTENDENDO-O-WIRS.md`](ENTENDENDO-O-WIRS.md): o porquê de cada peça, explicado slice por slice.
+- [`ENTENDENDO-O-WIRS.md`](ENTENDENDO-O-WIRS.md): guia didático de segurança e investigação para interpretar sinais, evidências, cobertura e limites do WIRS.
 - [`WIRS_MASTER_SPEC_PT-BR.md`](../WIRS_MASTER_SPEC_PT-BR.md): especificação viva (autoridade de produto e arquitetura).
 - [`CONTEXT.md`](../CONTEXT.md): glossário do domínio.
 - [`adr/`](adr/): decisões arquiteturais.

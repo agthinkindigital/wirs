@@ -21,6 +21,11 @@ evidência de sucesso.
 
 ## Documentação
 
-Toda detecção nova ganha seção em `docs/ENTENDENDO-O-WIRS.md`. Mudança de seam
-ou trade-off difícil pode exigir ADR. Mudança de produto exige Charter antes de
-Roadmap e Issues.
+Atualize `docs/ENTENDENDO-O-WIRS.md` quando uma entrega ou mudança de
+comportamento acrescentar conhecimento útil à segurança ou à investigação:
+interpretação de sinal, Evidence, Finding, Coverage, Diagnosis, report,
+limites ou próximos passos humanos. Uma Issue fechada não exige
+automaticamente nova seção; Issues relacionadas podem alimentar a mesma seção
+conceitual. Refactors, tooling, plumbing, CI, testes e detalhes internos sem
+impacto interpretativo ficam fora do guia. Mudança de seam ou trade-off difícil
+pode exigir ADR. Mudança de produto exige Charter antes de Roadmap e Issues.

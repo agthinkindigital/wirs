@@ -1,19 +1,62 @@
-# Entendendo o WIRS: o que procurar num site comprometido (e por quê)
+# Entendendo o WIRS: segurança e investigação de comprometimento
 
-Este documento ensina **segurança na prática**: que problemas moram nos
-arquivos de um site, como reconhecê-los e por que o scanner foi desenhado do
-jeito que foi para encontrá-los. Cada seção nasce de uma entrega real do
-projeto (o número `#NN` é a Issue que a implementou), e explica três coisas:
-**o que** o scan busca, **como** ele busca e **por que** foi desenhado assim.
+> **Aprenda como o scanner reconhece sinais de comprometimento e por que cada
+> verificação foi desenhada dessa forma.**
 
-Não é manual de código nem de arquitetura — para isso, veja
-[`ARCHITECTURE.md`](ARCHITECTURE.md). Aqui o assunto é o **seu site**:
-onde o invasor se esconde, o que é evidência de verdade e como ler um
-relatório sem cair em falso positivo nem em falso "está limpo".
+Este é um guia didático e prático para iniciantes e profissionais
+intermediários de segurança, operadores, desenvolvedores e analistas. Ele
+ensina análise de comprometimento usando o WIRS como instrumento: o que
+procurar, por que um sinal é suspeito, como o scanner o observa e como
+interpretar o resultado, seus limites, falsos positivos e falsos negativos.
 
-> Novas entregas de detecção ganham sua seção aqui. Mecânica interna
-> (tooling, plumbing de CLI, detalhes de implementação) mora no código e nos
-> ADRs, não neste documento.
+Não é uma spec normativa, Architecture, referência de API de provider, ADR,
+roadmap, changelog ou guia de implementação. Para esses assuntos, consulte as
+fontes correspondentes na [matriz documental](DOCUMENTATION-MATRIX.md). Aqui o
+assunto é o **seu site**: onde um invasor pode se esconder, o que é evidência de
+verdade e como ler um relatório sem cair em falso positivo nem em falso
+"está limpo".
+
+## Contrato editorial
+
+Capacidades que acrescentem conhecimento útil à investigação ganham ou
+atualizam conteúdo aqui. Isso inclui detecções, integridade, providers,
+correlação e conceitos necessários para interpretar o relatório. Uma seção
+deve ensinar pelo menos uma destas perguntas: o que o sinal observa; qual
+Evidence o sustenta; como distinguir sinal legítimo de falso positivo; como
+interpretar o resultado; o que ele prova e o que não prova; como ausência de
+dados, provider ou Coverage muda a leitura; como sinais se reforçam ou se
+contradizem; ou qual próximo passo humano o sinal sugere.
+
+Providers externos futuros entram primeiro como conceito, quando houver
+comportamento real a interpretar: o que acrescentam, qual provenance produzem
+e como sua ausência aparece em Coverage. Não crie uma seção nominal para um
+provider ainda não integrado; detalhes de API, autenticação e binding ficam em
+`docs/providers/`.
+
+Mudanças internas que não alterem como um analista entende ou investiga o
+resultado não entram: refactors, renames, builders, factories, CI, packaging,
+dependências, plumbing de CLI, lint, testes, serializers internos e
+performance sem impacto interpretativo. Uma Issue fechada não implica
+automaticamente uma nova seção. Issues são rastreabilidade, não taxonomia de
+conhecimento; Issues relacionadas podem alimentar a mesma seção conceitual.
+
+Antes de atualizar, confirme:
+
+```text
+[ ] ensina segurança ou investigação
+[ ] explica interpretação de resultado e seus limites
+[ ] descreve comportamento realmente entregue
+[ ] acrescenta algo que não pertence melhor a Architecture, ADR ou provider docs
+[ ] evita duplicação e usa linguagem compreensível
+[ ] deve atualizar uma seção existente em vez de criar outra
+```
+
+As seções podem manter `#NN` nos títulos e nas referências `Verificar` para
+rastreabilidade. Esse identificador não define a organização do conhecimento.
+
+Após cada nova Issue, faça esta revisão editorial: se ela mudar a interpretação
+de segurança, crie uma seção nova ou atualize a seção conceitual existente; se
+não mudar, preserve o guia sem adicionar conteúdo apenas para marcar a entrega.
 
 ---
 
@@ -672,8 +715,8 @@ da comunidade, em vez de reinventar um corpus concorrente.
 ### Por que foi desenhado assim
 
 - **Opcional de verdade**: o provider distingue ausência de `yara-python`,
-  timeout e falha. A integração com `scan` e Coverage é o próximo slice (#66);
-  até lá, essas garantias são verificadas no boundary do analyzer.
+  timeout e falha. A integração com `scan` e Coverage preserva essa distinção;
+  essas garantias são verificadas no boundary do analyzer.
 - **Bytes do reader, nunca path direto**: o YARA recebe o conteúdo já lido
   sob budget — o analyzer não abre arquivo por conta própria, então limite
   de tamanho e recusa de especiais continuam valendo.
@@ -699,8 +742,8 @@ decoding (webshell-like) e `include` com variável de input. Regras com
 nome, descrição, severidade e condição de tamanho — para o match dizer
 *o quê* casou, não só "casou algo".
 
-O pack e o provider estão implementados; a execução automática pelo `scan`
-permanece pendente em #66.
+O pack e o provider estão implementados e a execução automática pelo `scan`
+está descrita na seção #66.
 
 ### Por que foi desenhado assim
 
