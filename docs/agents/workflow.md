@@ -13,6 +13,14 @@ apenas snapshot. Não feche Epic pai sem autorização explícita.
 - Não confunda Issue/Epic/capability concluída com release; consulte
   [`docs/VERSIONAMENTO-E-GATES.md`](../VERSIONAMENTO-E-GATES.md).
 
+## Issues Lock
+
+Não trocar de tarefa ou abrir nova Issue/Epic enquanto a atual não estiver com:
+- critérios de aceite verificados;
+- testes e gates aprovados;
+- documentação sincronizada;
+- estado no tracker refletindo a realidade (fechada ou com pendência registrada).
+Uma mudança de contexto sem conclusão documentada é considerada navegação sem rumo.
 ## Desenvolvimento
 
 - Use TDD em slices verticais: RED, GREEN, refactor.
