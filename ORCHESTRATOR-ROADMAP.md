@@ -21,9 +21,9 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 
   Schemas, severidade/confiança, Coverage model, Scan Manifest, versionamento.
   Slices: #23 (WIRS-020, done), #24 (WIRS-021, done), #25 (WIRS-023, done).
-  #65 (WIRS-026, artifact canônico completo) foi concluída em schema 2.0; a
-  próxima DAG começa em #66. A Epic pai permanece aberta para follow-ons do
-  próprio domínio. (Fases A/C)
+  #65 (WIRS-026, artifact canônico completo) foi concluída em schema 2.0 e #66
+  (WIRS-086, YARA no `scan`) também foi concluída. A próxima DAG é #67. A Epic
+  pai permanece aberta para follow-ons do próprio domínio. (Fases A/C)
 
 - [**[E03] Reader, Hashing e Resource Control**](https://github.com/agthinkindigital/wirs/issues/4) - `in_progress`
 
