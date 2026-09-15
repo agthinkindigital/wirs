@@ -33,5 +33,5 @@ jobs:
           python-version: "3.11"
       - run: uv venv && uv pip install -e ".[dev,yara]"
       - run: uv run pytest tests/integration/test_yara_rules.py tests/integration/test_scan_yara.py
-      - run: uv run python -m build
+      - run: uv pip install build && uv run python -m build
       - run: uv run python -c "import glob, zipfile; wheel = glob.glob('dist/*.whl')[0]; names = zipfile.ZipFile(wheel).namelist(); assert 'wirs/rules/yara/builtin/php_webshell.yar' in names"
