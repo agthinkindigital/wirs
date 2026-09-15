@@ -22,6 +22,7 @@ from rich.console import Console
 from rich.table import Table
 
 from wirs import __version__
+from wirs.adapters.php_generic import PHPGenericAdapter, PHPStaticExecutablePolicy
 from wirs.adapters.wordpress.discovery import WordPressAdapter
 from wirs.adapters.wordpress.policies import UploadsExecutablePolicy
 from wirs.application.orchestrator import run_scan
@@ -34,18 +35,32 @@ from wirs.domain import (
     IOCKind,
     LocalDirectoryTarget,
     ProviderInvalidOutput,
+    SecurityBoundaryError,
     Severity,
     TargetError,
 )
 from wirs.infrastructure import ArtifactReader, LocalArtifactSource
 from wirs.infrastructure.baseline import BaselineBuilder
+from wirs.infrastructure.bundle import (
+    BUNDLE_MANIFEST,
+    BundleArtifactSource,
+    bundle_target,
+    load_bundle,
+)
 from wirs.infrastructure.reader import ReadBudget
+from wirs.ports import ArtifactSource
 from wirs.ports.checksum import IntegrityProvider
 from wirs.ports.detection import Detector
 from wirs.providers.operator_baseline import OperatorBaselineIntegrity, load_baseline_mapping
 from wirs.providers.wp_checksum import WpCliCoreIntegrity, WpCliPluginIntegrity
 from wirs.providers.yara_provider import YaraAnalyzer
-from wirs.reporting import CanonicalReport, render_markdown, render_report, write_text_atomic
+from wirs.reporting import (
+    CanonicalReport,
+    render_forensic_html,
+    render_markdown,
+    render_report,
+    write_text_atomic,
+)
 
 # Limites por artifact: o stream nunca é materializado pelo orquestrador.
 PROFILE_BUDGETS = {
@@ -69,6 +84,11 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _write_utf8_stdout(value: str) -> None:
+    """Preserva UTF-8 quando stdout do console usa uma code page legada."""
+    typer.get_binary_stream("stdout").write(value.encode("utf-8"))
 
 
 class ExitCode(IntEnum):
@@ -221,9 +241,13 @@ def _load_manifest_cli(path: Path) -> BaselineManifest:
         raise ValueError(f"manifest fora do schema: {path} ({e})") from e
 
 
-def build_detectors(ioc_list: Sequence[IOC]) -> list[Detector]:
+def build_detectors(
+    ioc_list: Sequence[IOC], php_static_zones: Sequence[str] = ()
+) -> list[Detector]:
     """Detectores do scan; IOC só entra com lista (evita 2ª leitura à toa)."""
     detectors: list[Detector] = [PhpHeuristicsDetector(), UploadsExecutablePolicy()]
+    if php_static_zones:
+        detectors.append(PHPStaticExecutablePolicy(php_static_zones))
     if ioc_list:
         detectors.insert(0, IocDetector(list(ioc_list)))
     return detectors
@@ -258,7 +282,9 @@ def load_iocs_file(path: Path) -> list[IOC]:
 def scan(
     target: Path | None = typer.Argument(None, help="Diretório local ou snapshot a analisar."),
     profile: str = typer.Option("soft", help="Perfil de recursos: soft, balanced, fast."),
-    format_: str = typer.Option("terminal", "--format", help="Formato: terminal, json, markdown."),
+    format_: str = typer.Option(
+        "terminal", "--format", help="Formato: terminal, json, markdown ou html."
+    ),
     fail_on: str = typer.Option("high", "--fail-on", help="Severidade mínima para exit 1."),
     ioc: Path | None = typer.Option(None, "--ioc", help="Arquivo de IOCs kind:value."),
     baseline: Path | None = typer.Option(
@@ -272,6 +298,9 @@ def scan(
     wizard: bool = typer.Option(False, "--wizard", help="Assistente interativo (WIRS-129)."),
     cache_dir: Path | None = typer.Option(None, "--cache-dir", help="Cache de baselines."),
     sign_key: Path | None = typer.Option(None, "--sign-key", help="Chave p/ manifests (WIRS-046)."),
+    php_static_zone: list[str] = typer.Option(
+        [], "--php-static-zone", help="Prefixo PHP não-executável (repetível)."
+    ),
 ) -> None:
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if wizard:
@@ -292,7 +321,7 @@ def scan(
     if profile not in PROFILE_BUDGETS:
         console.print(f"[red]Perfil inválido:[/red] {profile}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
-    if format_ not in ("terminal", "json", "markdown"):
+    if format_ not in ("terminal", "json", "markdown", "html"):
         console.print(f"[red]Formato inválido:[/red] {format_}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET)
     try:
@@ -301,9 +330,19 @@ def scan(
         console.print(f"[red]fail-on inválido:[/red] {fail_on}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET) from None
     try:
-        tgt = LocalDirectoryTarget(target)
+        artifact_source: ArtifactSource
+        if target.is_dir() and (target / BUNDLE_MANIFEST).is_file():
+            bundle_manifest = load_bundle(target)
+            tgt = bundle_target(bundle_manifest)
+            artifact_source = BundleArtifactSource(bundle_manifest)
+        else:
+            tgt = LocalDirectoryTarget(target)
+            artifact_source = LocalArtifactSource()
     except TargetError as e:
         console.print(f"[red]Target inválido:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    except (SecurityBoundaryError, ValueError) as e:
+        console.print(f"[red]Bundle inválido:[/red] {e}")
         raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
     ioc_list: list[IOC] = []
     if ioc is not None:
@@ -354,14 +393,19 @@ def scan(
         integrity_providers.append(
             OperatorBaselineIntegrity(mapping, BaselineCache(cache_dir), key)
         )
+    try:
+        php_adapter = PHPGenericAdapter(php_static_zone)
+    except ValueError as e:
+        console.print(f"[red]Zona PHP inválida:[/red] {e}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
     result = run_scan(
         tgt,
         profile=profile,
-        source=LocalArtifactSource(),
-        adapters=[WordPressAdapter()],
+        source=artifact_source,
+        adapters=[WordPressAdapter(), php_adapter],
         reader=ArtifactReader(),
         budget=PROFILE_BUDGETS[profile],
-        detectors=build_detectors(ioc_list),
+        detectors=build_detectors(ioc_list, php_adapter.static_zones),
         analyzers=[yara_analyzer],
         integrity=integrity_providers,
         on_event=monitor,
@@ -377,6 +421,8 @@ def scan(
         console.print_json(payload)
     elif format_ == "markdown":
         console.print(render_markdown(report))
+    elif format_ == "html":
+        _write_utf8_stdout(render_forensic_html(report))
     else:
         _print_terminal(report, kinds)
     if report_dest is not None:
