@@ -6,6 +6,7 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from wirs.cli.app import app
@@ -41,6 +42,26 @@ def test_report_dentro_do_target_e_recusado() -> None:
 
         assert result.exit_code == 2
         assert not (alvo / "scan.json").exists()
+
+
+def test_report_symlink_dentro_do_target_e_recusado() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        alvo = tmp_path / "alvo"
+        alvo.mkdir()
+        externo = tmp_path / "fora.json"
+        externo.write_text("sentinela", encoding="utf-8")
+        destino = alvo / "scan.json"
+        try:
+            destino.symlink_to(externo)
+        except OSError as e:
+            pytest.skip(f"symlink indisponível neste host: {e}")
+
+        result = runner.invoke(app, ["scan", str(alvo), "--report", str(destino)])
+
+        assert result.exit_code == 2
+        assert destino.is_symlink()
+        assert externo.read_text(encoding="utf-8") == "sentinela"
 
 
 def test_report_em_diretorio_e_recusado() -> None:

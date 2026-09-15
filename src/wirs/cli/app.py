@@ -381,6 +381,8 @@ def scan(
 
 def _dentro_do_target(candidate: Path, root: Path) -> bool:
     """Report nunca mora no alvo (invariante 1: scan não escreve no target)."""
+    if candidate.is_symlink():
+        return True
     try:
         resolved = candidate.resolve()
     except OSError:
