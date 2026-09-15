@@ -2,6 +2,7 @@
 
 - [`PRODUCT-CHARTER.md`](PRODUCT-CHARTER.md): identidade, limites e ordem de expansão.
 - [`DOCUMENTATION-MATRIX.md`](DOCUMENTATION-MATRIX.md): autoridade e sincronização por assunto.
+- [`VERSIONAMENTO-E-GATES.md`](VERSIONAMENTO-E-GATES.md): branches, gates e critérios para promover versões.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): como o sistema foi pensado e como as peças se encaixam.
 - [`ENTENDENDO-O-WIRS.md`](ENTENDENDO-O-WIRS.md): guia didático de segurança e investigação para interpretar sinais, evidências, cobertura e limites do WIRS.
 - [`WIRS_MASTER_SPEC_PT-BR.md`](../WIRS_MASTER_SPEC_PT-BR.md): especificação viva (autoridade de produto e arquitetura).
@@ -23,5 +24,6 @@
 - Implementação real: código + testes reproduzíveis.
 - Ordem: [`../ORCHESTRATOR-ROADMAP.md`](../ORCHESTRATOR-ROADMAP.md).
 - Estado: [`../ESTADO_ORQUESTRATOR.md`](../ESTADO_ORQUESTRATOR.md).
+- Release e promoção: [`VERSIONAMENTO-E-GATES.md`](VERSIONAMENTO-E-GATES.md).
 
 Quando houver divergência, registre-a e resolva-a na fonte competente.

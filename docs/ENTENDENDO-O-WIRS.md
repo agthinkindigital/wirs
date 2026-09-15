@@ -876,3 +876,152 @@ confiança de uma observação.
 `src/wirs/application/orchestrator.py`, `benchmarks/scan_large_file.py`,
 `tests/unit/test_reader.py` e `tests/integration/test_orchestrator.py` ·
 **Issue:** #67.
+
+---
+
+## #77 — Diagnosis: quando dois sinais apontam para o mesmo Artifact
+
+### O que o scan entrega
+
+O WIRS agora produz uma `Diagnosis` file-centric quando um mismatch de baseline
+confiável e uma assinatura, ou heurística PHP de confiança alta, apontam para o
+mesmo `Artifact`. A correlação usa o `Artifact.id` canônico; um mesmo texto de
+path em fontes diferentes não basta para juntar observações.
+
+`DX001` é uma hipótese, não um Finding novo. O report preserva os Findings
+originais e a Diagnosis registra `basis` com seus IDs, `evidence_refs`,
+`hypothesis`, `alternative_hypotheses`, `unknowns` e
+`recommended_next_checks`. Não há score numérico: a confiança é qualitativa e,
+neste caso, `high`. A confirmação humana continua obrigatória.
+
+### Como interpretar
+
+Dois sinais convergentes aumentam a prioridade de revisão do arquivo, mas não
+provam quem o alterou, quando isso ocorreu ou que a assinatura representa uma
+infecção real. O baseline pode estar incorreto ou desatualizado, e uma regra de
+assinatura pode ter falso positivo contextual. O próximo passo é revisar a
+Evidence, confirmar a versão do baseline e comparar o arquivo com um pacote
+confiável da mesma versão.
+
+Uma Diagnosis só aparece quando suas referências são resolvíveis. Se os sinais
+estão em Artifacts diferentes, se a Evidence está ausente ou se o baseline é
+apenas uma referência `UNVERIFIED`, nenhuma Diagnosis é criada. Isso não remove
+nem rebaixa os Findings. `diagnoses: []` continua significando somente que esta
+receita não foi produzida nesta execução.
+
+### Limites deliberados
+
+Esta primeira receita não cruza logs, IPs, contas, sessões, hosts ou janelas de
+tempo. Também não usa LLM e não cria Evidence para justificar sua hipótese.
+
+**Verificar:** `src/wirs/domain/diagnosis.py`,
+`src/wirs/application/orchestrator.py`, `src/wirs/reporting/canonical.py`,
+`tests/unit/test_diagnosis.py` e `tests/integration/test_orchestrator.py` ·
+**Issue:** #77.
+
+---
+
+## #80 — HTML forense: uma view não pode inventar evidência
+
+### O que o scan entrega
+
+`wirs scan --format html` transforma o mesmo `CanonicalReport` usado pelo JSON em
+uma página self-contained para leitura humana e impressão. Ela organiza resumo,
+Findings, Coverage, Diagnoses, limites e apêndices de Artifacts/Evidence e
+providers. O arquivo não consulta novamente o Target: o HTML é uma view do que
+já foi coletado e validado.
+
+### Como interpretar
+
+O HTML mantém a distinção entre fato, suspeita e hipótese. `diagnoses: []` vira
+uma mensagem explícita de que nenhuma correlação foi produzida; a Timeline também
+é marcada como indisponível porque logs temporais ainda não fazem parte deste
+slice. Isso não rebaixa Findings nem transforma ausência de timeline em prova de
+que nada ocorreu.
+
+`--report` continua sendo o JSON canônico, mesmo com `--format html`; isso permite
+usar HTML para revisão e JSON para automação sem criar duas fontes de verdade.
+
+### Limites de segurança
+
+Todo valor vem do modelo canônico já redigido e é escapado antes de entrar no
+HTML. A página não usa CDN, JavaScript, imagens ou fontes remotas e declara CSP
+restritiva. Layout e severidade continuam legíveis em texto e na impressão, sem
+depender apenas de cor. Ainda assim, o HTML é uma view de investigação: confirme
+Evidence, provenance e Coverage no JSON quando a decisão exigir auditoria formal.
+O comando também emite o documento como bytes UTF-8, inclusive quando o console
+do operador usa uma code page legada no Windows; sem isso, acentos corrompidos
+podem atrapalhar a leitura do laudo.
+
+**Verificar:** `src/wirs/reporting/html.py`,
+`tests/integration/test_forensic_html.py` · **Issue:** #80.
+
+---
+
+## #70 — PHP genérico: o contexto da zona muda o significado
+
+### O que o scan busca
+
+Aplicações PHP legadas podem não ter nenhum sinal WordPress. O adapter genérico
+as reconhece pela presença de extensões PHP, sem executar nem abrir o código para
+descobri-las. Prefixos como `uploads`, `img` e `assets` podem ser declarados com
+`--php-static-zone`; neles, PHP executável viola a expectativa de conteúdo
+estático e gera `PHP.ZONE.EXECUTABLE` com Evidence.
+
+### Como interpretar
+
+PHP no webroot pode ser legítimo: `index.php` sozinho não gera esse Finding. O
+mesmo conteúdo dentro de um prefixo declarado como estático merece prioridade,
+porque a zona deveria conter mídia ou assets inertes. Isso é uma violação de
+política, não prova automática de malware; confirme o caminho de deploy e a
+Evidence antes de remover qualquer arquivo.
+
+O adapter PHP pode coexistir com o WordPress. Em um target híbrido, o WordPress
+continua usando sua própria descoberta e zonas, enquanto a policy PHP ainda cobre
+os prefixos estáticos explicitamente configurados. Uma imagem ou CSS em zona
+estática não gera alerta apenas por estar ali.
+
+### Limites
+
+A descoberta é local e baseada em extensão (`.php`, `.phtml`, `.php3` a `.php5`,
+`.phar`); conteúdo sem extensão pode ficar fora desta primeira cobertura. Symlinks
+não são seguidos. Composer, configuração de runtime, baseline de dependências,
+análise AST e regras PHP adicionais permanecem em slices posteriores.
+
+**Verificar:** `src/wirs/adapters/php_generic.py`,
+`tests/integration/test_php_generic_scan.py` · **Issue:** #70.
+
+---
+
+## #68 — Incident Bundle: a investigação precisa declarar suas fontes
+
+### O que o scan busca
+
+Um Incident Bundle reúne fontes locais diferentes, como um webroot e logs, sob
+uma raiz comum. O arquivo `wirs-bundle.json` declara cada fonte com
+`source_ref`, papel, origem, SHA-256 e estado de confiança. O comando
+`wirs scan <bundle>` inventaria as fontes declaradas e preserva seus namespaces
+no report canônico.
+
+### Como interpretar
+
+O manifesto responde primeiro “de onde veio esta Evidence?”. `webroot` e `logs`
+podem conter o mesmo caminho relativo, mas não são o mesmo Artifact porque têm
+`source_ref` diferentes. O hash e o trust state documentam a confiança declarada
+na fonte; eles não provam sozinhos que o conteúdo está íntegro ou benigno.
+
+Um bundle válido também pode produzir zero Findings: isso significa apenas que as
+fontes declaradas concluíram as verificações disponíveis. A ausência de uma fonte
+no manifesto não é autodescoberta nem preenchida pelo WIRS, e o scanner não busca
+arquivos na máquina nem acessa rede para completar a investigação.
+
+### Limites de segurança
+
+Paths de fonte são relativos à raiz do bundle. Absolutos, `..`, escapes por
+normalização e symlinks são rejeitados antes do inventário. O slice não extrai
+archives nem interpreta logs temporais; essas capacidades terão seus próprios
+contratos e Coverage. A pasta do bundle é somente leitura para o scan, e nenhum
+manifesto de incidente real entra nas fixtures do projeto.
+
+**Verificar:** `src/wirs/infrastructure/bundle.py`,
+`tests/integration/test_incident_bundle.py` · **Issue:** #68.

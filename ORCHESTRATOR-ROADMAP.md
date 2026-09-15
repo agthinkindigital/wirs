@@ -4,6 +4,8 @@ O GitHub Issue de cada Epic é a fonte detalhada. Este arquivo resume objetivo,
 estado e ordem estratégica. IDs `E##` são estáveis e nunca reutilizados.
 O [Product Charter](docs/PRODUCT-CHARTER.md) define a North Star e os
 horizontes; este arquivo não transforma uma visão futura em compromisso atual.
+Promoção entre `develop` e `main`, e os gates de versão, seguem
+[`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md).
 
 ## Epics
 
@@ -83,8 +85,9 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   detecção operando.
   Slices: #28 (WIRS-090, done), #40 (WIRS-091, done), #41 (WIRS-092, done),
   #59 (WIRS-093, done), #53 (WIRS-094/WIRS-119, writer/export done). #80
-  (WIRS-095, HTML forense) e #81 (WIRS-097, PDF opcional) ficam depois do
-  artifact canônico e Diagnosis. (Fases A/B/C/F)
+  (WIRS-095, HTML forense filesystem-only, implementada localmente) e #81
+  (WIRS-097, PDF opcional) ficam depois do artifact canônico e Diagnosis.
+  (Fases A/B/C/F)
 
 - [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`
 
@@ -117,16 +120,18 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
   #82 (WIRS-123, rejeição de symlink no destino de `--report`) foi concluída;
   os demais itens WIRS-120–WIRS-128 continuam no backlog. (contínuo)
 
-- [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `todo`
+- [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `in_progress`
 
   Pasta local com manifesto de fontes/provenance + archive target sem extração
-  insegura. Slices: #68 (WIRS-130), #69 (WIRS-131). SSH/SFTP foi removido do
+  insegura. Slices: #68 (WIRS-130, implementado localmente), #69 (WIRS-131).
+  SSH/SFTP foi removido do
   caminho pré-1.0; WIRS-135 foi incorporado a #68. (Horizonte B)
 
-- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `todo`
+- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `in_progress`
 
   Discovery, Composer inventory/baseline, zone policies, runtime config, rules.
-  Primeiro slice: #70 (WIRS-140, scan PHP genérico local). (Horizonte B)
+  Primeiro slice: #70 (WIRS-140, scan PHP genérico local, implementado
+  localmente). (Horizonte B)
 
 - [**[E14] Runtime HTTP**](https://github.com/agthinkindigital/wirs/issues/15) - `todo`
 
@@ -178,9 +183,11 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 7. Hardening do destino `--report` (#82), independente de #65 (concluído).
 8. Integrar YARA no scan (#66), após #65 (done).
 9. Content analysis bounded (#67), concluída.
-10. Diagnosis file-centric (#77) → HTML filesystem-only (#80), próxima DAG.
-11. PHP genérico local (#70), sem depender de Incident Bundle ou logs.
-12. Incident Bundle (#68) → archive (#69).
+10. Diagnosis file-centric (#77) → HTML filesystem-only (#80), implementada
+    localmente; próxima DAG é PHP genérico local (#70).
+11. PHP genérico local (#70), implementado localmente, sem depender de Incident
+    Bundle ou logs.
+12. Incident Bundle (#68), implementado localmente → archive (#69).
 13. Evidence temporal (#71) → Coverage de logs (#72) → adapters locais (#73–75).
 14. Relações (#76) → Diagnoses adicionais (#78) → contexto offline opcional (#79).
 15. PDF opcional (#81), derivado do HTML.

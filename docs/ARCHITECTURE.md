@@ -47,12 +47,13 @@ validar config → resolver target → manifest do scan → descobrir plataforma
 ```
 
 Na versão atual, o pipeline termina após detecção, content analysis bounded,
-analyzers externos, Coverage e views de terminal/JSON/Markdown. O report
+analyzers externos, Coverage e views de terminal/JSON/Markdown/HTML. O report
 canônico publica Artifacts/Evidence e o YARA builtin participa do `scan` quando
 o extra opcional está disponível; ausência e falhas ficam explícitas no
-Coverage. Incident Bundle, collectors temporais, correlação, Diagnoses e
-HTML/PDF são capacidades futuras, não entregas atuais. A próxima DAG é
-Diagnosis file-centric.
+Coverage. Incident Bundle local já é aceito por manifesto; collectors temporais,
+extração de archives e PDF são capacidades futuras. HTML forense filesystem-only
+e Diagnosis file-centric derivam do modelo canônico sem consultar o Target. A
+próxima DAG é archive local.
 
 A ordem importa: o barato e confiável roda primeiro; o caro e incerto, depois.
 Falha parcial é o comportamento padrão — um provider ausente vira
@@ -90,6 +91,8 @@ cli ──▶ application ──▶ domain ◀── ports ◀── infrastruct
 - **`adapters/wordpress/`** — tudo que é específico de WP (discovery por
   combinação de sinais, classificação de zonas, versão/locale, collectors
   `safe_only`). É o único lugar que pode falar `wp-content`.
+- **`adapters/php_generic.py`** — descoberta local por extensões PHP e policy de
+  prefixos estáticos configuráveis; não altera o domínio nem executa conteúdo.
 - **`reporting/`** — consome o modelo final em modo read-only e renderiza as
   views (JSON canônico primeiro; terminal, Markdown e HTML derivam dele).
 - **`cli/`** — composition root: monta as implementações, lê config/flags e

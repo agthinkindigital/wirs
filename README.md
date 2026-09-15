@@ -49,7 +49,7 @@ entrega o primeiro fluxo operacional:
 - detecção de arquivos inesperados no core e PHP em `uploads`;
 - busca de IOCs literais em streaming;
 - heurísticas PHP com severidade e confiança separadas;
-- relatórios no terminal e em JSON determinístico;
+- relatórios no terminal, JSON determinístico e HTML forense self-contained;
 - redaction de secrets e Coverage explícito;
 - perfis de recursos `soft`, `balanced` e `fast`;
 - falha graciosa quando um provider integrado não está disponível.
@@ -72,7 +72,9 @@ próxima DAG é Diagnosis file-centric, antes de promover logs ou outras expans�
 | YARA provider + pack | Integrado ao `scan`; ausência e falhas aparecem em Coverage |
 | Content analysis bounded | Implementado em `develop` |
 | Diagnosis file-centric | Próximo Horizonte A |
-| PHP genérico, Incident Bundle e archive local | Horizonte B |
+| PHP genérico local | Implementado em `develop` |
+| Incident Bundle local | Implementado em `develop` |
+| Archive local | Horizonte B |
 | Logs locais, Evidence temporal e adapters de hospedagem | Horizonte C |
 | Correlação temporal, IP/ASN e laudo enriquecido | Horizonte C |
 | Banco/cron WordPress e providers externos | Planejado após o fluxo forense local |
@@ -157,7 +159,7 @@ wirs scan /srv/www/site --format terminal --report ./scan.json
 |---|---|---|---|
 | `<pasta>` (argumento) | caminho do diretório | — | Alvo do scan (obrigatório) |
 | `--profile` | `soft`, `balanced`, `fast` | `soft` | Orçamento de recursos (1 worker, limites de leitura) |
-| `--format` | `terminal`, `json`, `markdown` | `terminal` | View de saída; JSON é o canônico |
+| `--format` | `terminal`, `json`, `markdown`, `html` | `terminal` | View de saída; JSON é o canônico |
 | `--fail-on` | `info`, `low`, `medium`, `high`, `critical` | `high` | Severidade mínima para exit 1 |
 | `--ioc` | caminho de arquivo `kind:value` | — | IOCs literais extras (ex.: `literal:eval(`) |
 | `--baseline` | caminho de mapping JSON | — | `{dir: manifest}` do operador (premium/custom) |
@@ -193,6 +195,10 @@ completo está lá, ou nada foi escrito.
 Um [relatório JSON de exemplo](docs/examples/scan-example.json) mostra o modelo
 canônico sem exigir uma instalação WordPress local.
 
+Para uma leitura humana self-contained, sem CDN ou JavaScript remoto, use
+`--format html`. A view inclui Findings, Coverage, Diagnoses, limites e
+metadados redigidos; `--report` continua gravando o JSON canônico.
+
 ### Outros comandos
 
 | Comando | Para quê |
@@ -216,7 +222,7 @@ canônico sem exigir uma instalação WordPress local.
 
 ```text
 target -> inventory -> WordPress discovery -> zones -> trusted integrity
-       -> policies -> IOCs -> heuristics -> Coverage -> terminal / JSON
+        -> policies -> IOCs -> heuristics -> Coverage -> terminal / JSON / HTML
 ```
 
 O barato e determinístico roda primeiro. Um arquivo confirmado por baseline

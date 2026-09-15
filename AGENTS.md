@@ -57,6 +57,9 @@ North Star sem decisão documental.
 Detalhes técnicos e de fluxo: [`docs/agents/architecture.md`](docs/agents/architecture.md)
 e [`docs/agents/workflow.md`](docs/agents/workflow.md).
 
+Política de branches, gates e promoção de versões:
+[`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md).
+
 ## Segurança de output
 
 Todo conteúdo do Target é input hostil: escape HTML, neutralize ANSI, trate

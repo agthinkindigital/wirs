@@ -4,6 +4,32 @@
 **Branch:** `develop` (repo `agthinkindigital/wirs`, público)
 **Framework:** skills locais; clone remoto do framework não foi encontrado neste checkout.
 
+Política de release: `develop` é atualizado continuamente; `main` só avança após
+os gates documentados em [`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md).
+Estado de versão: `main = 0.1.0`; `develop` contém trabalho pós-0.1.0 ainda não
+promovido.
+
+Auditoria de `0.2.0` em 2026-09-15: **NÃO ELEGÍVEL para `main`**. Gates técnicos
+locais passaram, mas #77/#80 estão abertas, Epics de M3/M4 não foram fechadas e
+o build atual ainda é `wirs-0.1.0`. Há mudanças locais não commitadas; nenhuma
+promoção, tag ou release deve ocorrer antes da sincronização e aprovação formal.
+O próximo passo é fechar o conjunto de `0.2.0`; a CI verde do último commit
+remoto de `develop` não valida o worktree local atual.
+
+Em 2026-09-15, as divergências do tracker foram registradas sem fechar Issues:
+[#67](https://github.com/agthinkindigital/wirs/issues/67#issuecomment-5682466278),
+[#77](https://github.com/agthinkindigital/wirs/issues/77#issuecomment-5682466210)
+e [#80](https://github.com/agthinkindigital/wirs/issues/80#issuecomment-5682466239).
+
+QA HITL de #80 encontrou e corrigiu a emissão mojibake do HTML em console
+Windows com code page legada. A correção está em `src/wirs/cli/app.py`, com
+regressão em `tests/integration/test_forensic_html.py`; o guia didático registra
+o impacto interpretativo em [`docs/ENTENDENDO-O-WIRS.md`](docs/ENTENDENDO-O-WIRS.md).
+Todos os gates locais passaram novamente: `pytest` (suite completa), Ruff,
+formatação, mypy e `git diff --check`. A evidência foi registrada no
+[#80](https://github.com/agthinkindigital/wirs/issues/80#issuecomment-5684145541),
+sem fechar a Issue antes da publicação no `develop`.
+
 ---
 
 ## Fase 0 — Pré-condições (ATENDIDAS)
@@ -180,3 +206,56 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - Rastreabilidade: #82 (WIRS-123), fechado após verificação dos critérios.
 - Divergência corrigida no roadmap: #65/WIRS-026 está fechada após QA do schema
   2.0; o contrato aprovado está registrado no GitHub e no ADR-004.
+
+## Implementação local da DAG #77 (2026-09-15)
+
+- Diagnosis file-centric foi implementada localmente com a receita determinística
+  DX001: mismatch de baseline confiável + assinatura/heurística HIGH no mesmo
+  Artifact.
+- `Diagnosis` é domínio tipado, referencia `basis` de Finding IDs e Evidence
+  existentes, mantém hipótese separada dos fatos e não cria Evidence.
+- O `ScanResult` e o JSON canônico carregam diagnoses; o report valida Artifact,
+  Finding e Evidence refs e rejeita mistura de Artifacts na basis.
+- Testes dedicados unitários e de integração adicionados; `pytest`, Ruff,
+  formatação, mypy strict e guard arquitetural passaram.
+- Pendente: publicar a alteração, comentar/fechar #77 e revisar/fechar #80 após
+  QA visual HITL.
+
+## Implementação local da DAG #80 (2026-09-15)
+
+- `render_forensic_html` deriva exclusivamente do `CanonicalReport` já redigido;
+  não consulta o Target e não contém regra de negócio.
+- A view é self-contained, com CSS inline, CSP restritiva, layout responsivo e
+  print stylesheet; Findings, Coverage, Diagnoses, Artifacts, Evidence e
+  provider runs ficam navegáveis sem CDN ou JavaScript.
+- Ausência de Diagnosis e Timeline é declarada explicitamente. `--report` mantém
+  o JSON canônico mesmo quando `--format html` é escolhido.
+- Testes de integração cobrem CLI, escaping de path/título hostil, redaction e
+  preservação do JSON; QA visual HITL ainda é pendência antes de fechar #80.
+
+## Implementação local da DAG #70 (2026-09-15)
+
+- `PHPGenericAdapter` descobre extensões PHP (`.php`, `.phtml`, `.php3–.php5`,
+  `.phar`) sem abrir ou executar conteúdo e sem seguir symlinks.
+- `PHPStaticExecutablePolicy` permite declarar prefixos estáticos repetíveis por
+  `--php-static-zone`; PHP executável nesses prefixos gera Finding com Evidence
+  `PHP.ZONE.EXECUTABLE`. PHP legítimo no webroot não gera esse Finding.
+- O adapter PHP pode ser montado junto do WordPress; em alvo híbrido o
+  WordPress continua sendo a descoberta primária e a policy PHP ainda cobre os
+  prefixos estáticos configurados.
+- Fixture e integração dedicadas adicionadas em
+  `tests/fixtures/generic/php_legacy` e `tests/integration/test_php_generic_scan.py`.
+
+## Implementação local da DAG #68 (2026-09-15)
+
+- `wirs-bundle.json` define schema `1.0` e fontes locais com `source_ref`, papel,
+  origem, SHA-256 e trust state; o report canônico preserva o source manifest.
+- `BundleArtifactSource` inventaria múltiplas fontes sem misturar namespaces e
+  `TargetKind.INCIDENT_BUNDLE` identifica o alvo no Scan Manifest.
+- Paths absolutos, POSIX/Windows, traversal e source symlink são rejeitados;
+  nenhuma fonte é corrigida silenciosamente e nenhuma rede ou autodescoberta é
+  usada.
+- Fixture e testes dedicados adicionados em
+  `tests/fixtures/generic/incident_bundle` e
+  `tests/integration/test_incident_bundle.py`. QA automatizado passou: `216
+  passed, 10 skipped`; revisão HITL do schema do manifesto continua pendente.

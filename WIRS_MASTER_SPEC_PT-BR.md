@@ -3758,6 +3758,8 @@ executam código do alvo nem classificam ação observada como intenção malici
 # 18. /roadmap — Roadmap de Produto e Engenharia
 
 O roadmap deve permitir uso rápido sem transformar o MVP em arquitetura descartável.
+As regras para manter `develop`, promover `main` e definir versões por gates
+estão em [`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md).
 
 ## Fase A — Skeleton / 0.0.x
 

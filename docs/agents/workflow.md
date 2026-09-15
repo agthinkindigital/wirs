@@ -6,6 +6,13 @@ GitHub Issues são a fonte persistente de escopo, dependências, aceite e estado
 O Roadmap resume Epics; a Issue da Epic detalha. `ESTADO_ORQUESTRATOR.md` é
 apenas snapshot. Não feche Epic pai sem autorização explícita.
 
+## Branches e versões
+
+- `develop` deve ser atualizado continuamente com mudanças aprovadas.
+- `main` só recebe promoção formal após os gates da versão.
+- Não confunda Issue/Epic/capability concluída com release; consulte
+  [`docs/VERSIONAMENTO-E-GATES.md`](../VERSIONAMENTO-E-GATES.md).
+
 ## Desenvolvimento
 
 - Use TDD em slices verticais: RED, GREEN, refactor.
