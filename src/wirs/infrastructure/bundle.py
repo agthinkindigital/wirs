@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import ntpath
 import os
 import stat
 from collections.abc import Iterator, Mapping
@@ -57,6 +58,7 @@ def _relative_source_path(root: Path, value: str) -> Path:
     parts = [part for part in normalized.split("/") if part not in ("", ".")]
     if (
         candidate.is_absolute()
+        or bool(ntpath.splitdrive(normalized)[0])
         or normalized.startswith("/")
         or not parts
         or any(part == ".." for part in parts)
