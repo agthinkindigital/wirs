@@ -702,17 +702,62 @@ Default: `safe_only`.
 
 ## 7.1 PHP Generic Adapter
 
-Capacidades futuras:
+### 7.1.1 O que WIRS 0.3.x faz (slices)
 
-- descoberta de `.php`, `.phtml`, `.phar`;
-- identificação por conteúdo, não só extensão;
-- Composer inventory;
-- análise de document root;
-- zonas graváveis com execução;
-- `.htaccess`, `.user.ini`, PHP ini;
-- YARA/Semgrep;
-- baseline fornecido pelo operador;
-- ownership/permissions.
+WIRS usa extensões `.php`, `.phtml` e `.php3`-`.php5` como **sinais locationais**,
+não normas de runtime — todo arquivo com uma dessas extensões é um candidato a
+análise. Não executar conteúdo PHP, nem em arquivos de usuário nem em WP-CLI, nem
+em outro contexto no caminho pré-1.0. Tocar "plugin = PHP chamado" é uma sentença
+passível de falsos positivos; descobrir e classificar por extensão são capítulos
+diferentes.
+
+O WIRS será capaz de:
+
+- descobrir, por extensão, todos os arquivos PHP no alvo (local, sem tentar
+  execução; incluindo snacks e snippets com extensões mistas ou pHAML, como `.php`,
+  `.phtml`);
+- inventariar composições PHP locais, diferenciando código customizado (C) de
+  código de terceiros (T);
+- zonas estáticas de PHP (static, uploads/...)
+
+### 7.1.2 Slice P1 — discovery by extension (pronto para 0.2.x/0.3.x)
+
+O mínimo local de um PHP genérico operacional é:
+
+- reconhecer `.php`, `.phtml` e `.php3`-`.php5` como arquivos PHP candidatos;
+- nunca tentar executar conteúdo PHP em local;
+- submeter cada candidato a checks públicos estáveis (filename heuristics, zone
+  policy, IOC, content analysis bounded) sem depender de runtime PHP;
+- relatar descoberta como evidência de análise, não como garantia de detecção.
+
+Isso basta para um PHP genérico mínimo sem confusão de camadas. O primeiro slice
+de PHP genérico é discovery by extension + zoneamento estático mínimo.
+
+### 7.1.3 Capacidades P3 — zonas, Composer, runtime config e rules
+
+As capacidades abaixo são complementos de contexto, não pré-requisito para o mínimo
+local de PHP genérico, e chegam em stalls posteriores:
+
+- **Zonas e policies de execução local** — policies de zones estáticas para PHP
+  genérico (static, uploads/media, plugins, themes). Entram após discovery operar.
+- **Inventory de Composer e baseline** — output de `composer.lock` e inventário de
+  dependências como complemento de contexto.
+- **Runtime config e rules** — execução inline de PHP, análise de comportamento em
+  runtime e rules específicas de PHP genérico são pré-requisitos de hardening ou
+  coleta de runtime, e são geralmente capturados após discovery by extension e
+  zonas funcionarem.
+
+### 7.1.4 Resumo de prioridades (para não misturar P1/P3)
+
+No mínimo local, apenas uma coisa importa:
+
+- **P1:** Descobrir, via extensão, todos os arquivos PHP no alvo, e classificá-los
+  sem executar nada. Isso basta para um scanner de PHP genérico mínimo, sem
+  confusão de camadas.
+
+Zonas, Composer, runtime config e rules são capítulos posteriores ao discovery
+operacional. Eles não são pré-requisito para o mínimo, e quando chegarem, rodem
+como complementos ao discovery.
 
 ## 7.2 Laravel Adapter
 
@@ -1847,7 +1892,33 @@ Diagnosis responde:
 
 Misturar os dois cria certeza falsa.
 
-## 12.2 Chaves de correlação
+## 12.2 Delivery de diagnósticos no WIRS
+
+No WIRS, diagnósticos são receitas de correlação auditável. O capítulo descreve
+receitas de design (DX001, DX002, DX003, DX004) que definem o que o mecanismo deve
+conseguir inferir. O delivery real, porém, é organizado em **slices verticais**
+(/audits/feature-state.md#slice-definitions, #77, #78, #79): um slice entrega um
+diagnosis file-centric que responde a uma pergunta específica, com seus próprios
+requisitos de entrada, contexto e saída. Isso significa:
+
+- **DX001** — delivery via #77 (Diagnosis file-centric por sinais convergentes),
+  o primeiro diagnosis do WIRS. Ele é o slice de entrada e define o padrão de
+  output que os próximos seguem.
+- **DX002–DX004** — descrevem a intenção de design para correlações posteriores
+  (executável inesperado em zona, persistência → artifact, DB + filesystem).
+  Elas não são recipes independentes a implementar em paralelo; são motivadoras
+  para os próximos slices (#78, #79) que chegam depois do milestone de diagnosis.
+
+Um diagnóstico só existe quando existe um slice que o entrega — a receita de design
+é intenção, o slice é contrato. Quando um slice entrega, ele é documentado no
+estado do projeto com seu próprio ID e seu próprio checklist de aceite, e a
+documentação do capítulo 12 reflete a cobertura real implementada.
+
+A lista de receitas abaixo descreve o que o mecanismo deve conseguir inferir no
+conjunto, não o cronograma de entrega. O cronograma está no roadmap: #77 →
+#78 → #79, com evidência temporal e correlação local em horizontes posteriores.
+
+## 12.3 Chaves de correlação
 
 - mesmo artifact;
 - mesmo diretório;
@@ -1861,7 +1932,7 @@ Misturar os dois cria certeza falsa.
 - runtime origin apontando para IOC existente;
 - baseline mismatch + code heuristic no mesmo arquivo.
 
-## 12.3 Regras iniciais
+## 12.4 Regras iniciais
 
 ### DX001 — Trusted mismatch + malware signature
 
@@ -1892,7 +1963,7 @@ Configuração de persistência referencia artifact que possui findings relevant
 
 Registro suspeito no DB referencia component/path/domain que possui outros findings.
 
-## 12.4 Confidence de diagnosis
+## 12.5 Confidence de diagnosis
 
 No MVP, receitas categóricas explícitas são melhores que números sofisticados falsamente precisos.
 
@@ -1907,7 +1978,7 @@ confidence: high
 severity: critical
 ```
 
-## 12.5 Output obrigatório
+## 12.6 Output obrigatório
 
 Todo diagnosis deve trazer:
 
@@ -1921,13 +1992,13 @@ Todo diagnosis deve trazer:
 - próximos checks;
 - necessidade de confirmação humana.
 
-## 12.6 Sem raciocínio circular
+## 12.7 Sem raciocínio circular
 
 Finding → Diagnosis.
 
 Diagnosis não pode criar Evidence para justificar Finding no mesmo scan.
 
-## 12.7 Evidence graph futuro
+## 12.8 Evidence graph futuro
 
 Estrutura desejável:
 
@@ -3990,7 +4061,33 @@ Produz relações/diagnoses.
 
 Gera model final e entrega a renderers.
 
-## 19.4 Collector, Detector e Provider
+## 19.4 Evitar `ScanOrchestrator` como god object
+
+O orquestrador é o lugar mais provável para o WIRS acumular responsabilidade demais.
+Um orquestrador que cresce sem controle vira um god object: sabe demasiado sobre
+cada camada, adia decisões de extração e acaba sendo o único lugar que alguém
+tem coragem de tocar. O design do WIRS prefere **serviços com uma razão para mudar
+clara**, não uma única classe que sabe tudo sobre o scan.
+
+Práticas para manter o orquestrador enxuto:
+
+- O orquestrador coodena a ordem; decisões de detalhe moram nos serviços ou em
+  helpers pequenos. Se um método do orquestrador está mais de 40 linhas sem ser uma
+  coordenação simples, considere se ele é um serviço disfarçado.
+- Quando uma camada ganha uma segunda responsabilidade ortogonal (por exemplo:
+  "descobrir a plataforma" E "decidir o threshold de leitura de conteúdo"), avalie
+  se ela vira dois serviços ou dois módulos, não um método grande.
+- O domínio nunca absorve regras de serviço. Se uma regra muda quando muda a forma
+  de lançamento (CLI, CI, bundle), ela provavelmente não mora no domain.
+- Se `ScanOrchestrator` alcançar ~1000–1200 linhas sem separar em serviços bem
+  delimitados, algum serviço novo está faltando no mapa — não é um sinal de
+  progresso, é um acúmulo.
+
+Um orquestrador grande não é erro de uma vez. É tendência de crescimento. A ferramenta
+contra ele é revisar, a cada mil linhas aproximadamente, se algum serviço está na
+fronteira de estourar e dividir antes que a divisão fique dolorosa.
+
+## 19.5 Collector, Detector e Provider
 
 ### Collector
 

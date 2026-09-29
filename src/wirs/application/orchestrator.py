@@ -547,6 +547,7 @@ def run_scan(
     head_bytes: int = HEAD_BYTES,
     should_stop: Callable[[], bool] | None = None,
     on_event: Callable[[ProgressEvent], None] | None = None,
+    exclude_zones: tuple[str, ...] = (),
 ) -> ScanResult:
     sid = scan_id or f"scan_{uuid.uuid4().hex[:12]}"
     emit = on_event or (lambda _e: None)
@@ -571,6 +572,11 @@ def run_scan(
         adapter = next(a for a in adapters if a.id == found.platform_id)
         for artifact in artifacts:
             zones[artifact.id] = adapter.classify(artifact.path.relative)
+
+    # Exclui zonas solicitadas (após classificação, antes de integridade/deteção)
+    if exclude_zones:
+        artifacts = [a for a in artifacts if zones.get(a.id) not in exclude_zones]
+        zones = {aid: zone for aid, zone in zones.items() if zone not in exclude_zones}
 
     # Integridade ANTES da detecção: baseline confiável absolve (WIRS-053).
     # Divergentes continuam escaneados (correlação DX001 precisa dos dois lados).

@@ -301,7 +301,21 @@ def scan(
     php_static_zone: list[str] = typer.Option(
         [], "--php-static-zone", help="Prefixo PHP não-executável (repetível)."
     ),
+    exclude_zone: list[str] = typer.Option(
+        [], "--exclude-zone", help="Zona WordPress a excluir do scan (repetível: plugins, themes, uploads, mu-plugins, cache, upgrade, core, root-special)."
+    ),
 ) -> None:
+    zone_aliases = {
+        "plugins": "wp-content-plugins",
+        "themes": "wp-content-themes",
+        "uploads": "wp-content-uploads",
+        "mu-plugins": "wp-content-mu-plugins",
+        "cache": "wp-content-cache",
+        "upgrade": "wp-content-upgrade",
+        "core": "wp-core-protected",
+        "root-special": "wp-root-special",
+    }
+    exclude_zones = tuple(zone_aliases.get(z, z) for z in exclude_zone)
     """Executa um scan read-only sobre o target (orquestrador v1)."""
     if wizard:
         try:
@@ -409,6 +423,7 @@ def scan(
         analyzers=[yara_analyzer],
         integrity=integrity_providers,
         on_event=monitor,
+        exclude_zones=exclude_zones,
     )
     for artifact in result.artifacts:
         kinds[artifact.kind.value] += 1

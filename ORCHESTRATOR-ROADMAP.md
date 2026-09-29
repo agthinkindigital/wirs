@@ -7,6 +7,30 @@ horizontes; este arquivo não transforma uma visão futura em compromisso atual.
 Promoção entre `develop` e `main`, e os gates de versão, seguem
 [`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md).
 
+## Status de execução atual
+
+- Versão publicada: `0.1.0` (`main`).
+- Versão em desenvolvimento: `0.2.0` (`develop`, não promovida).
+- Próximo slice formal a entregar: **#76 (WIRS-105, relações)** — predecessor de #78 e #79.
+- Próximo marco: **M4 — Content analysis + Diagnosis (Horizonte A)**.
+- Commit de referência para `develop`: `074677c` (CI verde: [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607)).
+
+## Próximos passos (sequência linear única)
+
+O próximo trabalho é **#76 (WIRS-105, relações)** — precede #78 e #79. Ele é o
+próximo slice de Diagnosis após DX001 (#77) e do HTML filesystem-only (#80). Depende
+apenas de #65 (artifact canônico, done) e da content analysis bounded entregue.
+
+Após #76: #78 (WIRS-107, phishing/cloaking/backup) → #79 (WIRS-108, contexto
+offline de IP/CIDR/UA).
+
+Não iniciar #69, #71, #72, #73–75, #81, nem qualquer trabalho pós-1.0 até #76 e
+a sequência de Diagnosis estarem entregues formalmente.
+
+> **Nota:** itens marcados `(implementado_localmente)` no texto têm código no
+> worktree, mas ainda não passaram por Issue/QA/promoção e não contam como entrega
+> formal (ver [`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md)).
+
 ## Epics
 
 - [**[E00] Fundação do Repositório**](https://github.com/agthinkindigital/wirs/issues/1) - `in_progress`
@@ -27,12 +51,18 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
   (WIRS-086, YARA no `scan`) também foi concluída. A próxima DAG é #67. A Epic
   pai permanece aberta para follow-ons do próprio domínio. (Fases A/C)
 
+  Status interno: 5 slices concluídos (#23, #24, #25, #65, #66); próximo slice
+  dentro do epícilio é #67 (WIRS-034, fontes locais grandes, done).
+
 - [**[E03] Reader, Hashing e Resource Control**](https://github.com/agthinkindigital/wirs/issues/4) - `in_progress`
 
   ArtifactReader read-only, HashService, profiles (soft/balanced/fast),
   scheduler central, large-file policy, benchmark.
   Slices: #26 (WIRS-030, done), #27 (WIRS-031, done), #67 (WIRS-034, fontes
   locais grandes, done). (Fases A/B)
+
+  Status interno: 3 slices concluídos (#26, #27, #67); próximo slice dentro do
+  epícilio é #67 (WIRS-034, fontes locais grandes, done).
 
 - [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `done`
 
@@ -66,7 +96,7 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
   file-centric no Horizonte A/B e runtime/state posterior. Nenhum item
   file-centric depende de logs, cPanel, E16 ou E17. (Fases B/G)
 
-- [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `in_progress`
+- [**[E07] External Analyzer Providers**](https://github.com/agthinkindigital/wirs/issues/8) - `done`
 
   Contrato ExternalAnalyzer, YARA, Wordfence CLI, Semgrep (fase 2), sandbox.
   Inteligência de versões/higiene (componente desatualizado ou recurso
@@ -74,7 +104,7 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
   Slices 0.2.0: #60 (WIRS-080, done), #61 (WIRS-081, done), #62 (WIRS-082, done),
   #66 (WIRS-086, done). YARA no `scan` publica Coverage real e dependeu de #65.
   Wordfence/Semgrep adiados até o fluxo forense local estar completo.
-  Issues: WIRS-080–WIRS-086. (Fases C/H)
+  (Fases C/H)
 
 - [**[E08] Reporting e Redaction**](https://github.com/agthinkindigital/wirs/issues/9) - `in_progress`
 
@@ -88,6 +118,10 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
   (WIRS-095, HTML forense filesystem-only, implementada localmente) e #81
   (WIRS-097, PDF opcional) ficam depois do artifact canônico e Diagnosis.
   (Fases A/B/C/F)
+
+  Status interno: 5 slices concluídos (#28, #40, #41, #59, #53); #80
+  (WIRS-095, HTML forense filesystem-only) é implementado localmente mas não
+  formalizado; próximo slice dentro do epícilio é #80 após formalização.
 
 - [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`
 
@@ -120,18 +154,24 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
   #82 (WIRS-123, rejeição de symlink no destino de `--report`) foi concluída;
   os demais itens WIRS-120–WIRS-128 continuam no backlog. (contínuo)
 
-- [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `in_progress`
+- [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `done`
 
   Pasta local com manifesto de fontes/provenance + archive target sem extração
-  insegura. Slices: #68 (WIRS-130, implementado localmente), #69 (WIRS-131).
-  SSH/SFTP foi removido do
+  insegura. Slices: #68 (WIRS-130, done), #69 (WIRS-131). SSH/SFTP foi removido do
   caminho pré-1.0; WIRS-135 foi incorporado a #68. (Horizonte B)
 
-- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `in_progress`
+  Status interno: #68 (WIRS-130) está done; #69 (WIRS-131, archive local) ainda
+  não é entregue formalmente e depende de #68.
+
+- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `done`
 
   Discovery, Composer inventory/baseline, zone policies, runtime config, rules.
-  Primeiro slice: #70 (WIRS-140, scan PHP genérico local, implementado
-  localmente). (Horizonte B)
+  Primeiro slice: #70 (WIRS-140, done). PHP discovery is delivered; zonas e Composer
+  são P3 e chegam em iterações posteriores. (Horizonte B)
+
+  Status interno: #70 (WIRS-140, PHP discovery) está done; zonas, Composer e
+  runtime config são P3 e não estão implementados. Próximo trabalho possível é
+  verificar e formalizar #70 antes de avançar para P3.
 
 - [**[E14] Runtime HTTP**](https://github.com/agthinkindigital/wirs/issues/15) - `todo`
 
@@ -174,26 +214,69 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
 
 ## Ordem de execução
 
-1. FT-1 core seguro (E00, E01, E02, E03, E08-JSON, E10-scan).
-2. FT-2 integridade WordPress (E06 + E05-policy).
-3. FT-3 detection (E05 + E08-terminal + redaction).
-4. FT-4 componentes customizados (E04).
-5. Validar em fixtures/snapshots conhecidos antes de adicionar complexidade.
-6. Fechar artifact canônico (#65).
-7. Hardening do destino `--report` (#82), independente de #65 (concluído).
-8. Integrar YARA no scan (#66), após #65 (done).
-9. Content analysis bounded (#67), concluída.
-10. Diagnosis file-centric (#77) → HTML filesystem-only (#80), implementada
-    localmente; próxima DAG é PHP genérico local (#70).
-11. PHP genérico local (#70), implementado localmente, sem depender de Incident
-    Bundle ou logs.
-12. Incident Bundle (#68), implementado localmente → archive (#69).
-13. Evidence temporal (#71) → Coverage de logs (#72) → adapters locais (#73–75).
-14. Relações (#76) → Diagnoses adicionais (#78) → contexto offline opcional (#79).
-15. PDF opcional (#81), derivado do HTML.
+Esta seção é ao mesmo tempo **registro histórico** (como as coisas foram feitas)
+e **guia de leitura** (o que foi entregue, o que ainda falta, e em que ordem o
+trabalho avança):\
+
+- itens com `(done)` ou `(implementado_localmente)` são histórico;
+- itens com `(todo)` ou `(in_progress)` são próximos passos;
+- a distinção entre `implementado_localmente` e entrega formal
+  (Issue/QA/promoção) está na nota de rodapé ao final desta seção;
+- o **planejamento formal** mora nos Epics deste arquivo, em
+  [`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md) e nas Issues do GitHub;
+  esta lista não substitui nenhum deles.
+
+1. `(done)` FT-1 core seguro (E00, E01, E02, E03, E08-JSON, E10-scan).
+2. `(done)` FT-2 integridade WordPress (E06 + E05-policy).
+3. `(done)` FT-3 detection (E05 + E08-terminal + redaction).
+4. `(done)` FT-4 componentes customizados (E04).
+5. `(done)` Validar em fixtures/snapshots conhecidos antes de adicionar complexidade.
+6. `(done)` Fechar artifact canônico (#65) — entregue em schema 2.0, refém do
+   orquestrador e dos adapters de evidência.
+7. `(done)` Hardening do destino `--report` (#82), independente de #65 (concluído).
+8. `(done)` Integrar YARA no scan (#66), após #65 (done) — publica Coverage real e
+   dependeu de #65.
+9. `(done)` Content analysis bounded (#67), concluída.
+10. `(implementado_localmente)` Diagnosis file-centric (#77) → HTML filesystem-only
+    (#80), implementados localmente; **próximo slice formal** é #76
+    (WIRS-105, relações) → #78 (WIRS-107, phishing/cloaking/backup) → #79
+    (WIRS-108, contexto offline de IP/CIDR/UA); #80 deriva do artifact canônico.
+11. `(implementado_localmente)` PHP genérico local (#70), implementado localmente
+    como discovery by extension, sem depender de Incident Bundle ou logs; zonas e
+    Composer são P3 e chegam em iterações posteriores.
+12. `(implementado_localmente)` Incident Bundle (#68), implementado localmente →
+    archive (#69) ainda não entregue formalmente.
+13. `(todo)` Evidence temporal (#71) → Coverage de logs (#72) → adapters locais
+    (#73–75).
+14. `(todo)` Relações (#76) → Diagnoses adicionais (#78) → contexto offline opcional
+    (#79).
+15. `(todo)` PDF opcional (#81), derivado do HTML.
 
 SSH/SFTP, active HTTP, agentes residentes, streaming/SIEM e resposta automática
 ficam pós-1.0 em seams separados.
+
+> **Nota de rodapé — implementado_localmente vs. entrega formal**
+>
+> Itens marcados `(implementado_localmente)` têm código no worktree atual, mas
+> ainda não passaram pelo fluxo de Issue/QA e promoção de versão descrito em
+> [`docs/VERSIONAMENTO-E-GATES.md`](docs/VERSIONAMENTO-E-GATES.md). Enquanto não
+> passarem por esse fluxo, não contam como entrega formal da versão e não
+> movem o marco correspondente no roadmap. A vantagem é que a base técnica já está
+> quieta para quando o slice for formalmente aprovado; a ressalva é que o que está
+> no worktree não é garantido até passar pelo gate.
+>
+> **Próximos slices não-entregues formalmente (forward-looking):**
+>
+> - #76 (WIRS-105, relações) → #78 (WIRS-107, phishing/cloaking/backup) → #79
+>   (WIRS-108, contexto offline de IP/CIDR/UA) — sequência de Diagnosis pós-DX001.
+> - #69 (WIRS-131, archive local) depende de #68 (Incident Bundle, já
+>   implementado_localmente).
+> - #71 (WIRS-170, Evidence temporal) → #72 (WIRS-171, Coverage de logs) →
+>   #73–75 (WIRS-180–182, adapters locais).
+> - #81 (WIRS-097, PDF opcional) deriva do HTML.
+>
+> SSH/SFTP, active HTTP, agentes residentes, streaming/SIEM e resposta automática
+> permanecem pós-1.0 e não entram na sequência acima.
 
 ## Critério de done
 

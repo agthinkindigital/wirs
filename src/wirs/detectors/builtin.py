@@ -62,4 +62,4 @@ class PhpHeuristicsDetector(Detector):
     def analyze(
         self, artifact: Artifact, zone: str | None, head: bytes, chunks: Iterable[bytes]
     ) -> Sequence[ProposedFinding]:
-        return analyze_php_stream(artifact, chunks)
+        return analyze_php_stream(artifact, chunks, zone)

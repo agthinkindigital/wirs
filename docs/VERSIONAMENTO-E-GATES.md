@@ -120,6 +120,57 @@ conjunto M5/`0.3.0` junto das demais entradas necessárias.
 - Próxima decisão de promoção: fechar e auditar o conjunto completo de `0.2.0`,
   não promover por causa de uma capability isolada.
 
+## Estado de execução
+
+Esta seção registra o estado do worktree atual como fato, separado da auditoria de
+elegibilidade de versão que segue abaixo. Um LLM ou analista que ler este documento
+primeiro deve ler esta seção para saber em que ponto do desenvolvimento se encontra
+o WIRS antes de interpretar a auditoria.
+
+- `main`: tag `0.1.0` publicada (última versão publicada).
+- `develop`: trabalhando para `0.2.0` (M3/M4).
+
+### Epics em estado atual
+
+- E00 (Fundação do Repositório) — `in_progress`. Slices: #17 (done), #18 (aberto).
+- E01 (Target e Artifact) — `in_progress`. Slices: #19–#22 (nenhum fechado).
+- E02 (Evidence, Findings e Coverage) — `in_progress`. Slices concluídos: #23, #24,
+  #25, #65, #66. Próximo slice dentro do epícilio: #67 (WIRS-034, fontes locais
+  grandes).
+- E03 (Reader, Hashing e Resource Control) — `in_progress`. Slices concluídos: #26,
+  #27, #67. Próximo slice dentro do epícilio: #67 (já concluído).
+- E04 (Baseline e Integrity) — `done`. Todos os slices (#40–#46) concluídos.
+- E05 (IOC e Rule Engine Genérico) — `in_progress`. Slices FT-3: #36–#39 (nenhum
+  fechado). Restante (WIRS-052, 056–058): a fatiar.
+- E06 (WordPress Adapter) — `in_progress`. Slices FT-2: #30–#35 (nenhum fechado).
+- E07 (External Analyzer Providers) — `done`. Slices 0.2.0: #60, #61, #62, #66
+  concluídos.
+- E08 (Reporting e Redaction) — `in_progress`. Slices concluídos: #28, #40, #41,
+  #59, #53. Slices implementados localmente não formalizados: #80 (HTML
+  filesystem-only).
+- E09 (Diagnosis e Correlation) — `todo`. Próximo slice: #77 (WIRS-106), depois
+  #76 → #78 → #79.
+- E10 (CLI e Configuração) — `in_progress`. Slices: #29 (done); orquestrador:
+  #42, #43 (done); flag --ioc: #44 (aberto); UX validação: #53–#55 (done).
+- E11 (Hardening do Scanner) — `todo`. Slice entregue: #46 (done). #82
+  (WIRS-123) foi concluído; restante em backlog.
+- E12 (Incident Bundle, Snapshot e Archive Local) — `done`. #68 (WIRS-130) está
+  done; #69 (WIRS-131) ainda não entregue formalmente.
+- E13 (PHP Generic) — `done`. #70 (WIRS-140, PHP discovery) está done; zonas,
+  Composer e runtime config (P3) não estão implementados.
+- E14 (Runtime HTTP) — `todo` (pós-1.0).
+- E15 (AI Analysis Opcional) — `todo` (pós-1.0).
+- E16 (Evidência Temporal e Ingestão de Logs) — `todo`.
+- E17 (Adapter de Hospedagem Local) — `todo`.
+
+### Canal de desenvolvimento atual
+
+- Branch: `develop`.
+- Próximo slice a atacar: **#76 (WIRS-105, relações)** — precede #78 e #79.
+- Commit de referência: `074677c` (CI verde em [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607)).
+- Não tocar em #69, #71, #72, #73–75, #81, nem qualquer trabalho pós-1.0 até
+  #76 e a sequência de Diagnosis estarem entregues formalmente.
+
 ## Auditoria de Elegibilidade — 2026-09-15
 
 **Resultado: NÃO ELEGÍVEL para promoção de `0.2.0` neste momento.**

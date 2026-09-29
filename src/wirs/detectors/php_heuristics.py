@@ -8,7 +8,8 @@ a ref — invariante 2). Regras de combinação (a única inteligência aqui):
 - PROCESS + FILE_NET → COMBO/MEDIUM
 - DYNAMIC_EXECUTION ou PROCESS isolados → SINGLE/LOW
 - demais isolados → nada (comuns demais em código legítimo)
-- heurística NUNCA gera CRITICAL (só determinístico/assinatura podem)
+- heurística NUNCA gera CRITICAL por conta própria (só determinístico/assinatura podem)
+  exceto quando a zona é CORE_PROTECTED (core WordPress), onde escala para CRITICAL.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 
+from wirs.adapters.wordpress.zones import WordPressZone
 from wirs.domain import Artifact, Confidence, ConfidenceClass, Severity
 from wirs.ports.detection import ProposedFinding
 
@@ -86,37 +88,55 @@ def signal_families_stream(chunks: Iterable[bytes]) -> tuple[str, ...]:
     return tuple(fam for fam, _ in _FAMILIES if fam in found)
 
 
-def _tier(families: frozenset[str]) -> tuple[str, Severity, Confidence] | None:
+def _tier(families: frozenset[str], zone: str | None = None) -> tuple[str, Severity, Confidence] | None:
     enc = "encoding" in families
     if enc and (families & {"dynamic_execution", "process", "dynamic_function"}):
-        return ("PHP.HEUR.CHAIN", Severity.HIGH, Confidence(ConfidenceClass.HIGH))
-    if len(families) >= 3:
-        return ("PHP.HEUR.CHAIN", Severity.HIGH, Confidence(ConfidenceClass.HIGH))
-    if "dynamic_execution" in families and (
+        rule_id, severity, confidence = "PHP.HEUR.CHAIN", Severity.HIGH, Confidence(ConfidenceClass.HIGH)
+    elif len(families) >= 3:
+        rule_id, severity, confidence = "PHP.HEUR.CHAIN", Severity.HIGH, Confidence(ConfidenceClass.HIGH)
+    elif "dynamic_execution" in families and (
         families & {"process", "file_network", "dynamic_function"}
     ):
-        return ("PHP.HEUR.COMBO", Severity.MEDIUM, Confidence(ConfidenceClass.MEDIUM))
-    if {"process", "file_network"} <= families:
-        return ("PHP.HEUR.COMBO", Severity.MEDIUM, Confidence(ConfidenceClass.MEDIUM))
-    if families & {"dynamic_execution", "process"}:
-        return ("PHP.HEUR.SINGLE", Severity.LOW, Confidence(ConfidenceClass.LOW))
-    return None
+        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, Confidence(ConfidenceClass.MEDIUM)
+    elif {"process", "file_network"} <= families:
+        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, Confidence(ConfidenceClass.MEDIUM)
+    elif families & {"dynamic_execution", "process"}:
+        rule_id, severity, confidence = "PHP.HEUR.SINGLE", Severity.LOW, Confidence(ConfidenceClass.LOW)
+    else:
+        return None
+
+    # Escalation para CRITICAL se zona é CORE_PROTECTED (core WP modificado)
+    if zone == WordPressZone.CORE_PROTECTED.value:
+        severity = Severity.CRITICAL
+        confidence = Confidence(ConfidenceClass.HIGH)
+
+    return (rule_id, severity, confidence)
+
+
+def _is_php_file(artifact: Artifact) -> bool:
+    """Verifica se artifact é arquivo PHP (extensão .php)."""
+    return artifact.path.relative.lower().endswith(".php")
 
 
 def analyze_php(
     artifact: Artifact,
     head: bytes,
     *,
+    zone: str | None = None,
     evidence_refs: Sequence[str] = (),
 ) -> tuple[ProposedFinding, ...]:
     """Uma proposta no máximo (o tier mais alto): sem duplicar por família.
 
     `evidence_refs` existe por compatibilidade e é ignorado: a ref verdadeira
     é anexada pelo orquestrador ao cunhar a Evidence.
+
+    Só analisa arquivos .php; demais extensões retornam vazio.
     """
+    if not _is_php_file(artifact):
+        return ()
     _ = evidence_refs
     families = frozenset(signal_families(head))
-    decided = _tier(families)
+    decided = _tier(families, zone)
     if decided is None:
         return ()
     rule_id, severity, confidence = decided
@@ -134,10 +154,15 @@ def analyze_php(
     )
 
 
-def analyze_php_stream(artifact: Artifact, chunks: Iterable[bytes]) -> tuple[ProposedFinding, ...]:
-    """Analisa o conteúdo inteiro disponibilizado pelo budget, sem materializá-lo."""
+def analyze_php_stream(artifact: Artifact, chunks: Iterable[bytes], zone: str | None = None) -> tuple[ProposedFinding, ...]:
+    """Analisa o conteúdo inteiro disponibilizado pelo budget, sem materializá-lo.
+
+    Só analisa arquivos .php; demais extensões retornam vazio.
+    """
+    if not _is_php_file(artifact):
+        return ()
     families = frozenset(signal_families_stream(chunks))
-    decided = _tier(families)
+    decided = _tier(families, zone)
     if decided is None:
         return ()
     rule_id, severity, confidence = decided
