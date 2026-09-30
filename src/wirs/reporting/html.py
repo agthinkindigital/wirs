@@ -41,9 +41,20 @@ def render_forensic_html(report: CanonicalReport) -> str:
         counts[finding["severity"]] = counts.get(finding["severity"], 0) + 1
 
     finding_rows = []
+    evidence_by_id = {item["id"]: item for item in evidence}
     for finding in findings:
         attributes = finding.get("attributes", {})
         path = attributes.get("path", finding["artifact_ref"])
+        contexts: list[str] = []
+        for ref in finding.get("evidence_refs", ()):
+            content = evidence_by_id.get(ref, {}).get("content", {})
+            items = content.get("contexts", ())
+            if isinstance(items, list):
+                contexts.extend(str(item) for item in items)
+        trecho_html = ""
+        if contexts:
+            bloco = _text("\n".join(contexts))
+            trecho_html = f"<dt>Trecho de código</dt><td><pre class='trecho'>{bloco}</pre></td>"
         finding_rows.append(
             "<article class='finding'>"
             f"<h3><span class='severity severity-{_text(finding['severity'])}'>"
@@ -54,6 +65,7 @@ def render_forensic_html(report: CanonicalReport) -> str:
             f"<dt>Categoria</dt>{_cell(finding['category'])}"
             f"<dt>Confiança</dt>{_cell(finding['confidence']['class'])}"
             f"<dt>Evidence</dt>{_cell(', '.join(finding['evidence_refs']))}"
+            f"{trecho_html}"
             "</dl></article>"
         )
     findings_html = "".join(finding_rows) or "<p class='empty'>Nenhum Finding.</p>"
@@ -106,7 +118,7 @@ h1,h2,h3 {{ line-height:1.2; }} h1 {{ font-size:clamp(1.8rem,4vw,3rem); }} h2 {{
 .metric,.finding,.diagnosis,.notice {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:1rem; }}
 .metric strong {{ display:block; font-size:1.8rem; }} .severity {{ border-radius:999px; padding:.2rem .5rem; font-size:.75rem; font-weight:700; }}
 .severity-critical,.severity-high {{ background:var(--danger); color:#241015; }} .severity-medium {{ background:var(--warn); color:#251a0c; }} .severity-low {{ background:#90cdf4; color:#10202b; }} .severity-info {{ background:#cbd5e0; color:#1a202c; }}
-.finding,.diagnosis {{ margin:.75rem 0; }} .title {{ font-size:1.05rem; }} dl {{ display:grid; grid-template-columns:minmax(9rem, auto) 1fr; gap:.35rem .75rem; }} dt {{ color:var(--muted); font-weight:600; }} dd {{ margin:0; overflow-wrap:anywhere; }}
+.finding,.diagnosis {{ margin:.75rem 0; }} .title {{ font-size:1.05rem; }} pre.trecho {{ background:#0b1117; border:1px solid var(--line); border-radius:6px; padding:.6rem; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-size:.85rem; }} dl {{ display:grid; grid-template-columns:minmax(9rem, auto) 1fr; gap:.35rem .75rem; }} dt {{ color:var(--muted); font-weight:600; }} dd {{ margin:0; overflow-wrap:anywhere; }}
 table {{ width:100%; border-collapse:collapse; margin:1rem 0; }} th,td {{ border-bottom:1px solid var(--line); padding:.6rem; text-align:left; overflow-wrap:anywhere; }} th {{ color:var(--muted); }}
 .notice {{ border-left:4px solid var(--accent); }} @media print {{ :root {{ color-scheme:light; --bg:#fff; --panel:#fff; --ink:#111; --muted:#444; --line:#bbb; }} body {{ font-size:10pt; }} main {{ max-width:none; padding:.5cm; }} .finding,.diagnosis,.metric,.notice {{ break-inside:avoid; }} }}
 </style></head><body><main>

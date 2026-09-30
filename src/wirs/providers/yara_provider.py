@@ -28,6 +28,28 @@ except ImportError:  # pragma: no cover - caminho real exige a lib
 
 PROVIDER_ID = "yara"
 _SEVERIDADES = ("info", "low", "medium", "high", "critical")
+_CONTEXT_STRING_CAP = 5
+_CONTEXT_STRING_WIDTH = 200
+
+
+def _match_contexts(match: Any) -> list[str]:
+    """Trechos casados pela regra (identificador + bytes, aparados).
+
+    Acesso defensivo via getattr: versões/stubs sem `strings` devolvem vazio.
+    Redaction final acontece no orquestrador (invariante 10).
+    """
+    contexts: list[str] = []
+    for string in getattr(match, "strings", None) or ():
+        for instance in getattr(string, "instances", None) or ():
+            data = getattr(instance, "matched_data", b"") or b""
+            if isinstance(data, str):
+                data = data.encode("utf-8", errors="replace")
+            text = bytes(data).decode("utf-8", errors="replace").strip()[:_CONTEXT_STRING_WIDTH]
+            if text:
+                contexts.append(f"{getattr(string, 'identifier', '?')}: {text}")
+            if len(contexts) >= _CONTEXT_STRING_CAP:
+                return contexts
+    return contexts
 
 
 class YaraAnalyzer:
@@ -159,6 +181,7 @@ class YaraAnalyzer:
                         severity=severity if severity in _SEVERIDADES else "medium",
                         artifact_ref=artifact.path.relative,
                         source_ref=artifact.source_ref,
+                        evidence_content={"contexts": _match_contexts(match)},
                         attributes={
                             "tags": list(getattr(match, "tags", [])),
                             "namespace": str(getattr(match, "namespace", "")),

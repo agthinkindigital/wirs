@@ -280,6 +280,7 @@ def test_sem_stream_sem_segunda_leitura(tmp_path) -> None:
     from wirs.detectors.builtin import IocDetector, PhpHeuristicsDetector
     from wirs.domain import IOC, IOCKind
 
+    (tmp_path / "a.php").write_bytes(b"hello world")
     (tmp_path / "a.txt").write_bytes(b"hello world")
     target = LocalDirectoryTarget(tmp_path)
     leituras = 0
@@ -300,7 +301,8 @@ def test_sem_stream_sem_segunda_leitura(tmp_path) -> None:
         budget=ReadBudget(max_bytes=1 << 20),
         detectors=[PhpHeuristicsDetector()],
     )
-    assert leituras == 2  # head + conteúdo completo para a heurística
+    # head + stream para o .php; só head para o .txt (heurística só roda em PHP)
+    assert leituras == 3
 
     leituras = 0
     run_scan(
@@ -312,7 +314,7 @@ def test_sem_stream_sem_segunda_leitura(tmp_path) -> None:
         budget=ReadBudget(max_bytes=1 << 20),
         detectors=[IocDetector([IOC(kind=IOCKind.LITERAL, value="zzz")])],
     )
-    assert leituras == 2  # head + stream do IOC
+    assert leituras == 4  # head + stream do IOC, para cada um dos 2 arquivos
 
 
 def test_verificado_por_baseline_suprime_heuristicas(tmp_path) -> None:

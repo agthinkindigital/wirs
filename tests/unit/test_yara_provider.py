@@ -23,12 +23,26 @@ from wirs.providers.yara_provider import YaraAnalyzer
 
 class _FakeMatch:
     def __init__(
-        self, rule="PHP_WEBSHELL", namespace="builtin", tags=("webshell", "php"), meta=None
+        self, rule="PHP_WEBSHELL", namespace="builtin", tags=("webshell", "php"), meta=None,
+        strings=(),
     ):
         self.rule = rule
         self.namespace = namespace
         self.tags = list(tags)
         self.meta = meta or {}
+        self.strings = list(strings)
+
+
+class _FakeInstance:
+    def __init__(self, offset=0, matched_data=b""):
+        self.offset = offset
+        self.matched_data = matched_data
+
+
+class _FakeString:
+    def __init__(self, identifier="$a", instances=()):
+        self.identifier = identifier
+        self.instances = list(instances)
 
 
 class _FakeRules:
@@ -96,6 +110,19 @@ def test_match_sintetico_normalizado(com_yara, tmp_path: Path) -> None:
     assert achado.artifact_ref == "evil.php"
     assert achado.attributes["tags"] == ["webshell", "php"]
     assert achado.attributes["namespace"] == "builtin"
+
+
+def test_match_traz_strings_casadas_em_contexts(tmp_path: Path, monkeypatch) -> None:
+    casado = _FakeMatch(
+        strings=(_FakeString("$a", (_FakeInstance(8, b"trecho suspeito aqui"),)),)
+    )
+    monkeypatch.setattr(yara_provider, "_yara", _FakeYara([casado]))
+    analyzer = _analyzer(tmp_path)
+
+    resultado = analyzer.scan([_artifact(tmp_path, conteudo=b"<?php // x\n")])
+
+    (achado,) = resultado.findings
+    assert any("trecho suspeito aqui" in c for c in achado.evidence_content["contexts"])
 
 
 def test_compile_desabilita_includes_externos(tmp_path: Path, monkeypatch) -> None:

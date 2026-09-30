@@ -75,3 +75,32 @@ def test_fixtures_heuristics() -> None:
     assert verdict("single.php") == ()
     assert verdict("clean.php") == ()
     assert verdict("min.min.js") == ()
+
+
+def test_chain_traz_linhas_casadas_em_contexts(tmp_path) -> None:
+    # NOTA ANTI-AV: tokens perigosos fragmentados; em runtime o valor é idêntico.
+    B64 = b"ba" + b"se64_decode("
+    head = b"<?php\n$out = " + B64 + b"$x);\n" + b"ev" + b"al($out);\n"
+
+    (finding,) = analyze_php(_artifact(tmp_path), head, evidence_refs=("ev_1",))
+
+    assert finding.rule_id == "PHP.HEUR.CHAIN"
+    contexts = finding.evidence_content["contexts"]
+    esperado = "ba" + "se64_decode("  # montado para não literalizar o token
+    assert any(esperado in line for line in contexts)
+    assert any(("ev" + "al(") in line for line in contexts)
+
+
+def test_stream_traz_contexts_mesmo_com_sinal_cortado(tmp_path) -> None:
+    # NOTA ANTI-AV: o sinal corta na fronteira dos chunks; o veredito persiste
+    # e o trecho exibe a linha completa (segundo chunk).
+    from wirs.detectors.php_heuristics import analyze_php_stream
+
+    B64 = b"ba" + b"se64_decode("
+    chunks = (b"<?php\n$out = " + B64[:4], B64[4:] + b"$x);\n" + b"ev" + b"al($out);\n")
+
+    (finding,) = analyze_php_stream(_artifact(tmp_path), chunks)
+
+    assert finding.rule_id == "PHP.HEUR.CHAIN"
+    esperado = "ba" + "se64_decode("  # montado para não literalizar o token
+    assert any(esperado in line for line in finding.evidence_content["contexts"])

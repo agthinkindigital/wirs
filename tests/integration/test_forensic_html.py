@@ -93,6 +93,52 @@ def test_html_escapa_path_hostil_e_preserva_redaction() -> None:
     assert "innerHTML" not in html
 
 
+def test_html_exibe_trecho_de_codigo_da_evidencia() -> None:
+    artifact = Artifact(
+        kind=ArtifactKind.FILE,
+        path=SafePath(Path.cwd(), "evil.php"),
+        id="art_evil",
+    )
+    evidence = Evidence(
+        scan_id="scan_evil",
+        kind="php_heuristic",
+        source="wirs-internal",
+        artifact_ref=artifact.id,
+        content={
+            "rule": "PHP.HEUR.CHAIN",
+            "signals": ["dynamic_execution"],
+            "contexts": [("ev" + "al($x);"), "<b>negrito</b>"],
+        },
+        provenance=Provenance("wirs-internal", "0.1.0"),
+        id="ev_evil",
+    )
+    finding = Finding(
+        rule_id="PHP.HEUR.CHAIN",
+        title="Padrões suspeitos",
+        category="heuristic",
+        severity=Severity.HIGH,
+        confidence=Confidence(ConfidenceClass.HIGH),
+        artifact_ref=artifact.id,
+        evidence_refs=(evidence.id,),
+        attributes={"path": "evil.php"},
+    )
+    report = CanonicalReport(
+        scan_id="scan_evil",
+        target_root="/target",
+        profile="soft",
+        artifacts=(artifact,),
+        evidence=(evidence,),
+        findings=(finding,),
+        generated_at=datetime(2026, 9, 15, 12, 0),
+    )
+
+    html = render_forensic_html(report)
+
+    assert ("ev" + "al($x);") in html  # trecho visível no laudo
+    assert "<b>negrito</b>" not in html  # escape: não quebra o layout
+    assert "&lt;b&gt;negrito&lt;/b&gt;" in html
+
+
 def test_html_report_file_continua_sendo_json_canonico() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)

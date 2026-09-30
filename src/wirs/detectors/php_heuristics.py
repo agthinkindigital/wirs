@@ -68,6 +68,24 @@ _FAMILIES: tuple[tuple[str, tuple[bytes, ...]], ...] = (
 
 _PATTERNS = [(fam, re.compile(b"|".join(pats), re.IGNORECASE)) for fam, pats in _FAMILIES]
 _STREAM_CARRY_BYTES = 512
+_CONTEXT_LINE_CAP = 5
+_CONTEXT_LINE_WIDTH = 200
+
+
+def _matching_lines(data: bytes, limit: int = _CONTEXT_LINE_CAP) -> tuple[str, ...]:
+    """Linhas que casam algum padrão (trecho demonstrativo da evidência).
+
+    Aparadas em largura e quantidade para não inflar o report; a redaction
+    final (secrets) acontece no orquestrador.
+    """
+    out: list[str] = []
+    for raw in data.split(b"\n"):
+        if not any(rx.search(raw) for _, rx in _PATTERNS):
+            continue
+        out.append(raw.decode("utf-8", errors="replace").strip()[:_CONTEXT_LINE_WIDTH])
+        if len(out) >= limit:
+            break
+    return tuple(out)
 
 
 def signal_families(head: bytes) -> tuple[str, ...]:
@@ -88,20 +106,25 @@ def signal_families_stream(chunks: Iterable[bytes]) -> tuple[str, ...]:
     return tuple(fam for fam, _ in _FAMILIES if fam in found)
 
 
-def _tier(families: frozenset[str], zone: str | None = None) -> tuple[str, Severity, Confidence] | None:
+def _tier(
+    families: frozenset[str], zone: str | None = None
+) -> tuple[str, Severity, Confidence] | None:
     enc = "encoding" in families
+    high = Confidence(ConfidenceClass.HIGH)
+    medium = Confidence(ConfidenceClass.MEDIUM)
+    low = Confidence(ConfidenceClass.LOW)
     if enc and (families & {"dynamic_execution", "process", "dynamic_function"}):
-        rule_id, severity, confidence = "PHP.HEUR.CHAIN", Severity.HIGH, Confidence(ConfidenceClass.HIGH)
+        rule_id, severity, confidence = "PHP.HEUR.CHAIN", Severity.HIGH, high
     elif len(families) >= 3:
-        rule_id, severity, confidence = "PHP.HEUR.CHAIN", Severity.HIGH, Confidence(ConfidenceClass.HIGH)
+        rule_id, severity, confidence = "PHP.HEUR.CHAIN", Severity.HIGH, high
     elif "dynamic_execution" in families and (
         families & {"process", "file_network", "dynamic_function"}
     ):
-        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, Confidence(ConfidenceClass.MEDIUM)
+        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, medium
     elif {"process", "file_network"} <= families:
-        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, Confidence(ConfidenceClass.MEDIUM)
+        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, medium
     elif families & {"dynamic_execution", "process"}:
-        rule_id, severity, confidence = "PHP.HEUR.SINGLE", Severity.LOW, Confidence(ConfidenceClass.LOW)
+        rule_id, severity, confidence = "PHP.HEUR.SINGLE", Severity.LOW, low
     else:
         return None
 
@@ -148,20 +171,51 @@ def analyze_php(
             severity=severity,
             confidence=confidence,
             evidence_kind="php_heuristic",
-            evidence_content={"rule": rule_id, "signals": sorted(families)},
+            evidence_content={
+                "rule": rule_id,
+                "signals": sorted(families),
+                "contexts": list(_matching_lines(head)),
+            },
             attributes={"signals": sorted(families)},
         ),
     )
 
 
-def analyze_php_stream(artifact: Artifact, chunks: Iterable[bytes], zone: str | None = None) -> tuple[ProposedFinding, ...]:
+def analyze_php_stream(
+    artifact: Artifact, chunks: Iterable[bytes], zone: str | None = None
+) -> tuple[ProposedFinding, ...]:
     """Analisa o conteúdo inteiro disponibilizado pelo budget, sem materializá-lo.
 
-    Só analisa arquivos .php; demais extensões retornam vazio.
+    Só analisa arquivos .php; demais extensões retornam vazio. Os contexts
+    vêm de linhas completas por chunk (padrão cortado na fronteira de chunk
+    pode não aparecer no trecho, sem afetar o veredito).
     """
     if not _is_php_file(artifact):
         return ()
-    families = frozenset(signal_families_stream(chunks))
+    found: set[str] = set()
+    contexts: list[str] = []
+    carry = b""
+    line_carry = b""
+    for chunk in chunks:
+        if not chunk:
+            continue
+        window = carry + chunk
+        found.update(fam for fam, rx in _PATTERNS if rx.search(window))
+        carry = window[-_STREAM_CARRY_BYTES:]
+        if len(contexts) < _CONTEXT_LINE_CAP:
+            parts = (line_carry + chunk).split(b"\n")
+            line_carry = parts[-1]
+            for raw in parts[:-1]:
+                if any(rx.search(raw) for _, rx in _PATTERNS):
+                    linha = raw.decode("utf-8", errors="replace").strip()
+                    contexts.append(linha[:_CONTEXT_LINE_WIDTH])
+                    if len(contexts) >= _CONTEXT_LINE_CAP:
+                        break
+    if line_carry and len(contexts) < _CONTEXT_LINE_CAP:
+        if any(rx.search(line_carry) for _, rx in _PATTERNS):
+            linha = line_carry.decode("utf-8", errors="replace").strip()
+            contexts.append(linha[:_CONTEXT_LINE_WIDTH])
+    families = frozenset(fam for fam, _ in _FAMILIES if fam in found)
     decided = _tier(families, zone)
     if decided is None:
         return ()
@@ -174,7 +228,11 @@ def analyze_php_stream(artifact: Artifact, chunks: Iterable[bytes], zone: str | 
             severity=severity,
             confidence=confidence,
             evidence_kind="php_heuristic",
-            evidence_content={"rule": rule_id, "signals": sorted(families)},
+            evidence_content={
+                "rule": rule_id,
+                "signals": sorted(families),
+                "contexts": contexts,
+            },
             attributes={"signals": sorted(families)},
         ),
     )
