@@ -128,3 +128,24 @@ def test_report_sem_parcial_e_overwrite() -> None:
         assert result.exit_code == 0, result.output
         assert json.loads(destino.read_text(encoding="utf-8"))["schema_version"] == "2.0"
         assert f"report: {destino}" in result.output
+
+
+def test_json_stdout_traz_contexts_unicode_sem_quebrar(tmp_path) -> None:
+    # Regressão: contexts com bytes fora do cp1252 (ex.: '≥') quebravam o
+    # console Windows via rich; stdout agora sai em UTF-8 binário.
+    alvo = tmp_path / "alvo"
+    alvo.mkdir()
+    EV = "ev" + "al("  # montado para não literalizar o token no fonte
+    B64 = "ba" + "se64_decode("
+    (alvo / "evil.php").write_text(
+        f"<?php\n$x = {B64}$y);\n{EV}$x); // \u2265\n", encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["scan", str(alvo), "--format", "json"])
+
+    assert result.exit_code == 1, result.output  # HIGH atinge o fail-on padrão
+    payload = json.loads(result.stdout)
+    (finding,) = payload["findings"]
+    (evidence,) = payload["evidence"]
+    assert finding["rule_id"] == "PHP.HEUR.CHAIN"
+    assert any("\u2265" in line for line in evidence["content"]["contexts"])

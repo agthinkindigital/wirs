@@ -302,7 +302,9 @@ def scan(
         [], "--php-static-zone", help="Prefixo PHP não-executável (repetível)."
     ),
     exclude_zone: list[str] = typer.Option(
-        [], "--exclude-zone", help="Zona WordPress a excluir do scan (repetível: plugins, themes, uploads, mu-plugins, cache, upgrade, core, root-special)."
+        [],
+        "--exclude-zone",
+        help="Zona a excluir do scan (repetível: plugins, themes, uploads, etc.).",
     ),
 ) -> None:
     zone_aliases = {
@@ -433,7 +435,9 @@ def scan(
     )
     payload = report.to_json()  # uma serialização: stdout e arquivo idênticos
     if format_ == "json":
-        console.print_json(payload)
+        # stdout binário em UTF-8: contexts trazem bytes arbitrários do Target
+        # (ex.: '≥') que quebram consoles cp1252 via rich (UnicodeEncodeError).
+        _write_utf8_stdout(payload + "\n")
     elif format_ == "markdown":
         console.print(render_markdown(report))
     elif format_ == "html":
