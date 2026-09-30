@@ -104,3 +104,31 @@ def test_stream_traz_contexts_mesmo_com_sinal_cortado(tmp_path) -> None:
     assert finding.rule_id == "PHP.HEUR.CHAIN"
     esperado = "ba" + "se64_decode("  # montado para não literalizar o token
     assert any(esperado in line for line in finding.evidence_content["contexts"])
+
+
+def test_mapeamento_de_funcoes_perigosas_com_despacho_dinamico(tmp_path) -> None:
+    # Mecanismo do webshell aboutt.php (caso Ofir, #84): nomes perigosos como
+    # strings num mapa + despacho via variável. Sem eval/base64 literais.
+    # NOTA ANTI-AV: tokens fragmentados; em runtime o valor é idêntico.
+    SYS = b"'sy" + b"stem'"
+    EV = b"'ev" + b"al'"
+    EX = b"'ex" + b"ec'"
+    head = (
+        b"<?php\n$alts = array(" + SYS + b" => 1, " + EV + b" => 1, " + EX + b" => 1);\n"
+        b"foreach ($alts as $name => $v) { $f = $name; }\n"
+        b"$out = $f($cmd);\n"
+    )
+
+    (finding,) = analyze_php(_artifact(tmp_path), head, evidence_refs=("ev_1",))
+
+    assert finding.rule_id == "PHP.HEUR.COMBO"
+    assert finding.severity is Severity.MEDIUM
+    assert "function_mapping" in finding.attributes["signals"]
+
+
+def test_nome_perigoso_isolado_sem_despacho_nao_acusa(tmp_path) -> None:
+    # Um único nome citado, sem chamada dinâmica: comum demais (docs, logs).
+    SYS = b"'sy" + b"stem'"
+    head = b"<?php\n// usa " + SYS + b" para checar disponibilidade\nok_init();\n"
+
+    assert analyze_php(_artifact(tmp_path), head, evidence_refs=("ev_1",)) == ()

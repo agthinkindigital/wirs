@@ -130,6 +130,27 @@ def test_report_sem_parcial_e_overwrite() -> None:
         assert f"report: {destino}" in result.output
 
 
+def test_report_renderiza_html_de_json_salvo(tmp_path) -> None:
+    alvo = tmp_path / "alvo"
+    alvo.mkdir()
+    (alvo / "evil.php").write_text("<?php system($x); copy($a, $b);", encoding="utf-8")
+    destino = tmp_path / "scan.json"
+    saida = tmp_path / "laudo.html"
+
+    salvo = runner.invoke(app, ["scan", str(alvo), "--format", "json", "--report", str(destino)])
+    assert salvo.exit_code == 0, salvo.output  # COMBO/MEDIUM abaixo do fail-on high
+
+    resultado = runner.invoke(
+        app, ["report", str(destino), "--format", "html", "--output", str(saida)]
+    )
+
+    assert resultado.exit_code == 0, resultado.output
+    html = saida.read_text(encoding="utf-8")
+    assert html.startswith("<!doctype html>")
+    assert "PHP.HEUR.COMBO" in html
+    assert "Trecho de c" in html  # contexts (#86) chegam ao laudo sem re-escanear
+
+
 def test_json_stdout_traz_contexts_unicode_sem_quebrar(tmp_path) -> None:
     # Regressão: contexts com bytes fora do cp1252 (ex.: '≥') quebravam o
     # console Windows via rich; stdout agora sai em UTF-8 binário.

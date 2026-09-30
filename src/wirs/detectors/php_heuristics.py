@@ -6,6 +6,7 @@ a ref — invariante 2). Regras de combinação (a única inteligência aqui):
 - 3+ famílias → CHAIN/HIGH
 - DYNAMIC_EXECUTION + (PROCESS | FILE_NET | DYNAMIC_FUNCTION) → COMBO/MEDIUM
 - PROCESS + FILE_NET → COMBO/MEDIUM
+- FUNCTION_MAPPING + DYNAMIC_FUNCTION → COMBO/MEDIUM (#84: webshell por mapa)
 - DYNAMIC_EXECUTION ou PROCESS isolados → SINGLE/LOW
 - demais isolados → nada (comuns demais em código legítimo)
 - heurística NUNCA gera CRITICAL por conta própria (só determinístico/assinatura podem)
@@ -71,6 +72,44 @@ _STREAM_CARRY_BYTES = 512
 _CONTEXT_LINE_CAP = 5
 _CONTEXT_LINE_WIDTH = 200
 
+# Nomes perigosos citados como strings (#84: mapa de despacho do webshell).
+# Veredito exige 2+ nomes DISTINTOS + chamada dinâmica (1 nome citado sozinho
+# é comum em docs/logs). Ordenados por tamanho p/ alternância exata.
+_MAPPING_NAMES: tuple[bytes, ...] = tuple(
+    sorted(
+        (
+            b"create_function",
+            b"call_user_func",
+            b"file_get_contents",
+            b"file_put_contents",
+            b"move_uploaded_file",
+            b"base64_decode",
+            b"shell_exec",
+            b"proc_open",
+            b"gzinflate",
+            b"str_rot13",
+            b"passthru",
+            b"assert",
+            b"system",
+            b"popen",
+            b"fopen",
+            b"eval",
+            b"exec",
+        ),
+        key=len,
+        reverse=True,
+    )
+)
+_MAPPING_RX = re.compile(rb"['\"](" + b"|".join(_MAPPING_NAMES) + rb")['\"]", re.IGNORECASE)
+# Legit code cita 1-2 nomes (docs/fallbacks, ex.: 'fopen'+'gzinflate' no
+# Requests); shells mapeiam cardápios inteiros. Limiar em 3 distintos.
+_MAPPING_MIN_DISTINCT = 3
+
+
+def _mapping_names(data: bytes) -> frozenset[bytes]:
+    """Nomes perigosos distintos citados como strings no conteúdo."""
+    return frozenset(match.group(1).lower() for match in _MAPPING_RX.finditer(data))
+
 
 def _matching_lines(data: bytes, limit: int = _CONTEXT_LINE_CAP) -> tuple[str, ...]:
     """Linhas que casam algum padrão (trecho demonstrativo da evidência).
@@ -80,7 +119,7 @@ def _matching_lines(data: bytes, limit: int = _CONTEXT_LINE_CAP) -> tuple[str, .
     """
     out: list[str] = []
     for raw in data.split(b"\n"):
-        if not any(rx.search(raw) for _, rx in _PATTERNS):
+        if not any(rx.search(raw) for _, rx in _PATTERNS) and not _MAPPING_RX.search(raw):
             continue
         out.append(raw.decode("utf-8", errors="replace").strip()[:_CONTEXT_LINE_WIDTH])
         if len(out) >= limit:
@@ -123,6 +162,8 @@ def _tier(
         rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, medium
     elif {"process", "file_network"} <= families:
         rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, medium
+    elif {"function_mapping", "dynamic_function"} <= families:
+        rule_id, severity, confidence = "PHP.HEUR.COMBO", Severity.MEDIUM, medium
     elif families & {"dynamic_execution", "process"}:
         rule_id, severity, confidence = "PHP.HEUR.SINGLE", Severity.LOW, low
     else:
@@ -159,6 +200,8 @@ def analyze_php(
         return ()
     _ = evidence_refs
     families = frozenset(signal_families(head))
+    if len(_mapping_names(head)) >= _MAPPING_MIN_DISTINCT:
+        families |= {"function_mapping"}
     decided = _tier(families, zone)
     if decided is None:
         return ()
@@ -196,26 +239,31 @@ def analyze_php_stream(
     contexts: list[str] = []
     carry = b""
     line_carry = b""
+    mapping: set[bytes] = set()
     for chunk in chunks:
         if not chunk:
             continue
         window = carry + chunk
         found.update(fam for fam, rx in _PATTERNS if rx.search(window))
+        mapping.update(_mapping_names(window))
         carry = window[-_STREAM_CARRY_BYTES:]
         if len(contexts) < _CONTEXT_LINE_CAP:
             parts = (line_carry + chunk).split(b"\n")
             line_carry = parts[-1]
             for raw in parts[:-1]:
-                if any(rx.search(raw) for _, rx in _PATTERNS):
-                    linha = raw.decode("utf-8", errors="replace").strip()
-                    contexts.append(linha[:_CONTEXT_LINE_WIDTH])
-                    if len(contexts) >= _CONTEXT_LINE_CAP:
-                        break
+                if not any(rx.search(raw) for _, rx in _PATTERNS) and not _MAPPING_RX.search(raw):
+                    continue
+                linha = raw.decode("utf-8", errors="replace").strip()
+                contexts.append(linha[:_CONTEXT_LINE_WIDTH])
+                if len(contexts) >= _CONTEXT_LINE_CAP:
+                    break
     if line_carry and len(contexts) < _CONTEXT_LINE_CAP:
         if any(rx.search(line_carry) for _, rx in _PATTERNS):
             linha = line_carry.decode("utf-8", errors="replace").strip()
             contexts.append(linha[:_CONTEXT_LINE_WIDTH])
     families = frozenset(fam for fam, _ in _FAMILIES if fam in found)
+    if len(mapping) >= _MAPPING_MIN_DISTINCT:
+        families |= {"function_mapping"}
     decided = _tier(families, zone)
     if decided is None:
         return ()

@@ -12,6 +12,8 @@ Exit codes (Seção 10.8 do spec):
 
 from __future__ import annotations
 
+import importlib
+import json
 from collections import Counter
 from collections.abc import Sequence
 from enum import IntEnum
@@ -213,16 +215,79 @@ def version() -> None:
 
 
 @app.command()
+def report(
+    saved: Path = typer.Argument(..., help="JSON canônico de um scan anterior."),
+    format_: str = typer.Option(
+        "html", "--format", help="Formato: html, markdown ou terminal."
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", help="Grava a view neste arquivo (padrão: stdout)."
+    ),
+) -> None:
+    """Renderiza uma view a partir de JSON canônico salvo (sem tocar no Target)."""
+    if format_ not in ("html", "markdown", "terminal"):
+        console.print(f"[red]Formato inválido:[/red] {format_}")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET)
+    try:
+        data = json.loads(Path(saved).read_text(encoding="utf-8"))
+    except OSError as e:
+        console.print(f"[red]Report ilegível:[/red] {saved} ({e})")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Report inválido:[/red] {saved} ({e})")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    try:
+        canonical = CanonicalReport.from_dict(data)
+    except (ValueError, KeyError, TypeError) as e:
+        console.print(f"[red]Report fora do schema:[/red] {saved} ({e})")
+        raise typer.Exit(code=ExitCode.INVALID_TARGET) from e
+    if format_ == "html":
+        rendered = render_forensic_html(canonical)
+    elif format_ == "markdown":
+        rendered = render_markdown(canonical)
+    else:
+        kinds: Counter[str] = Counter(a.kind.value for a in canonical.artifacts)
+        with console.capture() as buf:
+            _print_terminal(canonical, kinds)
+        rendered = buf.get()
+    if output is None:
+        _write_utf8_stdout(rendered if rendered.endswith("\n") else rendered + "\n")
+    else:
+        try:
+            write_text_atomic(output, rendered)
+        except OSError as e:
+            console.print(f"[red]Não consegui gravar:[/red] {e}")
+            raise typer.Exit(code=ExitCode.INTERNAL_ERROR) from e
+        console.print(f"report: {output}")
+    raise typer.Exit(code=ExitCode.OK)
+
+
+@app.command()
 def doctor() -> None:
     """Verifica runtime, providers disponíveis e configuração (WIRS-112)."""
     import shutil
     import sys
 
     console.print(f"[bold]wirs[/bold] {__version__} — Python {sys.version.split()[0]}")
-    for tool in ("wp", "yara", "wordfence"):
+    for tool in ("wp", "wordfence"):
         found = shutil.which(tool)
         state = f"[green]available[/green] ({found})" if found else "[yellow]unavailable[/yellow]"
         console.print(f"  {tool}: {state}")
+    available, detail = _yara_lib_status()
+    if available:
+        console.print(f"  yara: [green]available[/green] ({detail})")
+    else:
+        console.print(f"  yara: [yellow]unavailable[/yellow] ({detail})")
+
+
+def _yara_lib_status() -> tuple[bool, str]:
+    """Espelha a lib que o provider usa (import), não o binário no PATH."""
+    try:
+        lib = importlib.import_module("yara")
+    except ImportError:
+        return False, "ausente: pip install wirs[yara]"
+    version = getattr(lib, "__version__", None)
+    return True, f"lib {version}" if version else "lib yara-python"
 
 
 def _load_manifest_cli(path: Path) -> BaselineManifest:
