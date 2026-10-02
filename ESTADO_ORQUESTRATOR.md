@@ -278,3 +278,12 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
   admin); regressão real pega e corrigida (dangle de IDs em MISSING).
 - QA: suíte unit+integration+golden verde, `ruff check .` limpo,
   `mypy src/` limpo. Pendente: chaves de log/DB (#73–75, #85) e render no HTML.
+
+## Fechamentos e triagem no tracker (2026-10-02)
+
+- #76 CLOSED (subset filesystem; P2 / Horizonte F). #70 CLOSED (adapter PHP +
+  teste restaurado + trava de zonas absolutas).
+- #87 triada como `bug` P1 (`ready-for-human`): diagnoses vazias no caso real.
+- `ORCHESTRATOR-ROADMAP.md` sincronizado: próxima formal é #78 (bloqueada por
+  #75); itens 10/11/14 e lista forward-looking atualizados; E09 registra o
+  fechamento da #76.

@@ -11,21 +11,22 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
 
 - Versão publicada: `0.1.0` (`main`).
 - Versão em desenvolvimento: `0.2.0` (`develop`, não promovida).
-- Próximo slice formal a entregar: **#76 (WIRS-105, relações)** — predecessor de #78 e #79.
+- Próximo slice formal a entregar: **#78 (WIRS-107, phishing/cloaking/backup)** —
+  bloqueada por #75; #76 (WIRS-105, relações, subset filesystem) foi fechada em
+  2026-10-02.
 - Próximo marco: **M4 — Content analysis + Diagnosis (Horizonte A)**.
 - Commit de referência para `develop`: `074677c` (CI verde: [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607)).
 
 ## Próximos passos (sequência linear única)
 
-O próximo trabalho é **#76 (WIRS-105, relações)** — precede #78 e #79. Ele é o
-próximo slice de Diagnosis após DX001 (#77) e do HTML filesystem-only (#80). Depende
-apenas de #65 (artifact canônico, done) e da content analysis bounded entregue.
+O próximo trabalho na sequência de Diagnosis é **#78 (WIRS-107,
+phishing/cloaking/backup)** → #79 (WIRS-108, contexto offline de IP/CIDR/UA).
+#76 (WIRS-105, relações, subset filesystem) foi fechada em 2026-10-02; #78
+segue bloqueada por #75. #76 foi o slice de Diagnosis após DX001 (#77) e do
+HTML filesystem-only (#80).
 
-Após #76: #78 (WIRS-107, phishing/cloaking/backup) → #79 (WIRS-108, contexto
-offline de IP/CIDR/UA).
-
-Não iniciar #69, #71, #72, #73–75, #81, nem qualquer trabalho pós-1.0 até #76 e
-a sequência de Diagnosis estarem entregues formalmente.
+Não iniciar #69, #71, #72, #73–75, #81, nem qualquer trabalho pós-1.0 até a
+sequência de Diagnosis estar entregue formalmente (#76 entregue em 2026-10-02).
 
 > **Nota:** itens marcados `(implementado_localmente)` no texto têm código no
 > worktree, mas ainda não passaram por Issue/QA/promoção e não contam como entrega
@@ -130,15 +131,16 @@ a sequência de Diagnosis estarem entregues formalmente.
   arquivos/cache/banco como sugestão — remediação automática fora do scan).
   WIRS-100–103 eram placeholders horizontais não publicados e foram substituídos
   pelos slices verticais abaixo; WIRS-104 (graph export) fica pós-1.0.
-  Próximo slice: #77 (WIRS-106, Diagnosis file-centric por sinais convergentes),
-  dependente de #65 e da content analysis bounded já entregue. Depois: #76
-  (WIRS-105, relações), #78 (WIRS-107, phishing/cloaking/backup) e #79 (WIRS-108,
+  #77 (WIRS-106, Diagnosis file-centric) está fechada. #76 (WIRS-105, relações,
+  subset filesystem) foi fechada em 2026-10-02 (P2 / Horizonte F). Depois: #78
+  (WIRS-107, phishing/cloaking/backup, bloqueada por #75) e #79 (WIRS-108,
   contexto offline de IP/CIDR/UA). (Fase A/B, depois F)
 
   Decisão de coordenação (2026-09-30): relações = P2 / Horizonte F (0.5.0).
-  Subset filesystem entregue em `develop` (modelo REL.*, ScanResult.relations,
-  array `relations` no JSON canônico). Chaves de log/DB (conta, sessão, DB
-  record) aguardam #73–75/#85; sem elas, CIDR/UA/janela disparam só com dados.
+  #76 foi fechada em 2026-10-02 com o subset filesystem (modelo REL.*,
+  ScanResult.relations, array `relations` no JSON canônico). Chaves de log/DB
+  (conta, sessão, DB record) aguardam #73–75/#85; sem elas, CIDR/UA/janela
+  disparam só com dados.
 
 - [**[E10] CLI e Configuração**](https://github.com/agthinkindigital/wirs/issues/11) - `in_progress`
 
@@ -242,19 +244,20 @@ trabalho avança):\
 8. `(done)` Integrar YARA no scan (#66), após #65 (done) — publica Coverage real e
    dependeu de #65.
 9. `(done)` Content analysis bounded (#67), concluída.
-10. `(implementado_localmente)` Diagnosis file-centric (#77) → HTML filesystem-only
-    (#80), implementados localmente; **próximo slice formal** é #76
-    (WIRS-105, relações) → #78 (WIRS-107, phishing/cloaking/backup) → #79
+10. `(done)` Diagnosis file-centric (#77, fechada) → HTML filesystem-only
+    (#80, fechada); #76 (WIRS-105, relações, subset filesystem) fechada em
+    2026-10-02 → próximo: #78 (WIRS-107, bloqueada por #75) → #79
     (WIRS-108, contexto offline de IP/CIDR/UA); #80 deriva do artifact canônico.
-11. `(implementado_localmente)` PHP genérico local (#70), implementado localmente
-    como discovery by extension, sem depender de Incident Bundle ou logs; zonas e
+11. `(done)` PHP genérico local (#70, fechada em 2026-10-02), discovery by
+    extension, sem depender de Incident Bundle ou logs; zonas e
     Composer são P3 e chegam em iterações posteriores.
 12. `(implementado_localmente)` Incident Bundle (#68), implementado localmente →
     archive (#69) ainda não entregue formalmente.
 13. `(todo)` Evidence temporal (#71) → Coverage de logs (#72) → adapters locais
     (#73–75).
-14. `(todo)` Relações (#76) → Diagnoses adicionais (#78) → contexto offline opcional
-    (#79).
+14. `(done-subset)` Relações (#76, fechada em 2026-10-02: modelo + JSON; chaves
+    de log/DB pendentes) → Diagnoses adicionais (#78, bloqueada por #75) →
+    contexto offline opcional (#79).
 15. `(todo)` PDF opcional (#81), derivado do HTML.
 
 SSH/SFTP, active HTTP, agentes residentes, streaming/SIEM e resposta automática
@@ -272,8 +275,9 @@ ficam pós-1.0 em seams separados.
 >
 > **Próximos slices não-entregues formalmente (forward-looking):**
 >
-> - #76 (WIRS-105, relações) → #78 (WIRS-107, phishing/cloaking/backup) → #79
->   (WIRS-108, contexto offline de IP/CIDR/UA) — sequência de Diagnosis pós-DX001.
+> - #78 (WIRS-107, phishing/cloaking/backup, bloqueada por #75) → #79
+>   (WIRS-108, contexto offline de IP/CIDR/UA) — sequência de Diagnosis pós-DX001
+>   (com #76 fechada).
 > - #69 (WIRS-131, archive local) depende de #68 (Incident Bundle, já
 >   implementado_localmente).
 > - #71 (WIRS-170, Evidence temporal) → #72 (WIRS-171, Coverage de logs) →
