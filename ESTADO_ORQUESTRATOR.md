@@ -260,3 +260,21 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
   `tests/fixtures/generic/incident_bundle` e
   `tests/integration/test_incident_bundle.py`. QA automatizado passou: `216
   passed, 10 skipped`; revisão HITL do schema do manifesto continua pendente.
+
+## Implementação publicada em `develop` da DAG #76 — subset filesystem (2026-09-30)
+
+- Coordenação: P2 / Horizonte F (0.5.0). Conflito registrado e resolvido: o
+  roadmap marcava #76 como próximo slice formal, mas os Blocked-by #73–75
+  (adapters de log) são pós-1.0; vale a diretriz do coordenador.
+- `FindingRelation` em `src/wirs/domain/relation.py` (stdlib; `REL.*`,
+  kind strong/cue, key + window explícitas, `attribution=False` estrutural p/
+  CIDR/UA — sem `REL.SAME_ACTOR` no modelo).
+- Chaves ativas com dados filesystem (§12.3): artifact, component, IOC, rede
+  exata, owner, janela `occurred_at`; CIDR/UA disparam só com attributes.
+- `ScanResult.relations` + array `relations` no JSON canônico (com validação de
+  refs e golden atualizado de forma consciente). Relations recorrelacionadas
+  pós-remap no `from_scan_result` (`fnd_` deriva de `artifact_ref`).
+- TDD: `tests/unit/test_finding_relations.py` (7, incl. negativos NAT/proxy/CDN/
+  admin); regressão real pega e corrigida (dangle de IDs em MISSING).
+- QA: suíte unit+integration+golden verde, `ruff check .` limpo,
+  `mypy src/` limpo. Pendente: chaves de log/DB (#73–75, #85) e render no HTML.

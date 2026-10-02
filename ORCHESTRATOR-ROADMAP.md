@@ -135,6 +135,11 @@ a sequência de Diagnosis estarem entregues formalmente.
   (WIRS-105, relações), #78 (WIRS-107, phishing/cloaking/backup) e #79 (WIRS-108,
   contexto offline de IP/CIDR/UA). (Fase A/B, depois F)
 
+  Decisão de coordenação (2026-09-30): relações = P2 / Horizonte F (0.5.0).
+  Subset filesystem entregue em `develop` (modelo REL.*, ScanResult.relations,
+  array `relations` no JSON canônico). Chaves de log/DB (conta, sessão, DB
+  record) aguardam #73–75/#85; sem elas, CIDR/UA/janela disparam só com dados.
+
 - [**[E10] CLI e Configuração**](https://github.com/agthinkindigital/wirs/issues/11) - `in_progress`
 
   `wirs scan`, config schema, `wirs doctor`, verbose/debug, exit codes, progress/cancel.
