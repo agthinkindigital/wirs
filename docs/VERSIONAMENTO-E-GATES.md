@@ -102,7 +102,7 @@ isolada:
 | `0.2.0` | M3/M4: artifact canônico, baselines/YARA, content analysis e Diagnosis | em preparação em `develop`; gates não promovidos |
 | `0.3.0` | M5: Incident Bundle, archive local e PHP genérico | não elegível só por PHP coverage |
 | `0.4.0` | M6: Evidence temporal e logs locais com Coverage de retenção | futuro |
-| `0.5.0` | M7: relações, Diagnoses adicionais e laudo forense | futuro |
+| `0.5.0` | M7: relações, Diagnoses adicionais e laudo forense | futuro (subset filesystem de relações em `develop` desde 2026-10-02) |
 | `0.6.0` | M8: estado WordPress e ecossistema externo previsto | futuro |
 | `0.7.0` | external ecosystem conforme escopo aprovado | futuro |
 | `0.8.x–0.9.x` | hardening, compatibilidade e preparação de estabilidade | futuro |
@@ -146,10 +146,9 @@ o WIRS antes de interpretar a auditoria.
 - E07 (External Analyzer Providers) — `done`. Slices 0.2.0: #60, #61, #62, #66
   concluídos.
 - E08 (Reporting e Redaction) — `in_progress`. Slices concluídos: #28, #40, #41,
-  #59, #53. Slices implementados localmente não formalizados: #80 (HTML
-  filesystem-only).
-- E09 (Diagnosis e Correlation) — `todo`. Próximo slice: #77 (WIRS-106), depois
-  #76 → #78 → #79.
+  #59, #53, #80 (fechada).
+- E09 (Diagnosis e Correlation) — `todo`. #77 fechada; #76 fechada (subset
+  filesystem, P2 / Horizonte F); depois: #78 (bloqueada por #75) → #79.
 - E10 (CLI e Configuração) — `in_progress`. Slices: #29 (done); orquestrador:
   #42, #43 (done); flag --ioc: #44 (aberto); UX validação: #53–#55 (done).
 - E11 (Hardening do Scanner) — `todo`. Slice entregue: #46 (done). #82
@@ -166,10 +165,12 @@ o WIRS antes de interpretar a auditoria.
 ### Canal de desenvolvimento atual
 
 - Branch: `develop`.
-- Próximo slice a atacar: **#76 (WIRS-105, relações)** — precede #78 e #79.
+- Próximo slice a atacar: **#78 (WIRS-107)** — bloqueada por #75; #76 foi
+  fechada em 2026-10-02.
 - Commit de referência: `074677c` (CI verde em [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607)).
 - Não tocar em #69, #71, #72, #73–75, #81, nem qualquer trabalho pós-1.0 até
-  #76 e a sequência de Diagnosis estarem entregues formalmente.
+  a sequência de Diagnosis estar entregue formalmente (#76 entregue em
+  2026-10-02).
 
 ## Auditoria de Elegibilidade — 2026-09-15
 
@@ -199,6 +200,14 @@ versão. Em particular, a implementação local de #77 e #80 precisa passar pelo
 fluxo de Issue/QA e ser incorporada ao `develop`; não basta o código existir no
 worktree. A CI verde do commit anterior de `develop` não valida mudanças locais
 não commitadas.
+
+### Atualização — 2026-10-02 (sem reescrever a auditoria acima)
+
+Entradas que mudaram desde 2026-09-15, verificadas no tracker: #77 e #80 estão
+fechadas; #76 (subset filesystem, P2 / Horizonte F) e #70 estão fechadas. O
+veredito de elegibilidade continua pendente de reavaliação formal: seguem
+abertos o fechamento do conjunto M3/M4 no tracker, o build/tag/release
+`0.2.0` e a CI do `develop` atual.
 
 ## Responsabilidade Documental
 
