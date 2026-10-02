@@ -215,3 +215,25 @@ O roadmap define a ordem e os marcos; as Issues definem aceite e estado; este
 documento define promoção e versão; o Changelog registra apenas o que chegou à
 `main`. Divergências devem ser registradas antes da promoção, nunca resolvidas
 alterando o número da versão por conveniência.
+
+### Addendum de estado — 2026-10-02
+
+O plano operacional auditado está em
+[`docs/audits/GATE-0.2.0-PLANO-OPERACIONAL-2026-10.md`](audits/GATE-0.2.0-PLANO-OPERACIONAL-2026-10.md), publicado no commit `ddf1a94`.
+
+- A linha publicada continua `main`/`v0.1.0`; não houve promoção, mudança de
+  versão ou atualização do Changelog.
+- O alvo de promoção continua `0.2.0`, não `0.1.1`: M3/M4 incluem capacidades
+  coerentes e schema canônico 2.0, não apenas uma correção compatível de patch.
+- `main` e `develop` estão divergentes (`ahead_by=42`, `behind_by=6`); nenhuma
+  promoção pode presumir fast-forward.
+- #68 permanece fora de M3/M4; #75 continua bloqueando #78; #78 e #79 não serão
+  implementadas nesta execução.
+- #84 e #87 continuam P1 abertos e são blockers de release até decisão formal e
+  evidência futura. Não foram fechados nem implementados.
+- A CI do candidato anterior falhou no `ruff format --check` em quatro arquivos.
+  Por decisão explícita, a formatação não foi corrigida nesta execução; o gate
+  de CI permanece vermelho e não é tratado como sucesso.
+
+Este addendum atualiza o estado operacional sem reescrever a auditoria histórica
+de 2026-09-15 acima.

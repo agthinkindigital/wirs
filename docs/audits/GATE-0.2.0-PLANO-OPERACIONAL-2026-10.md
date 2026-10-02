@@ -177,3 +177,61 @@ A Fase A termina quando:
 Até esses critérios serem satisfeitos, o estado normativo é:
 
 > `develop` atualizado, `main` em `0.1.0`, gate `0.2.0` não elegível.
+
+## Decisões das Fases B e C — 2026-10-02
+
+### `0.2.0` versus `0.1.1`
+
+O alvo permanece **`0.2.0`**, não `0.1.1`. O conjunto inclui capacidades
+coerentes de M3/M4 e evolução breaking do artifact canônico para schema 2.0;
+isso não é uma correção compatível de patch. A versão instalada/publicada
+continua `0.1.0` até uma promoção formal. Nenhum número será alterado nesta
+execução.
+
+### Promoção `develop` → `main`
+
+Não haverá promoção nesta execução. A promoção futura só poderá ocorrer depois
+de A0–A8, com a divergência entre as branches reconciliada explicitamente,
+commit candidato reproduzível, CI verde, QA de release, atualização coordenada
+de versão/README/Changelog e tag/release. `main` permanece em `0.1.0`.
+
+### Issues críticas e bloqueios
+
+| Issue | Estado confirmado | Decisão desta execução |
+|---|---|---|
+| #68 | OPEN; M5/`0.3.0` | não implementar nem fechar; permanece fora de `0.2.0` |
+| #75 | OPEN; adapter de logs | não implementar; bloqueia #78 e permanece fora de M3/M4 |
+| #78 | OPEN; bloqueada por #75 | não implementar nem reordenar para antes do gate atual |
+| #79 | OPEN; depende de #76 | não implementar; segue após a sequência de Diagnosis |
+| #84 | OPEN/P1; falso negativo de webshell | não implementar; blocker de segurança requer decisão e evidência futura |
+| #87 | OPEN/P1; diagnoses vazias no caso Ofir | não implementar; blocker de Diagnosis requer decisão e evidência futura |
+
+Nenhuma Issue ou Epic controversa será fechada automaticamente. Comentários de
+evidência, quando feitos em execução futura, não equivalem a fechamento.
+
+### Sequência mínima após esta execução
+
+1. Manter a falha de `ruff format --check` registrada; não formatar arquivos
+   nesta run.
+2. Reconciliar `main` e `develop` sem alterar `main`, usando estratégia aprovada
+   pelo maintainer.
+3. Auditar os critérios e checklists de M3/M4 sem encerrar Epics com backlog
+   posterior.
+4. Obter decisão formal sobre #84 e #87; enquanto isso, o gate permanece
+   bloqueado.
+5. Executar novamente QA local e CI no SHA candidato, tratando format como
+   requisito obrigatório e falha como falha.
+6. Reavaliar A0–A8; somente depois preparar uma execução separada de promoção.
+
+### Riscos aceitos e não resolvidos
+
+- A CI final pode permanecer vermelha exclusivamente por formatação; isso não
+  será reportado como sucesso.
+- `main` e `develop` estão divergentes, portanto um candidato não é
+  automaticamente reproduzível por fast-forward.
+- Checklists de Epics e Issues fechadas ainda contêm estado histórico stale;
+  sincronizar sem evidência seria falsificar o gate.
+- #84 representa risco de falso negativo de segurança e #87 representa falha de
+  priorização/Diagnosis em caso real.
+- Capabilities antecipadas (#70, #76 e #80) não podem substituir o conjunto
+  M3/M4 nem antecipar a versão.

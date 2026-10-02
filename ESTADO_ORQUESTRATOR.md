@@ -1,6 +1,6 @@
 # Estado do Orquestrador — WIRS
 
-**Data:** 2026-09-15
+**Data do snapshot inicial:** 2026-09-15
 **Branch:** `develop` (repo `agthinkindigital/wirs`, público)
 **Framework:** skills locais; clone remoto do framework não foi encontrado neste checkout.
 
@@ -287,3 +287,22 @@ profile `soft` formal e E2E com WP real ficam para o `0.1.0`.
 - `ORCHESTRATOR-ROADMAP.md` sincronizado: próxima formal é #78 (bloqueada por
   #75); itens 10/11/14 e lista forward-looking atualizados; E09 registra o
   fechamento da #76.
+
+## Snapshot operacional — Fases B e C (2026-10-02)
+
+- Plano auditado: [`docs/audits/GATE-0.2.0-PLANO-OPERACIONAL-2026-10.md`](docs/audits/GATE-0.2.0-PLANO-OPERACIONAL-2026-10.md), publicado no commit `ddf1a94`.
+- `main` permanece em `0.1.0`; não houve promoção, alteração de versão ou
+  atualização do `CHANGELOG.md`.
+- `develop` continua em trabalho pós-`0.1.0`; `main...develop` está divergente
+  (`ahead_by=42`, `behind_by=6`) e exige reconciliação antes de qualquer release.
+- A decisão formal é preparar `0.2.0`, não `0.1.1`; o pacote continua em
+  `0.1.0` até o gate de promoção.
+- Não foram implementadas alterações em #68, #75, #78, #79, #84 ou #87; nenhuma
+  Issue/Epic controversa foi fechada.
+- Blockers atuais: #84 e #87 permanecem P1 abertos; a CI do candidato anterior
+  falhou exclusivamente no `ruff format --check` em quatro arquivos. Por decisão
+  desta execução, a formatação não será corrigida; a falha permanece blocker
+  verificável.
+- QA factual no checkout: `pytest` 241 passed/5 skipped, Ruff check passou,
+  mypy passou, build `wirs-0.1.0` passou; format check falhou.
+- O gate permanece: **develop atualizado, release `0.2.0` não elegível**.

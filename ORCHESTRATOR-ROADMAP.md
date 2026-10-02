@@ -15,7 +15,8 @@ Promoção entre `develop` e `main`, e os gates de versão, seguem
   bloqueada por #75; #76 (WIRS-105, relações, subset filesystem) foi fechada em
   2026-10-02.
 - Próximo marco: **M4 — Content analysis + Diagnosis (Horizonte A)**.
-- Commit de referência para `develop`: `074677c` (CI verde: [35006528607](https://github.com/agthinkindigital/wirs/actions/runs/35006528607)).
+- Commit de referência para `develop`: `ddf1a94` (plano do gate publicado; último
+  commit técnico com CI verde: `074677c`).
 
 ## Próximos passos (sequência linear única)
 
@@ -49,11 +50,12 @@ sequência de Diagnosis estar entregue formalmente (#76 entregue em 2026-10-02).
   Schemas, severidade/confiança, Coverage model, Scan Manifest, versionamento.
   Slices: #23 (WIRS-020, done), #24 (WIRS-021, done), #25 (WIRS-023, done).
   #65 (WIRS-026, artifact canônico completo) foi concluída em schema 2.0 e #66
-  (WIRS-086, YARA no `scan`) também foi concluída. A próxima DAG é #67. A Epic
+  (WIRS-086, YARA no `scan`) também foi concluída. #67 (WIRS-034, fontes locais
+  grandes) também foi concluída. A Epic
   pai permanece aberta para follow-ons do próprio domínio. (Fases A/C)
 
-  Status interno: 5 slices concluídos (#23, #24, #25, #65, #66); próximo slice
-  dentro do epícilio é #67 (WIRS-034, fontes locais grandes, done).
+  Status interno: 6 slices concluídos (#23, #24, #25, #65, #66, #67); a Epic
+  permanece aberta para follow-ons do próprio domínio.
 
 - [**[E03] Reader, Hashing e Resource Control**](https://github.com/agthinkindigital/wirs/issues/4) - `in_progress`
 
@@ -62,8 +64,8 @@ sequência de Diagnosis estar entregue formalmente (#76 entregue em 2026-10-02).
   Slices: #26 (WIRS-030, done), #27 (WIRS-031, done), #67 (WIRS-034, fontes
   locais grandes, done). (Fases A/B)
 
-  Status interno: 3 slices concluídos (#26, #27, #67); próximo slice dentro do
-  epícilio é #67 (WIRS-034, fontes locais grandes, done).
+  Status interno: 3 slices concluídos (#26, #27, #67); a Epic permanece aberta
+  para perfis, benchmarks e follow-ons de resource control.
 
 - [**[E04] Baseline e Integrity**](https://github.com/agthinkindigital/wirs/issues/5) - `done`
 
@@ -116,13 +118,12 @@ sequência de Diagnosis estar entregue formalmente (#76 entregue em 2026-10-02).
   detecção operando.
   Slices: #28 (WIRS-090, done), #40 (WIRS-091, done), #41 (WIRS-092, done),
   #59 (WIRS-093, done), #53 (WIRS-094/WIRS-119, writer/export done). #80
-  (WIRS-095, HTML forense filesystem-only, implementada localmente) e #81
+  (WIRS-095, HTML forense filesystem-only, closed) e #81
   (WIRS-097, PDF opcional) ficam depois do artifact canônico e Diagnosis.
   (Fases A/B/C/F)
 
-  Status interno: 5 slices concluídos (#28, #40, #41, #59, #53); #80
-  (WIRS-095, HTML forense filesystem-only) é implementado localmente mas não
-  formalizado; próximo slice dentro do epícilio é #80 após formalização.
+  Status interno: 6 slices concluídos (#28, #40, #41, #59, #53, #80); a Epic
+  permanece aberta para o PDF opcional e demais views futuras.
 
 - [**[E09] Diagnosis e Correlation**](https://github.com/agthinkindigital/wirs/issues/10) - `todo`
 
@@ -141,6 +142,9 @@ sequência de Diagnosis estar entregue formalmente (#76 entregue em 2026-10-02).
   ScanResult.relations, array `relations` no JSON canônico). Chaves de log/DB
   (conta, sessão, DB record) aguardam #73–75/#85; sem elas, CIDR/UA/janela
   disparam só com dados.
+  O plano do gate `0.2.0` registra #84 e #87 como blockers P1 de release; eles
+  não alteram a ordem estratégica #78 → #79 e não serão implementados nesta
+  execução.
 
 - [**[E10] CLI e Configuração**](https://github.com/agthinkindigital/wirs/issues/11) - `in_progress`
 
@@ -161,24 +165,24 @@ sequência de Diagnosis estar entregue formalmente (#76 entregue em 2026-10-02).
   #82 (WIRS-123, rejeição de symlink no destino de `--report`) foi concluída;
   os demais itens WIRS-120–WIRS-128 continuam no backlog. (contínuo)
 
-- [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `done`
+- [**[E12] Incident Bundle, Snapshot e Archive Local**](https://github.com/agthinkindigital/wirs/issues/13) - `todo`
 
   Pasta local com manifesto de fontes/provenance + archive target sem extração
-  insegura. Slices: #68 (WIRS-130, done), #69 (WIRS-131). SSH/SFTP foi removido do
+  insegura. Slices: #68 (WIRS-130, OPEN; implementação local sem aceite), #69 (WIRS-131). SSH/SFTP foi removido do
   caminho pré-1.0; WIRS-135 foi incorporado a #68. (Horizonte B)
 
-  Status interno: #68 (WIRS-130) está done; #69 (WIRS-131, archive local) ainda
-  não é entregue formalmente e depende de #68.
+  Status interno: #68 (WIRS-130) permanece OPEN com implementação local
+  publicada, mas sem aceite formal; #69 (WIRS-131, archive local) depende de #68.
 
-- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `done`
+- [**[E13] PHP Generic**](https://github.com/agthinkindigital/wirs/issues/14) - `todo`
 
   Discovery, Composer inventory/baseline, zone policies, runtime config, rules.
   Primeiro slice: #70 (WIRS-140, done). PHP discovery is delivered; zonas e Composer
   são P3 e chegam em iterações posteriores. (Horizonte B)
 
-  Status interno: #70 (WIRS-140, PHP discovery) está done; zonas, Composer e
-  runtime config são P3 e não estão implementados. Próximo trabalho possível é
-  verificar e formalizar #70 antes de avançar para P3.
+  Status interno: #70 (WIRS-140, PHP discovery) está fechado; zonas, Composer e
+  runtime config são P3 e não estão implementados. A Epic permanece aberta até
+  seus critérios completos serem aceitos.
 
 - [**[E14] Runtime HTTP**](https://github.com/agthinkindigital/wirs/issues/15) - `todo`
 
