@@ -25,6 +25,7 @@ from wirs.domain.integrity import FileIntegrity, IntegrityState
 from wirs.domain.ioc import IOC, IOCKind
 from wirs.domain.provider import ProviderRun, ProviderRunStatus
 from wirs.domain.redaction import REDACTED, STORE_RAW_CONTENT, redact_mapping, redact_text
+from wirs.domain.relation import FindingRelation, RelationKind, correlate_relations
 from wirs.domain.safepath import SafePath
 from wirs.domain.target import LocalDirectoryTarget, Target, TargetKind
 
@@ -43,6 +44,7 @@ __all__ = [
     "Evidence",
     "FileIntegrity",
     "Finding",
+    "FindingRelation",
     "IntegrityState",
     "IOC",
     "IOCKind",
@@ -58,6 +60,7 @@ __all__ = [
     "REDACTED",
     "ReadCancelled",
     "RedactionState",
+    "RelationKind",
     "SafePath",
     "SecurityBoundaryError",
     "Severity",
@@ -67,6 +70,7 @@ __all__ = [
     "TargetKind",
     "WirsError",
     "compare_baseline",
+    "correlate_relations",
     "redact_mapping",
     "redact_text",
 ]

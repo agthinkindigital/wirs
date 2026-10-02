@@ -474,3 +474,40 @@ def test_diagnosis_file_centric_chega_ao_scan_result(tmp_path) -> None:
     assert diagnosis["basis"] == sorted(diagnosis["basis"])
     assert set(diagnosis["basis"]) <= {finding.id for finding in result.findings}
     assert diagnosis["artifact_ref"] == result.diagnoses[0].artifact_ref
+
+
+def test_scan_preenche_relations_entre_findings_do_mesmo_artifact(tmp_path) -> None:
+    from wirs.detectors.builtin import IocDetector
+    from wirs.domain import IOC, IOCKind
+
+    (tmp_path / "a.php").write_bytes(b"alpha marker beta marker")
+    result = run_scan(
+        LocalDirectoryTarget(tmp_path),
+        profile="soft",
+        source=LocalArtifactSource(),
+        adapters=[],
+        reader=ArtifactReader(),
+        budget=ReadBudget(max_bytes=1 << 20),
+        detectors=[
+            IocDetector(
+                [
+                    IOC(kind=IOCKind.LITERAL, value="alpha marker"),
+                    IOC(kind=IOCKind.LITERAL, value="beta marker"),
+                ]
+            )
+        ],
+    )
+
+    assert len(result.findings) == 2
+    rules = {relation.rule_id for relation in result.relations}
+    assert "REL.SAME_ARTIFACT" in rules
+    for relation in result.relations:
+        assert set(relation.finding_refs) <= {finding.id for finding in result.findings}
+
+    from wirs.reporting.canonical import CanonicalReport
+
+    payload = CanonicalReport.from_scan_result(result).to_dict()
+    assert [item["rule_id"] for item in payload["relations"]] == sorted(
+        item["rule_id"] for item in payload["relations"]
+    )
+    assert payload["relations"], "JSON canônico ganha array relations (#76)"

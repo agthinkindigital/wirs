@@ -25,12 +25,14 @@ from wirs.domain import (
     Diagnosis,
     Evidence,
     Finding,
+    FindingRelation,
     IntegrityState,
     Provenance,
     ProviderRun,
     ProviderRunStatus,
     Severity,
     Target,
+    correlate_relations,
     redact_mapping,
     redact_text,
 )
@@ -88,6 +90,7 @@ class ScanResult:
     evidence: tuple[Evidence, ...] = ()
     provider_runs: tuple[ProviderRun, ...] = ()
     diagnoses: tuple[Diagnosis, ...] = ()
+    relations: tuple[FindingRelation, ...] = ()
     target_kind: str = "local_directory"
     source_manifest: Mapping[str, object] | None = None
 
@@ -701,6 +704,7 @@ def run_scan(
     diagnoses = correlate_diagnoses(
         artifacts=artifacts, findings=normalized_findings, evidence=all_evidence
     )
+    relations = correlate_relations(normalized_findings)
     return ScanResult(
         scan_id=sid,
         target_root=str(target.root),
@@ -714,6 +718,7 @@ def run_scan(
         evidence=tuple(all_evidence),
         provider_runs=tuple(provider_runs),
         diagnoses=diagnoses,
+        relations=relations,
         target_kind=target.kind.value,
         source_manifest=(
             target.metadata.get("source_manifest")

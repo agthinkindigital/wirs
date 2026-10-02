@@ -346,3 +346,84 @@ def test_serializacao_aplica_redaction_final_em_registros() -> None:
     assert "abc123" not in output
     assert "provider-secret" not in output
     assert "target-secret" not in output
+
+
+def test_relations_serializam_e_validam_referencias() -> None:
+    from wirs.domain import FindingRelation, RelationKind
+
+    artifact = Artifact(kind=ArtifactKind.FILE, path=SafePath(Path.cwd(), "a.php"), id="art_1")
+    evidence = Evidence(
+        scan_id="s",
+        kind="test",
+        source="test",
+        artifact_ref=artifact.id,
+        content={},
+        provenance=Provenance("test", "1"),
+        id="ev_1",
+    )
+    findings = (
+        Finding(
+            rule_id="T.A",
+            title="t",
+            category="test",
+            severity=Severity.LOW,
+            confidence=Confidence(ConfidenceClass.LOW),
+            artifact_ref=artifact.id,
+            evidence_refs=(evidence.id,),
+            id="fnd_a",
+        ),
+        Finding(
+            rule_id="T.B",
+            title="t",
+            category="test",
+            severity=Severity.LOW,
+            confidence=Confidence(ConfidenceClass.LOW),
+            artifact_ref=artifact.id,
+            evidence_refs=(evidence.id,),
+            id="fnd_b",
+        ),
+    )
+    relation = FindingRelation(
+        rule_id="REL.SAME_ARTIFACT",
+        kind=RelationKind.STRONG,
+        finding_refs=("fnd_a", "fnd_b"),
+        key="artifact:art_1",
+        window="exact",
+        justification="j",
+    )
+    report = CanonicalReport(
+        scan_id="s",
+        target_root="/t",
+        profile="soft",
+        artifacts=(artifact,),
+        evidence=(evidence,),
+        findings=findings,
+        relations=(relation,),
+        generated_at=FIXED_AT,
+    )
+
+    payload = report.to_dict()
+    assert [item["rule_id"] for item in payload["relations"]] == ["REL.SAME_ARTIFACT"]
+
+    clone = CanonicalReport.from_dict(payload)
+    assert clone.relations == (relation,)
+
+    quebrada = FindingRelation(
+        rule_id="REL.SAME_ARTIFACT",
+        kind=RelationKind.STRONG,
+        finding_refs=("fnd_a", "fnd_fantasma"),
+        key="artifact:art_1",
+        window="exact",
+        justification="j",
+    )
+    with pytest.raises(ValueError, match="Finding inexistente"):
+        CanonicalReport(
+            scan_id="s",
+            target_root="/t",
+            profile="soft",
+            artifacts=(artifact,),
+            evidence=(evidence,),
+            findings=findings,
+            relations=(quebrada,),
+            generated_at=FIXED_AT,
+        ).to_dict()

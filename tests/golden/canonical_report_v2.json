@@ -154,6 +154,7 @@
   },
   "note": "golden v2",
   "provider_runs": [],
+  "relations": [],
   "scanner_version": "0.1.0",
   "schema_version": "2.0"
 }

@@ -16,8 +16,10 @@ from wirs.domain import (
     Diagnosis,
     Evidence,
     Finding,
+    FindingRelation,
     ProviderRun,
     SafePath,
+    correlate_relations,
     redact_mapping,
 )
 
@@ -44,6 +46,7 @@ class CanonicalReport:
     evidence: tuple[Evidence, ...] = ()
     provider_runs: tuple[ProviderRun, ...] = ()
     diagnoses: tuple[Diagnosis, ...] = ()
+    relations: tuple[FindingRelation, ...] = ()
     target_kind: str = "local_directory"
     source_manifest: Mapping[str, Any] | None = None
 
@@ -54,6 +57,7 @@ class CanonicalReport:
         object.__setattr__(self, "evidence", tuple(self.evidence))
         object.__setattr__(self, "provider_runs", tuple(self.provider_runs))
         object.__setattr__(self, "diagnoses", tuple(self.diagnoses))
+        object.__setattr__(self, "relations", tuple(self.relations))
         if self.generated_at is None:
             object.__setattr__(self, "generated_at", datetime.now())
 
@@ -95,6 +99,10 @@ class CanonicalReport:
             coverage=result.coverage,
             provider_runs=result.provider_runs,
             diagnoses=result.diagnoses,
+            # fnd_ deriva de artifact_ref: o remap acima recunhou IDs, então as
+            # relations são recorrelacionadas sobre os findings finais (as de
+            # ScanResult valem dentro do grafo do ScanResult).
+            relations=correlate_relations(tuple(findings)),
             target_kind=result.target_kind,
             source_manifest=result.source_manifest,
             note=note,
@@ -112,6 +120,9 @@ class CanonicalReport:
             raise ValueError("provider run IDs duplicados no report canônico")
         finding_ids = {finding.id for finding in self.findings}
         finding_by_id = {finding.id: finding for finding in self.findings}
+        relation_ids = {relation.id for relation in self.relations}
+        if len(relation_ids) != len(self.relations):
+            raise ValueError("relation IDs duplicados no report canônico")
         diagnosis_ids = {diagnosis.diagnosis_id for diagnosis in self.diagnoses}
         if len(diagnosis_ids) != len(self.diagnoses):
             raise ValueError("diagnosis IDs duplicados no report canônico")
@@ -146,6 +157,12 @@ class CanonicalReport:
             if missing_evidence:
                 raise ValueError(
                     f"Diagnosis referencia Evidence inexistente: {missing_evidence[0]}"
+                )
+        for relation in self.relations:
+            missing_relations = [ref for ref in relation.finding_refs if ref not in finding_ids]
+            if missing_relations:
+                raise ValueError(
+                    f"Relation referencia Finding inexistente: {missing_relations[0]}"
                 )
 
     def to_dict(self) -> dict[str, Any]:
@@ -189,6 +206,9 @@ class CanonicalReport:
                     key=_diagnosis_key,
                 )
             ],
+            "relations": [
+                item.to_dict() for item in sorted(self.relations, key=lambda r: r.id)
+            ],
             "note": self.note,
         }
         source_manifest = self.source_manifest
@@ -227,6 +247,9 @@ class CanonicalReport:
                 ProviderRun.from_dict(item) for item in data.get("provider_runs", [])
             ),
             diagnoses=tuple(Diagnosis.from_dict(item) for item in data.get("diagnoses", [])),
+            relations=tuple(
+                FindingRelation.from_dict(item) for item in data.get("relations", [])
+            ),
             target_kind=str(target.get("kind", "local_directory")),
             source_manifest=(
                 manifest.get("source_manifest")
