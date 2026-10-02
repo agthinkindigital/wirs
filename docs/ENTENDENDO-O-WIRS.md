@@ -921,6 +921,44 @@ tempo. Também não usa LLM e não cria Evidence para justificar sua hipótese.
 
 ---
 
+## #76 — Relações: pistas que agrupam findings, nunca acusam
+
+### O que o scan entrega
+
+O JSON canônico ganhou o array `relations`. Cada `FindingRelation` liga dois ou
+mais Findings por uma chave explícita (`artifact:`, `component:`, `ioc:`,
+`ip:`, `cidr:`, `owner:`, `day:`) e uma janela (`exact` ou `24h`).
+
+Relações `strong` marcam identidade observada: mesmo arquivo, componente,
+indicador ou janela. Relações `cue` marcam pista fraca: mesma faixa de IP ou
+família de User-Agent. Toda `cue` carrega `attribution: false` por construção;
+o modelo nem possui um `REL.SAME_ACTOR`.
+
+Relações não criam Evidence e não alteram severidade nem confiança. Elas só
+dizem onde olhar junto.
+
+### Como interpretar
+
+Uma `cue` de CIDR ou UA entre contas distintas é o esperado atrás de NAT, proxy
+ou CDN — e não prova mesma pessoa. O mesmo vale para `owner`: um admin
+legítimo toca dezenas de arquivos numa atualização. A relação agrupa a revisão;
+o veredito continua vindo da Evidence de cada Finding.
+
+Sem dados na chave, não há relação: `relations: []` significa só que nada
+compartilhou chave nesta execução.
+
+### Limites deliberados
+
+Chaves de log e banco (conta, sessão, registro de DB) ainda não existem: chegam
+com os adapters de log e a auditoria SQL. A janela temporal só dispara com
+`occurred_at` nos attributes; tempo de coleta nunca agrupa. O HTML ainda não
+renderiza relations — leia-as no JSON.
+
+**Verificar:** `src/wirs/domain/relation.py`,
+`tests/unit/test_finding_relations.py` · **Issue:** #76.
+
+---
+
 ## #80 — HTML forense: uma view não pode inventar evidência
 
 ### O que o scan entrega
