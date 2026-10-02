@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
@@ -15,11 +16,25 @@ DEFAULT_STATIC_ZONES = ("img", "uploads", "assets")
 RULE_ID = "PHP.ZONE.EXECUTABLE"
 
 
+_DRIVE_RX = re.compile(r"^[A-Za-z]:")
+
+
 def _normalize_zones(zones: Sequence[str]) -> tuple[str, ...]:
     normalized: list[str] = []
     for zone in zones:
-        value = zone.strip().replace("\\", "/").strip("/")
-        if not value or value == "." or value.startswith("/") or ".." in value.split("/"):
+        # Absolutos e escapes são recusados ANTES de normalizar (fail fast:
+        # "/absoluta" não pode virar "absoluta" em silêncio).
+        value = zone.strip().replace("\\", "/")
+        if (
+            not value
+            or value == "."
+            or value.startswith("/")
+            or _DRIVE_RX.match(value)
+            or ".." in value.split("/")
+        ):
+            raise ValueError(f"zona PHP inválida: {zone!r}")
+        value = value.strip("/")
+        if not value or value == ".":
             raise ValueError(f"zona PHP inválida: {zone!r}")
         if value not in normalized:
             normalized.append(value)
