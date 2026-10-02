@@ -42,7 +42,7 @@ registrada; a história não é reescrita silenciosamente.
 |---|---|---|
 | Release publicada | tag `v0.1.0`, release GitHub de 2026-09-10 | confirmado |
 | `main` | `a8cdb32`, ainda declara pacote `0.1.0` | linha publicada |
-| `develop` | `6d62ffb`, `origin/develop` sincronizada | linha de trabalho |
+| `develop` | `2373012`, `origin/develop` sincronizada | linha de trabalho |
 | Relação entre branches | `main...develop`: `ahead_by=42`, `behind_by=6`, `status=diverged` | bloqueio de promoção |
 | Versão do pacote | `pyproject.toml` e `src/wirs/__init__.py`: `0.1.0` | correto nesta fase |
 | Release `0.2.0` | inexistente | correto nesta fase |
@@ -68,7 +68,7 @@ explicitamente em `develop` e auditada novamente. Não presumir fast-forward.
 
 ### Verificação técnica atual
 
-No checkout de `6d62ffb`:
+No checkout do candidato `2373012`:
 
 ```text
 uv run pytest tests -q       -> 241 passed, 5 skipped
@@ -78,9 +78,9 @@ uv run mypy src/             -> Success: no issues found in 64 source files
 uv run python -m build       -> wirs-0.1.0.tar.gz e wirs-0.1.0-py3-none-any.whl
 ```
 
-A CI `36978256336` confirma que os testes de Python 3.11 passaram e o job YARA
-passou, mas o job `test (3.11)` falhou no format check; os demais jobs foram
-cancelados. Portanto, não existe CI verde para o commit candidato atual.
+A CI `37041876058` confirma que o job YARA passou, mas os jobs `test` falharam
+no format check; os demais jobs da matriz foram cancelados. Portanto, não existe
+CI verde para o commit candidato atual.
 
 Arquivos que o format check reportou:
 
